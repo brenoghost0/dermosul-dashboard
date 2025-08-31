@@ -1,0 +1,11 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --brand-bg: #000000;
+}
+
+.p-LinkButton {
+  display: none !important;
+}

@@ -1,0 +1,16 @@
+{
+  "compilerOptions": {
+    "module": "commonjs",
+    "target": "esnext",
+    "moduleResolution": "node",
+    "esModuleInterop": true,
+    "strict": true,
+    "skipLibCheck": true,
+    "baseUrl": ".",
+    "paths": {
+      "@backend/*": ["./backend/*"]
+    }
+  },
+  "include": ["scripts/**/*.ts", "backend/**/*.ts"],
+  "exclude": ["node_modules"]
+}

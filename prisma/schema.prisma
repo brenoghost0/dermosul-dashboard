@@ -1,0 +1,131 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+  output   = "../node_modules/.prisma/client"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+enum OrderStatus {
+  pago
+  pendente
+  cancelado
+  enviado
+}
+
+enum PaymentMethod {
+  pix
+  cartao
+  boleto
+  desconhecido
+}
+
+enum LandingPageStatus {
+  ATIVA
+  PAUSADA
+}
+
+model Customer {
+  id         String    @id @default(cuid())
+  firstName  String    @map("first_name")
+  lastName   String?   @map("last_name")
+  email      String    @unique
+  phone      String
+  cpf        String    @unique
+  birthDate  String    @map("birth_date") // YYYY-MM-DD
+  gender     String?
+  createdAt  DateTime  @default(now()) @map("created_at")
+  orders     Order[]
+  addresses  Address[]
+
+  @@map("customers")
+}
+
+model Address {
+  id          String    @id @default(cuid())
+  customerId  String    @map("customer_id")
+  customer    Customer  @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  cep         String
+  street      String
+  number      String
+  complement  String?
+  district    String
+  city        String
+  state       String
+  createdAt   DateTime  @default(now()) @map("created_at")
+
+  @@map("addresses")
+}
+
+model Order {
+  id          String        @id
+  customerId  String        @map("customer_id")
+  customer    Customer      @relation(fields: [customerId], references: [id])
+  status      OrderStatus
+  category    String
+  totalAmount Int           @map("total_amount") // Em centavos
+  createdAt   DateTime      @default(now()) @map("created_at")
+  items       OrderItem[]
+  payments    Payment[]
+
+  @@index([createdAt])
+  @@index([status])
+  @@map("orders")
+}
+
+model OrderItem {
+  id        String   @id @default(cuid())
+  orderId   String   @map("order_id")
+  order     Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  sku       String
+  name      String
+  qty       Int
+  unitPrice Int      @map("unit_price") // Em centavos
+
+  @@map("order_items")
+}
+
+model Payment {
+  id            String        @id @default(cuid())
+  orderId       String        @map("order_id")
+  order         Order         @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  paymentMethod PaymentMethod @map("payment_method")
+  paidAmount    Int           @map("paid_amount") // Em centavos
+  status        String // Status do pagamento, pode ser mais detalhado que o status do pedido
+  createdAt     DateTime      @default(now()) @map("created_at")
+
+  @@index([paymentMethod])
+  @@map("payments")
+}
+
+model LandingPage {
+  id            String            @id @default(cuid())
+  slug          String            @unique
+  title         String
+  brand         String
+  description   String?
+  price         Int               // Em centavos
+  freeShipping  Boolean           @map("free_shipping")
+  imageUrl      String?           @map("image_url")
+  shippingPrice Int               @map("shipping_price") // Em centavos
+  status        LandingPageStatus @default(ATIVA)
+  createdAt     DateTime          @default(now()) @map("created_at")
+  updatedAt     DateTime?         @updatedAt
+
+  @@index([slug])
+  @@map("landings")
+}
+
+model User {
+  id           String   @id @default(cuid())
+  username     String   @unique
+  passwordHash String   @map("password_hash")
+  createdAt    DateTime @default(now()) @map("created_at")
+
+  @@map("users")
+}

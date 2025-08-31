@@ -1,0 +1,22 @@
+{
+  "name": "dermosul-monorepo",
+  "private": true,
+  "workspaces": [
+    "dermosul-dashboard",
+    "backend"
+  ],
+  "scripts": {
+    "dev": "vite",
+    "dev:backend": "npm run dev --prefix backend",
+    "dev:frontend": "npm run dev --prefix dermosul-dashboard"
+  },
+  "devDependencies": {
+    "concurrently": "^9.0.1"
+  },
+  "dependencies": {
+    "date-fns": "^4.1.0",
+    "react": "^19.1.1",
+    "react-dom": "^19.1.1",
+    "recharts": "^3.1.2"
+  }
+}

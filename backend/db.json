@@ -1,0 +1,730 @@
+{
+  "orders": [
+    {
+      "id": "2025-08-24-10",
+      "order_date": "2025-08-24",
+      "status": "pago",
+      "category": "Skincare",
+      "total_value": 129.9,
+      "paymentMethod": "cartao",
+      "customer": {
+        "id": "cliente_7010",
+        "firstName": "Joana",
+        "lastName": "Silva",
+        "email": "joana.silva@example.com",
+        "cpf": "12345678910",
+        "birthdate": "1992-04-15",
+        "phone": "11988880011",
+        "zip": "01000001",
+        "address": "Rua das Palmeiras",
+        "number": "456",
+        "complement": "Apto 202",
+        "district": "Centro",
+        "city": "São Paulo",
+        "state": "SP"
+      },
+      "shipping": {
+        "method": "PAC",
+        "address": "Rua das Palmeiras",
+        "number": "456",
+        "complement": "Apto 202",
+        "district": "Centro",
+        "city": "São Paulo",
+        "state": "SP",
+        "zip": "01000001",
+        "value": 15
+      },
+      "items": [
+        {
+          "sku": "SK-100",
+          "name": "Creme Hidratante",
+          "qty": 1,
+          "price": 114.9
+        }
+      ],
+      "payments": [
+        {
+          "method": "Cartão de Crédito",
+          "value": 129.9
+        }
+      ],
+      "summary": {
+        "subTotal": 114.9,
+        "discount": 0,
+        "shipping": 15,
+        "total": 129.9
+      }
+    },
+    {
+      "id": "2025-07-25-0",
+      "order_date": "2025-07-25",
+      "status": "pago",
+      "category": "Skincare",
+      "total_value": 522.9,
+      "paymentMethod": "pix",
+      "customer": {
+        "id": "cliente_7000",
+        "firstName": "Maria",
+        "lastName": "Oliveira",
+        "email": "maria.oliveira@example.com",
+        "cpf": "12345678900",
+        "birthdate": "1990-05-14",
+        "phone": "11988880001",
+        "zip": "01000000",
+        "address": "Rua das Flores",
+        "number": "123",
+        "complement": "Apto 101",
+        "district": "Centro",
+        "city": "São Paulo",
+        "state": "SP"
+      },
+      "shipping": {
+        "method": "PAC",
+        "address": "Rua das Flores",
+        "number": "123",
+        "complement": "Apto 101",
+        "district": "Centro",
+        "city": "São Paulo",
+        "state": "SP",
+        "zip": "01000000",
+        "value": 19.9
+      },
+      "items": [
+        {
+          "sku": "SK-912",
+          "name": "Esfoliante Corporal",
+          "qty": 2,
+          "price": 148.49
+        },
+        {
+          "sku": "SK-325",
+          "name": "Máscara Facial",
+          "qty": 2,
+          "price": 32.84
+        },
+        {
+          "sku": "SK-709",
+          "name": "Sérum Vitamina C",
+          "qty": 2,
+          "price": 75.17
+        }
+      ],
+      "payments": [
+        {
+          "method": "Cartão de Crédito",
+          "value": 522.9
+        }
+      ],
+      "summary": {
+        "subTotal": 513,
+        "discount": 10,
+        "shipping": 19.9,
+        "total": 522.9
+      }
+    },
+    {
+      "id": "2025-07-26-1",
+      "order_date": "2025-07-26",
+      "status": "pago",
+      "category": "Maquiagem",
+      "total_value": 532.9,
+      "paymentMethod": "boleto",
+      "customer": {
+        "id": "cliente_7001",
+        "firstName": "João",
+        "lastName": "Mendes",
+        "email": "joao.mendes@example.com",
+        "cpf": "98765432100",
+        "birthdate": "1988-11-30",
+        "phone": "21977770002",
+        "zip": "22000000",
+        "address": "Av. Atlântica",
+        "number": "2000",
+        "complement": "Bloco B",
+        "district": "Copacabana",
+        "city": "Rio de Janeiro",
+        "state": "RJ"
+      },
+      "shipping": {
+        "method": "SEDEX",
+        "address": "Av. Atlântica",
+        "number": "2000",
+        "complement": "Bloco B",
+        "district": "Copacabana",
+        "city": "Rio de Janeiro",
+        "state": "RJ",
+        "zip": "22000000",
+        "value": 19.9
+      },
+      "items": [
+        {
+          "sku": "SK-912",
+          "name": "Esfoliante Corporal",
+          "qty": 2,
+          "price": 148.49
+        },
+        {
+          "sku": "SK-325",
+          "name": "Máscara Facial",
+          "qty": 2,
+          "price": 32.84
+        },
+        {
+          "sku": "SK-709",
+          "name": "Sérum Vitamina C",
+          "qty": 2,
+          "price": 75.17
+        }
+      ],
+      "payments": [
+        {
+          "method": "Pix",
+          "value": 532.9
+        }
+      ],
+      "summary": {
+        "subTotal": 513,
+        "discount": 0,
+        "shipping": 19.9,
+        "total": 532.9
+      }
+    },
+    {
+      "id": "2025-07-27-2",
+      "order_date": "2025-07-27",
+      "status": "pago",
+      "category": "Cabelo",
+      "total_value": 532.9,
+      "customer": {
+        "id": "cliente_7002",
+        "firstName": "Ana",
+        "lastName": "Paula Santos",
+        "email": "ana.santos@example.com",
+        "cpf": "11122233344",
+        "birthdate": "1995-02-20",
+        "phone": "31966660003",
+        "zip": "30000000",
+        "address": "Rua Goiás",
+        "number": "45",
+        "complement": "Sala 3",
+        "district": "Savassi",
+        "city": "Belo Horizonte",
+        "state": "MG"
+      },
+      "shipping": {
+        "method": "Motoboy",
+        "address": "Rua Goiás",
+        "number": "45",
+        "complement": "Sala 3",
+        "district": "Savassi",
+        "city": "Belo Horizonte",
+        "state": "MG",
+        "zip": "30000000",
+        "value": 19.9
+      },
+      "items": [
+        {
+          "sku": "SK-912",
+          "name": "Esfoliante Corporal",
+          "qty": 2,
+          "price": 148.49
+        },
+        {
+          "sku": "SK-325",
+          "name": "Máscara Facial",
+          "qty": 2,
+          "price": 32.84
+        },
+        {
+          "sku": "SK-709",
+          "name": "Sérum Vitamina C",
+          "qty": 2,
+          "price": 75.17
+        }
+      ],
+      "payments": [
+        {
+          "method": "Cartão de Crédito",
+          "value": 532.9
+        }
+      ],
+      "summary": {
+        "subTotal": 513,
+        "discount": 0,
+        "shipping": 19.9,
+        "total": 532.9
+      }
+    },
+    {
+      "id": "2025-08-20-0",
+      "order_date": "2025-08-20",
+      "status": "pago",
+      "category": "Perfumaria",
+      "total_value": 250,
+      "paymentMethod": "pix",
+      "customer": {
+        "id": "cliente_7003",
+        "firstName": "Carlos",
+        "lastName": "Souza",
+        "email": "carlos.souza@example.com",
+        "cpf": "55544433322",
+        "birthdate": "1985-07-01",
+        "phone": "11999991111",
+        "zip": "02000000",
+        "address": "Rua Augusta",
+        "number": "100",
+        "complement": "Loja 1",
+        "district": "Consolação",
+        "city": "São Paulo",
+        "state": "SP"
+      },
+      "shipping": {
+        "method": "PAC",
+        "address": "Rua Augusta",
+        "number": "100",
+        "complement": "Loja 1",
+        "district": "Consolação",
+        "city": "São Paulo",
+        "state": "SP",
+        "zip": "02000000",
+        "value": 20
+      },
+      "items": [
+        {
+          "sku": "SK-200",
+          "name": "Perfume Essencial",
+          "qty": 1,
+          "price": 230
+        }
+      ],
+      "payments": [
+        {
+          "method": "Pix",
+          "value": 250
+        }
+      ],
+      "summary": {
+        "subTotal": 230,
+        "discount": 0,
+        "shipping": 20,
+        "total": 250
+      }
+    },
+    {
+      "id": "2025-08-21-1",
+      "order_date": "2025-08-21",
+      "status": "pago",
+      "category": "Maquiagem",
+      "total_value": 80,
+      "paymentMethod": "cartao",
+      "customer": {
+        "id": "cliente_7004",
+        "firstName": "Fernanda",
+        "lastName": "Lima",
+        "email": "fernanda.lima@example.com",
+        "cpf": "66655544433",
+        "birthdate": "1993-10-25",
+        "phone": "21988882222",
+        "zip": "20000000",
+        "address": "Av. Rio Branco",
+        "number": "500",
+        "complement": "Sala 10",
+        "district": "Centro",
+        "city": "Rio de Janeiro",
+        "state": "RJ"
+      },
+      "shipping": {
+        "method": "SEDEX",
+        "address": "Av. Rio Branco",
+        "number": "500",
+        "complement": "Sala 10",
+        "district": "Centro",
+        "city": "Rio de Janeiro",
+        "state": "RJ",
+        "zip": "20000000",
+        "value": 10
+      },
+      "items": [
+        {
+          "sku": "SK-300",
+          "name": "Batom Matte",
+          "qty": 1,
+          "price": 70
+        }
+      ],
+      "payments": [
+        {
+          "method": "Cartão de Crédito",
+          "value": 80
+        }
+      ],
+      "summary": {
+        "subTotal": 70,
+        "discount": 0,
+        "shipping": 10,
+        "total": 80
+      }
+    },
+    {
+      "id": "2025-08-22-2",
+      "order_date": "2025-08-22",
+      "status": "pago",
+      "category": "Cabelo",
+      "total_value": 150,
+      "paymentMethod": "boleto",
+      "customer": {
+        "id": "cliente_7005",
+        "firstName": "Roberto",
+        "lastName": "Alves",
+        "email": "roberto.alves@example.com",
+        "cpf": "77766655544",
+        "birthdate": "1978-03-10",
+        "phone": "31977773333",
+        "zip": "30100000",
+        "address": "Av. Afonso Pena",
+        "number": "1200",
+        "complement": "Andar 5",
+        "district": "Centro",
+        "city": "Belo Horizonte",
+        "state": "MG"
+      },
+      "shipping": {
+        "method": "PAC",
+        "address": "Av. Afonso Pena",
+        "number": "1200",
+        "complement": "Andar 5",
+        "district": "Centro",
+        "city": "Belo Horizonte",
+        "state": "MG",
+        "zip": "30100000",
+        "value": 15
+      },
+      "items": [
+        {
+          "sku": "SK-400",
+          "name": "Shampoo Fortificante",
+          "qty": 1,
+          "price": 135
+        }
+      ],
+      "payments": [
+        {
+          "method": "Boleto",
+          "value": 150
+        }
+      ],
+      "summary": {
+        "subTotal": 135,
+        "discount": 0,
+        "shipping": 15,
+        "total": 150
+      }
+    },
+    {
+      "id": "2025-08-23-3",
+      "order_date": "2025-08-23",
+      "status": "pendente",
+      "category": "Skincare",
+      "total_value": 90,
+      "paymentMethod": "pix",
+      "customer": {
+        "id": "cliente_7006",
+        "firstName": "Mariana",
+        "lastName": "Costa",
+        "email": "mariana.costa@example.com",
+        "cpf": "88877766655",
+        "birthdate": "1998-01-05",
+        "phone": "11966664444",
+        "zip": "03000000",
+        "address": "Rua da Consolação",
+        "number": "1500",
+        "complement": "Apto 50",
+        "district": "Consolação",
+        "city": "São Paulo",
+        "state": "SP"
+      },
+      "shipping": {
+        "method": "PAC",
+        "address": "Rua da Consolação",
+        "number": "1500",
+        "complement": "Apto 50",
+        "district": "Consolação",
+        "city": "São Paulo",
+        "state": "SP",
+        "zip": "03000000",
+        "value": 10
+      },
+      "items": [
+        {
+          "sku": "SK-500",
+          "name": "Protetor Solar",
+          "qty": 1,
+          "price": 80
+        }
+      ],
+      "payments": [
+        {
+          "method": "Pix",
+          "value": 90
+        }
+      ],
+      "summary": {
+        "subTotal": 80,
+        "discount": 0,
+        "shipping": 10,
+        "total": 90
+      }
+    },
+    {
+      "id": "2025-08-24-4",
+      "order_date": "2025-08-24",
+      "status": "cancelado",
+      "category": "Perfumaria",
+      "total_value": 180,
+      "paymentMethod": "cartao",
+      "customer": {
+        "id": "cliente_7007",
+        "firstName": "Pedro",
+        "lastName": "Ferreira",
+        "email": "pedro.ferreira@example.com",
+        "cpf": "99988877766",
+        "birthdate": "1991-06-18",
+        "phone": "21977775555",
+        "zip": "22200000",
+        "address": "Rua Voluntários da Pátria",
+        "number": "300",
+        "complement": "Apto 100",
+        "district": "Botafogo",
+        "city": "Rio de Janeiro",
+        "state": "RJ"
+      },
+      "shipping": {
+        "method": "SEDEX",
+        "address": "Rua Voluntários da Pátria",
+        "number": "300",
+        "complement": "Apto 100",
+        "district": "Botafogo",
+        "city": "Rio de Janeiro",
+        "state": "RJ",
+        "zip": "22200000",
+        "value": 15
+      },
+      "items": [
+        {
+          "sku": "SK-600",
+          "name": "Colônia Refrescante",
+          "qty": 1,
+          "price": 165
+        }
+      ],
+      "payments": [
+        {
+          "method": "Cartão de Crédito",
+          "value": 180
+        }
+      ],
+      "summary": {
+        "subTotal": 165,
+        "discount": 0,
+        "shipping": 15,
+        "total": 180
+      }
+    },
+    {
+      "id": "2025-08-25-5",
+      "order_date": "2025-08-25",
+      "status": "pago",
+      "category": "Maquiagem",
+      "total_value": 110,
+      "paymentMethod": "pix",
+      "customer": {
+        "id": "cliente_7008",
+        "firstName": "Julia",
+        "lastName": "Martins",
+        "email": "julia.martins@example.com",
+        "cpf": "11100099988",
+        "birthdate": "1996-09-12",
+        "phone": "11955556666",
+        "zip": "04000000",
+        "address": "Av. Paulista",
+        "number": "1000",
+        "complement": "Conj 10",
+        "district": "Bela Vista",
+        "city": "São Paulo",
+        "state": "SP"
+      },
+      "shipping": {
+        "method": "PAC",
+        "address": "Av. Paulista",
+        "number": "1000",
+        "complement": "Conj 10",
+        "district": "Bela Vista",
+        "city": "São Paulo",
+        "state": "SP",
+        "zip": "04000000",
+        "value": 10
+      },
+      "items": [
+        {
+          "sku": "SK-700",
+          "name": "Máscara de Cílios",
+          "qty": 1,
+          "price": 100
+        }
+      ],
+      "payments": [
+        {
+          "method": "Pix",
+          "value": 110
+        }
+      ],
+      "summary": {
+        "subTotal": 100,
+        "discount": 0,
+        "shipping": 10,
+        "total": 110
+      }
+    },
+    {
+      "id": "2025-08-25-6",
+      "order_date": "2025-08-25",
+      "status": "pago",
+      "category": "Skincare",
+      "total_value": 220,
+      "paymentMethod": "cartao",
+      "customer": {
+        "id": "cliente_7009",
+        "firstName": "Lucas",
+        "lastName": "Pereira",
+        "email": "lucas.pereira@example.com",
+        "cpf": "22211100099",
+        "birthdate": "1990-08-01",
+        "phone": "21944447777",
+        "zip": "22400000",
+        "address": "Rua Prudente de Morais",
+        "number": "200",
+        "complement": "Apto 30",
+        "district": "Ipanema",
+        "city": "Rio de Janeiro",
+        "state": "RJ"
+      },
+      "shipping": {
+        "method": "SEDEX",
+        "address": "Rua Prudente de Morais",
+        "number": "200",
+        "complement": "Apto 30",
+        "district": "Ipanema",
+        "city": "Rio de Janeiro",
+        "state": "RJ",
+        "zip": "22400000",
+        "value": 20
+      },
+      "items": [
+        {
+          "sku": "SK-800",
+          "name": "Creme Anti-idade",
+          "qty": 1,
+          "price": 200
+        }
+      ],
+      "payments": [
+        {
+          "method": "Cartão de Crédito",
+          "value": 220
+        }
+      ],
+      "summary": {
+        "subTotal": 200,
+        "discount": 0,
+        "shipping": 20,
+        "total": 220
+      }
+    },
+    {
+      "id": "2025-08-26-7",
+      "order_date": "2025-08-26",
+      "status": "pago",
+      "category": "Perfumaria",
+      "total_value": 100,
+      "paymentMethod": "boleto",
+      "customer": {
+        "id": "cliente_7011",
+        "firstName": "Isabela",
+        "lastName": "Gomes",
+        "email": "isabela.gomes@example.com",
+        "cpf": "33322211100",
+        "birthdate": "1994-03-20",
+        "phone": "11933338888",
+        "zip": "05000000",
+        "address": "Rua Tupi",
+        "number": "50",
+        "complement": "Casa",
+        "district": "Perdizes",
+        "city": "São Paulo",
+        "state": "SP"
+      },
+      "shipping": {
+        "method": "PAC",
+        "address": "Rua Tupi",
+        "number": "50",
+        "complement": "Casa",
+        "district": "Perdizes",
+        "city": "São Paulo",
+        "state": "SP",
+        "zip": "05000000",
+        "value": 10
+      },
+      "items": [
+        {
+          "sku": "SK-900",
+          "name": "Perfume Floral",
+          "qty": 1,
+          "price": 90
+        }
+      ],
+      "payments": [
+        {
+          "method": "Boleto",
+          "value": 100
+        }
+      ],
+      "summary": {
+        "subTotal": 90,
+        "discount": 0,
+        "shipping": 10,
+        "total": 100
+      }
+    }
+  ],
+  "visits": [],
+  "landingPages": [
+    {
+      "id": "merxbsoa2xmwouo0tvs",
+      "slug": "cerave-para-pele-seca-a-extra-seca---loo-hidratante-facial-e-corporal-sem-perfume-473ml-mesrguz9",
+      "productImage": "/uploads/image-1756175127270-163477494.jpeg",
+      "productTitle": "CeraVe para Pele Seca a Extra Seca - Loção Hidratante Facial e Corporal Sem Perfume 473ml",
+      "productDescription": "CeraVe para Pele Seca a Extra Seca\r\nLoção hidratante para peles secas ou ressecadas. CeraVe Rosto e Corpo conta com textura fluida e de rápida absorção que nutre completamente, recupera a hidratação e o viço natural da pele.\r\n\r\n\r\nA Loção Hidratante CeraVe Rosto e Corpo restaura a barreira natural da pele, não obstrui os poros e melhora a elasticidade e vitalidade. Sua fórmula é ideal para ajudar a reter a umidade e garantir uma pele macia e completamente hidratada por até 24 horas. \r\n\r\n\r\nCeraVe Loção Hidratante Facial e Corporal Sem Perfume para Pele Seca é um produto que reúne o melhor em tecnologia e ingredientes poderosos para proporcionar resultados reais em pouco tempo. Experimente e surpreenda-se!",
+      "productBrand": "CeraVe",
+      "productPrice": 89.9,
+      "shippingValue": 0,
+      "freeShipping": true,
+      "url": "/l/cerave-para-pele-seca-a-extra-seca---loo-hidratante-facial-e-corporal-sem-perfume-473ml-mesrguz9",
+      "createdAt": "2025-08-26T02:25:27.274Z",
+      "updatedAt": "2025-08-26T16:29:12.019Z"
+    },
+    {
+      "id": "merzmzyot11srxme9tg",
+      "slug": "cetaphil---loo-hidratante-473ml-merzmzyo",
+      "productImage": "/uploads/image-1756179009162-130769266.jpeg",
+      "productTitle": "Cetaphil - Loção Hidratante 473ml",
+      "productDescription": "Cetaphil\r\n﻿Loção hidratante corporal e facial, para peles sensível, equilibradas e secas. Cetaphil Loção Hidratante promove a hidratação instantânea da pele de forma profunda e prolongada.\r\n\r\n\r\nA Loção Hidratante Cetaphil apresenta uma textura leve, que permite rápida absorção. Além disso, pode ser utilizada tanto no rosto e quanto no corpo. Sua fórmula é enriquecida com Niacinamida, Pantenol e Glicerina, que ajuda a fortalecer a barreira cutânea em 24 horas.\r\n\r\n\r\nEntre as principais características, temos: \r\n\r\n\r\n  • Estimulação de 15 ceramidas que a pele necessita.\r\n\r\n\r\n  • Fortalecimento da barreira cutânea em 24 horas.\r\n\r\n\r\n  • Pele mais macia já na primeira aplicação(94%).*\r\n\r\n\r\n  • Rápida absorção graças à textura leve de fácil penetração.\r\n\r\n\r\n  • Hidratação 360º com ingredientes emolientes, oclusivos e umectantes.\r\n",
+      "productBrand": "Cetaphil",
+      "productPrice": 79.9,
+      "shippingValue": 0,
+      "freeShipping": true,
+      "url": "/l/cetaphil---loo-hidratante-473ml-merzmzyo",
+      "createdAt": "2025-08-26T03:30:09.168Z",
+      "updatedAt": "2025-08-26T19:10:33.204Z"
+    }
+  ]
+}

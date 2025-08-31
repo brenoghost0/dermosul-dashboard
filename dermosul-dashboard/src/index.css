@@ -1,0 +1,27 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ================================
+   ESTILOS GLOBAIS DERMOSUL
+   ================================ */
+
+body {
+  /* antes: bg-[#f8fafc] text-gray-900 */
+  @apply font-sans bg-brand-50 text-gray-900;
+}
+
+h1, h2, h3, h4, h5, h6 {
+  /* antes: text-[#153E2E] */
+  @apply font-semibold text-brand-800;
+}
+
+a {
+  /* antes: text-[#175544] */
+  @apply text-brand-600 hover:underline;
+}
+
+button {
+  /* antes tinha cores arbitrárias no @apply */
+  @apply px-4 py-2 rounded-lg bg-brand-600 text-white font-medium shadow hover:bg-brand-800 transition;
+}
