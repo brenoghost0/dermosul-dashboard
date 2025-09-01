@@ -6,7 +6,7 @@
     "dev": "run-p dev:*",
     "dev:server": "PORT=3007 nodemon --watch 'src/**/*.ts' --exec 'tsc -p tsconfig.server.json && node -r dotenv/config dist/server.js'",
     "dev:client": "vite",
-    "build": "tsc && vite build",
+    "build": "tsc -p tsconfig.server.json && vite build",
     "build:scripts": "tsc -p tsconfig.scripts.json",
     "start": "node dist/server.js",
     "db:push": "npx prisma db push",
