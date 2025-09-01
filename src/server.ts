@@ -9,7 +9,8 @@ import cors from 'cors';
 import fs from 'fs';
 import multer from 'multer';
 import session from 'express-session';
-import apiRouter from './api.js'; // Importa o router centralizado
+// Import sem extensão para funcionar bem após transpilar para dist/ (CJS)
+import apiRouter from './api'; // Importa o router centralizado
 
 // Declarar o módulo 'express' para estender a interface Request
 declare global {
@@ -90,8 +91,8 @@ const upload = multer({
   }
 });
 
-// Servir arquivos estáticos da pasta 'public'
-const publicPath = path.join(__dirname, "public");
+// Servir arquivos estáticos: usa process.cwd() para independência de __dirname/ESM
+const publicPath = path.join(process.cwd(), 'backend', 'public');
 console.log(`Servindo arquivos estáticos de: ${publicPath}`);
 app.use(express.static(publicPath));
 app.use('/uploads', express.static(UPLOADS_DIR));
