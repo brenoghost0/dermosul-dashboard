@@ -4,7 +4,7 @@
   "version": "1.0.0",
   "scripts": {
     "dev": "run-p dev:*",
-    "dev:server": "PORT=3007 nodemon --watch 'src/**/*.ts' --exec 'tsc -p tsconfig.server.json && node -r dotenv/config dist/server.js'",
+    "dev:server": "PORT=3007 nodemon --watch 'src/**/*.ts' --exec 'tsc -p tsconfig.server.json && node -r dotenv/config dist-server/server.js'",
     "dev:client": "vite",
     "build": "tsc -p tsconfig.server.json && vite build",
     "build:scripts": "tsc -p tsconfig.scripts.json",

@@ -1,0 +1,36 @@
+=== Dermosul Bot Run 20250902_192400 ===
+DASHBOARD_URL=http://localhost:5174/dashboard/pedidos
+BELEZA_URL=https://www.belezanaweb.com.br/
+FAST_SEARCH=True DELAY_SCALE=0.7 TYPING_DELAY=0.02
+[19:24:00] ✔ 9 infos carregadas
+[19:24:00] → Próximo cartão carregado: **** **** **** 3529
+[19:24:00] Iniciando navegador 1 (Dashboard Pedidos)...
+[19:24:01] → Acessou http://localhost:5174/dashboard/pedidos
+[19:24:02] → Fez login (admin/123)
+[19:24:03] ✔ Encontrados 20 pedidos na tabela
+[19:24:03] Leitura concluída: 20 pedidos
+[19:24:03] → Filtrando por status PAGO: 5 candidatos
+[19:24:03] → Abrindo pedido PAGO #1
+[19:24:04] ✔ Detalhe do pedido aberto com sucesso
+[19:24:04] ✔ Detalhe aberto: Pedido #74407448
+[19:24:04] → Produto identificado: Eucerin Anti-Pigment Dual - Sérum Facial Uniformizador 30ml
+[19:24:04] → E-mail do cliente: Nicolas_Macedo@live.com
+[19:24:04] → Abrindo Beleza na Web para pesquisar: Eucerin Anti-Pigment Dual - Sérum Facial Uniformizador 30ml
+[19:24:29] ⏱ Início do pedido (cronômetro iniciado)
+[19:24:30] ✔ Pesquisa enviada (rápida)
+[19:24:30] ⏱ Etapa 'Pesquisa' concluída em 0.9s
+[19:24:47] ✔ Adicionado à sacola (página do produto)
+[19:24:47] ⏱ Etapa 'Adicionar à sacola' concluída em 16.8s
+[19:24:49] ! Produto divergente na sacola. Limpando e tentando novamente…
+[19:24:49] ⏱ Etapa 'Validar sacola / Checkout' concluída em 1.5s
+[19:24:49] ↻ Repetindo fluxo na Beleza na Web…
+[19:24:49] → Abrindo Beleza na Web para pesquisar: Eucerin Anti-Pigment Dual - Sérum Facial Uniformizador 30ml
+[19:25:13] ⏱ Início do pedido (cronômetro iniciado)
+[19:25:14] ✔ Pesquisa enviada (rápida)
+[19:25:14] ⏱ Etapa 'Pesquisa' concluída em 0.6s
+[19:25:31] ✔ Adicionado à sacola (página do produto)
+[19:25:31] ⏱ Etapa 'Adicionar à sacola' concluída em 16.6s
+[19:25:33] ! Produto divergente na sacola. Limpando e tentando novamente…
+[19:25:33] ⏱ Etapa 'Validar sacola / Checkout' concluída em 2.6s
+[19:25:34] ↻ Repetindo fluxo na Beleza na Web…
+[19:25:34] → Abrindo Beleza na Web para pesquisar: Eucerin Anti-Pigment Dual - Sérum Facial Uniformizador 30ml

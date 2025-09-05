@@ -1,0 +1,64 @@
+=== Dermosul Bot Run 20250902_192903 ===
+DASHBOARD_URL=http://localhost:5174/dashboard/pedidos
+BELEZA_URL=https://www.belezanaweb.com.br/
+FAST_SEARCH=True DELAY_SCALE=0.7 TYPING_DELAY=0.02
+[19:29:03] ✔ 9 infos carregadas
+[19:29:03] → Próximo cartão carregado: **** **** **** 3529
+[19:29:03] Iniciando navegador 1 (Dashboard Pedidos)...
+[19:29:05] → Acessou http://localhost:5174/dashboard/pedidos
+[19:29:05] → Fez login (admin/123)
+[19:29:07] ✔ Encontrados 20 pedidos na tabela
+[19:29:07] Leitura concluída: 20 pedidos
+[19:29:07] → Filtrando por status PAGO: 5 candidatos
+[19:29:07] → Abrindo pedido PAGO #1
+[19:29:07] ✔ Detalhe do pedido aberto com sucesso
+[19:29:07] ✔ Detalhe aberto: Pedido #74407448
+[19:29:07] → Produto identificado: Eucerin Anti-Pigment Dual - Sérum Facial Uniformizador 30ml
+[19:29:07] → E-mail do cliente: Nicolas_Macedo@live.com
+[19:29:07] → Abrindo Beleza na Web para pesquisar: Eucerin Anti-Pigment Dual - Sérum Facial Uniformizador 30ml
+[19:29:36] ⏱ Início do pedido (cronômetro iniciado)
+[19:29:36] ✔ Pesquisa enviada (rápida)
+[19:29:36] ⏱ Etapa 'Pesquisa' concluída em 0.6s
+[19:30:39] ✔ Adicionado à sacola (página do produto)
+[19:30:40] ⏱ Etapa 'Adicionar à sacola' concluída em 48.1s
+[19:31:13] → CEP do pedido: 74783544
+[19:31:21] ⏱ Etapa 'Validar sacola / Checkout' concluída em 41.3s
+[19:31:21] → Preenchendo e-mail na autenticação: Nicolas_Macedo3@live.com
+[19:31:21] ✔ E-mail enviado na autenticação
+[19:31:23] ⏱ Etapa 'Autenticação' concluída em 2.4s
+[19:31:24] ↻ Aguardando 2s antes de clicar em 'Criar Conta'…
+[19:31:26] ↻ Aguardando 3s após avançar cadastro…
+[19:31:28] ! Ainda na tela de cadastro. Tentando preencher novamente…
+[19:31:29] ↻ Aguardando 2s antes de clicar em 'Criar Conta'…
+[19:31:33] ⏱ Etapa 'Cadastro' concluída em 9.1s
+[19:31:58] → CEP do pedido: 74783544
+[19:32:08] → CEP do pedido: 74783544
+[19:32:15] ℹ Endereço ainda não confirmado; permanecendo na etapa de endereço.
+[19:32:15] ⏱ Etapa 'Endereço' concluída em 17.4s
+[19:32:15] ⏱ Etapa 'Pagamento' concluída em 0.0s
+[19:32:15] ⏱ Pedido finalizado (sem sucesso) em 159.5s
+[19:32:15]   ⏱ Etapa 'Pesquisa': 0.6s
+[19:32:15]   ⏱ Etapa 'Adicionar à sacola': 48.1s
+[19:32:15]   ⏱ Etapa 'Validar sacola / Checkout': 41.3s
+[19:32:15]   ⏱ Etapa 'Autenticação': 2.4s
+[19:32:15]   ⏱ Etapa 'Cadastro': 9.1s
+[19:32:15]   ⏱ Etapa 'Endereço': 17.4s
+[19:32:15]   ⏱ Etapa 'Pagamento': 0.0s
+[19:32:15] ↻ Repetindo fluxo na Beleza na Web…
+[19:32:15] → Abrindo Beleza na Web para pesquisar: Eucerin Anti-Pigment Dual - Sérum Facial Uniformizador 30ml
+[19:32:44] ⏱ Início do pedido (cronômetro iniciado)
+[19:32:44] ✔ Pesquisa enviada (rápida)
+[19:32:44] ⏱ Etapa 'Pesquisa' concluída em 0.5s
+[19:33:37] ✔ Adicionado à sacola (página do produto)
+[19:33:37] ⏱ Etapa 'Adicionar à sacola' concluída em 37.5s
+[19:33:55] → CEP do pedido: 74783544
+[19:34:03] ⏱ Etapa 'Validar sacola / Checkout' concluída em 26.6s
+[19:34:03] → Preenchendo e-mail na autenticação: Nicolas_Macedok@live.com
+[19:34:04] ✔ E-mail enviado na autenticação
+[19:34:05] ⏱ Etapa 'Autenticação' concluída em 2.0s
+[19:34:07] ↻ Aguardando 2s antes de clicar em 'Criar Conta'…
+[19:34:08] ↻ Aguardando 3s após avançar cadastro…
+[19:34:10] ! Ainda na tela de cadastro. Tentando preencher novamente…
+[19:34:11] ↻ Aguardando 2s antes de clicar em 'Criar Conta'…
+[19:34:15] ⏱ Etapa 'Cadastro' concluída em 9.7s
+[19:34:18] → CEP do pedido: 74783544

@@ -60,6 +60,44 @@ console.log(`Servindo arquivos estáticos de: ${publicPath}`);
 app.use(express_1.default.static(publicPath));
 app.use('/uploads', express_1.default.static(UPLOADS_DIR));
 // --------- ENDPOINTS ---------
+// --- Notas do pedido (persistidas em arquivo no dist) ---
+const NOTES_FILE = path_1.default.join(__dirname, 'notes.json');
+function loadNotesFile() {
+    try {
+        if (!fs_1.default.existsSync(NOTES_FILE)) {
+            fs_1.default.writeFileSync(NOTES_FILE, JSON.stringify({}), 'utf-8');
+        }
+        const raw = fs_1.default.readFileSync(NOTES_FILE, 'utf-8');
+        return JSON.parse(raw || '{}');
+    }
+    catch (_a) {
+        return {};
+    }
+}
+function saveNotesFile(data) {
+    fs_1.default.writeFileSync(NOTES_FILE, JSON.stringify(data, null, 2), 'utf-8');
+}
+app.get('/api/orders/:id/notes', (req, res) => {
+    const id = req.params.id;
+    const map = loadNotesFile();
+    res.json({ notes: map[id] || '' });
+});
+app.patch('/api/orders/:id/notes', (req, res) => {
+    const id = req.params.id;
+    const notes = (req.body && req.body.notes) || '';
+    if (typeof notes !== 'string') {
+        return res.status(400).json({ error: 'validation_failed', message: 'Campo notes deve ser string.' });
+    }
+    try {
+        const map = loadNotesFile();
+        map[id] = notes;
+        saveNotesFile(map);
+        res.json({ success: true, notes });
+    }
+    catch (e) {
+        res.status(500).json({ error: 'server_error', message: (e === null || e === void 0 ? void 0 : e.message) || 'Falha ao salvar notas.' });
+    }
+});
 // KPIs gerais
 app.get("/api/overview", async (req, res) => {
     try {

@@ -590,7 +590,7 @@ export async function createLandingPage(data: any): Promise<LandingPage> {
   }
 
   const id = generateUniqueId();
-  const slug = generateSlug(data.productTitle);
+  const slug = await generateSlug(data.productTitle);
   const fullShippingValue = Boolean(data.freeShipping) ? 0 : Number(data.shippingValue);
 
   const newLandingPage: LandingPage = {
@@ -651,7 +651,7 @@ export async function updateLandingPage(id: string, data: any): Promise<LandingP
   };
 
   if (data.productTitle !== existingLandingPage.productTitle) {
-    updatedLandingPage.slug = generateSlug(data.productTitle);
+    updatedLandingPage.slug = await generateSlug(data.productTitle);
     updatedLandingPage.url = `/l/${updatedLandingPage.slug}`;
   }
 

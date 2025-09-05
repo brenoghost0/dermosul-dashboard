@@ -7,7 +7,7 @@ import Home from "./pages/Home";
 import Pedidos from "./pages/Pedidos";
 import OrderDetail from "./pages/Pedidos/Detail";
 import Landing from "./pages/Landing";
-import Infos from "./pages/Infos";
+import Settings from "./pages/Settings";
 import PublicLandingPage from "./pages/public/Landing"; // Importar o componente da landing page pública
 import PurchaseSuccessPage from "./pages/public/PurchaseSuccess"; // Importar a página de sucesso
 import PublicCheckoutPage from "./pages/public/Checkout"; // Importar a página de checkout pública
@@ -35,7 +35,8 @@ export default function App() {
         <Route path="pedidos" element={<Pedidos />} />
         <Route path="pedidos/:id" element={<OrderDetail />} />
         <Route path="landing" element={<Landing />} />
-        <Route path="infos" element={<Infos />} />
+        <Route path="infos" element={<Settings />} />
+        <Route path="configuracoes" element={<Settings />} />
       </Route>
       <Route path="/l/:slug" element={<PublicLandingPage />} /> {/* Rota para a landing page pública */}
       <Route path="/purchase-success" element={<PurchaseSuccessPage />} /> {/* Rota para a página de sucesso */}

@@ -1,0 +1,76 @@
+=== Dermosul Bot Run 20250902_165301 ===
+DASHBOARD_URL=http://localhost:5174/dashboard/pedidos
+BELEZA_URL=https://www.belezanaweb.com.br/
+FAST_SEARCH=True DELAY_SCALE=0.7 TYPING_DELAY=0.02
+[16:53:01] ✔ 9 infos carregadas
+[16:53:01] → Próximo cartão carregado: **** **** **** 3529
+[16:53:01] Iniciando navegador 1 (Dashboard Pedidos)...
+[16:53:05] → Acessou http://localhost:5174/dashboard/pedidos
+[16:53:06] → Fez login (admin/123)
+[16:53:07] ✔ Encontrados 9 pedidos na tabela
+[16:53:07] Leitura concluída: 9 pedidos
+[16:53:07] → Filtrando por status PAGO: 8 candidatos
+[16:53:07] → Abrindo pedido PAGO #1
+[16:53:07] ✔ Detalhe do pedido aberto com sucesso
+[16:53:07] ✔ Detalhe aberto: Pedido #mq%r%O9@
+[16:53:08] → Produto identificado: SkinCeuticals HA Intensifier Multi-Glycan - Sérum Facial 30ml
+[16:53:08] → E-mail do cliente: danperez8998@gmail.com
+[16:53:08] → Abrindo Beleza na Web para pesquisar: SkinCeuticals HA Intensifier Multi-Glycan - Sérum Facial 30ml
+[16:53:13] ⏱ Início do pedido (cronômetro iniciado)
+[16:53:25] ✔ Pesquisa enviada (rápida)
+[16:53:25] ⏱ Etapa 'Pesquisa' concluída em 11.4s
+[16:53:41] ✔ Adicionado à sacola (página do produto)
+[16:53:41] ⏱ Etapa 'Adicionar à sacola' concluída em 16.3s
+[16:53:46] → CEP do pedido: 40040050
+[16:53:54] ⏱ Etapa 'Validar sacola / Checkout' concluída em 12.9s
+[16:53:54] → Preenchendo e-mail na autenticação: danperez8998x@gmail.com
+[16:53:54] ✔ E-mail enviado na autenticação
+[16:53:55] ⏱ Etapa 'Autenticação' concluída em 1.5s
+[16:53:56] ↻ Aguardando 2s antes de clicar em 'Criar Conta'…
+[16:53:58] ↻ Aguardando 3s após avançar cadastro…
+[16:54:00] ⏱ Etapa 'Cadastro' concluída em 4.7s
+[16:54:00] → CEP do pedido: 40040050
+[16:54:10] → CEP do pedido: 40040050
+[16:54:12] ✔ Endereço salvo e continuado
+[16:54:13] ✔ 'Usar este endereço' clicado
+[16:54:18] ✔ Finalizar Pedido clicado
+[16:54:30] ! Limite diário de tentativas atingido. Reiniciando fluxo…
+[16:54:30] ⏱ Etapa 'Endereço' concluída em 30.2s
+[16:54:30] ! Limite diário detectado no início da etapa de pagamento. Reiniciando fluxo…
+[16:54:30] ⏱ Etapa 'Pagamento' concluída em 0.0s
+[16:54:30] ⏱ Pedido finalizado (sem sucesso) em 77.1s
+[16:54:30]   ⏱ Etapa 'Pesquisa': 11.4s
+[16:54:30]   ⏱ Etapa 'Adicionar à sacola': 16.3s
+[16:54:30]   ⏱ Etapa 'Validar sacola / Checkout': 12.9s
+[16:54:30]   ⏱ Etapa 'Autenticação': 1.5s
+[16:54:30]   ⏱ Etapa 'Cadastro': 4.7s
+[16:54:30]   ⏱ Etapa 'Endereço': 30.2s
+[16:54:30]   ⏱ Etapa 'Pagamento': 0.0s
+[16:54:31] ↻ Repetindo fluxo na Beleza na Web…
+[16:54:31] → Abrindo Beleza na Web para pesquisar: SkinCeuticals HA Intensifier Multi-Glycan - Sérum Facial 30ml
+[16:55:12] ⏱ Início do pedido (cronômetro iniciado)
+[16:55:12] ! Falha na pesquisa rápida: Message: no such window: target window already closed
+from unknown error: web view not found
+  (Session info: chrome=139.0.7258.155)
+Stacktrace:
+0   chromedriver                        0x0000000104c96e00 cxxbridge1$str$ptr + 2742224
+1   chromedriver                        0x0000000104c8ed00 cxxbridge1$str$ptr + 2709200
+2   chromedriver                        0x00000001047d90b8 cxxbridge1$string$len + 90520
+3   chromedriver                        0x00000001047b2ea0 chromedriver + 143008
+4   chromedriver                        0x00000001048486b8 cxxbridge1$string$len + 546712
+5   chromedriver                        0x00000001048614c0 cxxbridge1$string$len + 648608
+6   chromedriver                        0x00000001048148f4 cxxbridge1$string$len + 334292
+7   chromedriver                        0x0000000104c5a478 cxxbridge1$str$ptr + 2494024
+8   chromedriver                        0x0000000104c5d6a4 cxxbridge1$str$ptr + 2506868
+9   chromedriver                        0x0000000104c3b3b0 cxxbridge1$str$ptr + 2366848
+10  chromedriver                        0x0000000104c5df4c cxxbridge1$str$ptr + 2509084
+11  chromedriver                        0x0000000104c2c4a8 cxxbridge1$str$ptr + 2305656
+12  chromedriver                        0x0000000104c7d644 cxxbridge1$str$ptr + 2637844
+13  chromedriver                        0x0000000104c7d7d0 cxxbridge1$str$ptr + 2638240
+14  chromedriver                        0x0000000104c8e94c cxxbridge1$str$ptr + 2708252
+15  libsystem_pthread.dylib             0x00000001879f6c0c _pthread_start + 136
+16  libsystem_pthread.dylib             0x00000001879f1b80 thread_start + 8
+
+[16:55:12] ⏱ Etapa 'Pesquisa' concluída em 0.0s
+[16:55:13] ↻ Repetindo fluxo na Beleza na Web…
+[16:55:13] → Abrindo Beleza na Web para pesquisar: SkinCeuticals HA Intensifier Multi-Glycan - Sérum Facial 30ml

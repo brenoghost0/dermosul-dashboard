@@ -1,29 +1,15 @@
 #!/bin/bash
 
-# Para a execução se qualquer comando falhar
-set -e
+# Parar e remover contêineres, redes e volumes antigos
+echo "Parando e removendo contêineres antigos..."
+docker-compose down --volumes
 
-# Puxa as últimas alterações do repositório
-echo "Buscando atualizações do repositório..."
-git pull origin main # ou a branch que você usa para produção
+# Construir as imagens novamente
+echo "Construindo as imagens Docker..."
+docker-compose build
 
-# Navega para o diretório do backend e instala dependências
-echo "Instalando dependências do backend..."
-cd backend
-npm install
-cd ..
+# Iniciar os serviços em modo detached
+echo "Iniciando os serviços..."
+docker-compose up -d
 
-# Instala dependências do frontend/raiz
-echo "Instalando dependências do frontend..."
-npm install
-
-# Faz o build da aplicação
-echo "Construindo a aplicação..."
-npm run build
-
-# Reinicia os containers do Docker
-echo "Reiniciando os serviços com Docker Compose..."
-docker-compose down
-docker-compose up -d --build
-
-echo "Deploy concluído com sucesso!"
+echo "Deploy concluído! A aplicação deve estar acessível em breve."

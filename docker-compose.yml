@@ -24,7 +24,7 @@ services:
     build: .
     restart: always
     ports:
-      - "80:3007"
+      - "80:3003"
     depends_on:
       - db
     environment:

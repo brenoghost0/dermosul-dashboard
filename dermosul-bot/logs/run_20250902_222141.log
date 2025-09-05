@@ -1,0 +1,39 @@
+=== Dermosul Bot Run 20250902_222141 ===
+DASHBOARD_URL=http://localhost:5174/dashboard/pedidos
+BELEZA_URL=https://www.belezanaweb.com.br/
+FAST_SEARCH=True DELAY_SCALE=0.7 TYPING_DELAY=0.02
+[22:21:41] ✔ 7 infos carregadas
+[22:21:41] → Próximo cartão carregado: **** **** **** 0974
+[22:21:41] Iniciando navegador 1 (Dashboard Pedidos)...
+[22:21:46] → Acessou http://localhost:5174/dashboard/pedidos
+[22:21:46] → Fez login (admin/123)
+[22:21:48] ✔ Encontrados 20 pedidos na tabela
+[22:21:48] Leitura concluída: 20 pedidos
+[22:21:49] → Página 1: encontrados 7 pedidos com status PAGO
+[22:21:49] → Abrindo pedido PAGO #1 na página 1
+[22:21:49] ✔ Detalhe do pedido aberto com sucesso
+[22:21:49] ✔ Detalhe aberto: Pedido #12434106
+[22:21:50] → Produto identificado: SkinCeuticals HA Intensifier Multi-Glycan - Sérum Facial 30ml
+[22:21:50] → Quantidade do pedido: 3
+[22:21:50] → E-mail do cliente: Marcia_Batista77@live.com
+[22:21:50] → Abrindo Beleza na Web para pesquisar: SkinCeuticals HA Intensifier Multi-Glycan - Sérum Facial 30ml
+[22:22:03] ⏱ Início do pedido (cronômetro iniciado)
+[22:22:04] ✔ Pesquisa enviada (rápida)
+[22:22:04] ⏱ Etapa 'Pesquisa' concluída em 1.3s
+[22:23:00] ✔ Adicionado à sacola (página do produto)
+[22:23:00] ⏱ Etapa 'Adicionar à sacola' concluída em 41.2s
+[22:23:10] → CEP do pedido: 60025001
+[22:23:18] ⏱ Etapa 'Validar sacola / Checkout' concluída em 17.6s
+[22:23:18] → Preenchendo e-mail na autenticação: Marcia_Batista77v@live.com
+[22:23:18] ✔ E-mail enviado na autenticação
+[22:23:20] ⏱ Etapa 'Autenticação' concluída em 1.9s
+[22:23:21] ↻ Aguardando 2s antes de clicar em 'Criar Conta'…
+[22:23:23] ↻ Aguardando 3s após avançar cadastro…
+[22:23:25] ⏱ Etapa 'Cadastro' concluída em 4.8s
+[22:23:25] → CEP do pedido: 60025001
+[22:23:35] → CEP do pedido: 60025001
+[22:23:37] ✔ Endereço salvo e continuado
+[22:23:38] ✔ 'Usar este endereço' clicado
+[22:23:43] ✔ Finalizar Pedido clicado
+[22:24:06] ! Falha ao concluir pagamento na tentativa 1/3.
+[22:24:08] ✔ Finalizar Pedido clicado

@@ -1,7 +1,9 @@
 // src/lib/api.ts
 import axios from 'axios';
 
-export const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3007';
+// Usa a origem atual do navegador como padrão em produção (mesma origem)
+const RUNTIME_ORIGIN = typeof window !== 'undefined' && (window.location?.origin || '');
+export const API_BASE_URL = (import.meta as any)?.env?.VITE_API_BASE_URL || RUNTIME_ORIGIN || 'http://localhost:3007';
 
 export const apiClient = axios.create({
   baseURL: `${API_BASE_URL}/api`,
@@ -70,18 +72,21 @@ export async function http<T>(path: string, config?: RequestInit): Promise<T> {
   });
 
   if (!r.ok) {
-    // Se a resposta não for OK, tenta extrair o corpo do erro.
-    const errorData = await r.json().catch(() => ({ message: "Erro desconhecido da API." }));
-    
-    // Se o status for 401 (não autorizado), limpa o estado de autenticação local
-    // e joga o erro para que o componente possa decidir o que fazer (ex: redirecionar).
+    // Tenta JSON; se falhar, captura texto para mensagem mais útil
+    let message = '';
+    try {
+      const errorData = await r.json();
+      message = errorData?.message || '';
+    } catch {
+      try {
+        const t = await r.text();
+        message = t ? `${r.status} ${r.statusText}: ${t.slice(0, 200)}` : '';
+      } catch {}
+    }
     if (r.status === 401) {
       localStorage.removeItem("auth");
-      // Não redireciona mais daqui. Apenas propaga o erro.
     }
-    
-    // Lança o erro com a mensagem do backend ou uma mensagem padrão.
-    throw new Error(errorData.message || `Falha na requisição para ${path}`);
+    throw new Error(message || `Falha na requisição para ${path}`);
   }
   return r.json();
 }
@@ -191,23 +196,29 @@ export const api = {
     const url = `/api/orders/export?${qs.toString()}`;
     return fetch(url); // o caller faz .blob() e baixa
   },
-  getOrderById: (id: string) => http<OrderDetail>(`/api/orders/${id}`),
+  getOrderById: (id: string) => http<OrderDetail>(`/api/orders/${encodeURIComponent(id)}`),
   saveOrder: (id: string, data: Partial<OrderDetail>) => {
-    return http<OrderDetail>(`/api/orders/${id}`, {
+    return http<OrderDetail>(`/api/orders/${encodeURIComponent(id)}`, {
       method: 'PATCH',
       body: JSON.stringify(data),
     });
   },
   deleteOrder: (id: string) => {
-    return http<{ success: boolean }>(`/api/orders/${id}`, {
+    return http<{ success: boolean }>(`/api/orders/${encodeURIComponent(id)}` , {
       method: 'DELETE',
     });
   },
+  getOrderNotes: (id: string) => http<{ notes: string }>(`/api/orders/${encodeURIComponent(id)}/notes`),
+  saveOrderNotes: (id: string, notes: string) => http<{ success: boolean; notes: string }>(`/api/orders/${encodeURIComponent(id)}/notes`, {
+    method: 'PATCH',
+    body: JSON.stringify({ notes }),
+  }),
 };
 
 export interface LandingPage {
   id: string;
   slug: string; // Adicionado slug
+  template: string; // Adicionado template
   imageUrl?: string; // URL da imagem
   productTitle: string;
   productDescription: string;
@@ -224,6 +235,7 @@ export interface LandingPage {
 export const landingPageApi = {
   createLandingPage: async (data: {
     image?: File;
+    template: string;
     productTitle: string;
     productDescription: string;
     productBrand: string;
@@ -235,6 +247,7 @@ export const landingPageApi = {
     if (data.image) {
       formData.append('image', data.image);
     }
+    formData.append('template', data.template);
     formData.append('productTitle', data.productTitle);
     formData.append('productDescription', data.productDescription);
     formData.append('productBrand', data.productBrand);
@@ -258,6 +271,7 @@ export const landingPageApi = {
   },
   updateLandingPage: async (id: string, data: {
     image?: File;
+    template: string;
     productTitle: string;
     productDescription: string;
     productBrand: string;
@@ -269,6 +283,7 @@ export const landingPageApi = {
     if (data.image) {
       formData.append('image', data.image);
     }
+    formData.append('template', data.template);
     formData.append('productTitle', data.productTitle);
     formData.append('productDescription', data.productDescription);
     formData.append('productBrand', data.productBrand);

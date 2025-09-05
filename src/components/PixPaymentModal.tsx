@@ -1,11 +1,11 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 
 interface PixPaymentModalProps {
   isOpen: boolean;
   onClose: () => void;
   qrCode: string;
   pixCopyPaste: string;
-  onConfirm: () => void;
+  onCheckPaymentStatus: () => Promise<boolean>; // Função que verifica o status e retorna true se pago
   amount: number;
 }
 
@@ -14,18 +14,41 @@ const PixPaymentModal: React.FC<PixPaymentModalProps> = ({
   onClose,
   qrCode,
   pixCopyPaste,
-  onConfirm,
+  onCheckPaymentStatus,
   amount,
 }) => {
+  const [isChecking, setIsChecking] = useState(false);
+
+  useEffect(() => {
+    if (!isOpen) {
+      return;
+    }
+
+    setIsChecking(true);
+    const intervalId = setInterval(async () => {
+      const isPaid = await onCheckPaymentStatus();
+      if (isPaid) {
+        clearInterval(intervalId);
+        setIsChecking(false);
+      }
+    }, 5000); // Verifica a cada 5 segundos
+
+    // Limpa o intervalo quando o modal é fechado
+    return () => {
+      clearInterval(intervalId);
+      setIsChecking(false);
+    };
+  }, [isOpen, onCheckPaymentStatus]);
+
   if (!isOpen) return null;
 
   const handleCopy = () => {
     navigator.clipboard.writeText(pixCopyPaste);
-    // Adicionar feedback visual para o usuário, se desejar
+    // Adicionar feedback visual (ex: toast) seria uma boa melhoria aqui
   };
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+    <div className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50 animate-fade-in">
       <div className="bg-white rounded-lg shadow-xl p-8 max-w-md w-full text-center">
         <h2 className="text-2xl font-bold text-gray-800 mb-4">Pague com Pix</h2>
         <p className="text-gray-600 mb-6">
@@ -49,24 +72,26 @@ const PixPaymentModal: React.FC<PixPaymentModalProps> = ({
           </div>
         </div>
 
-        <p className="text-lg font-semibold text-gray-800 mb-6">
+        <p className="text-lg font-semibold text-gray-800 mb-4">
           Total: {amount.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
         </p>
 
-        <div className="space-y-4">
-          <button
-            onClick={onConfirm}
-            className="w-full py-3 bg-emerald-600 text-white font-bold rounded-lg hover:bg-emerald-700 transition-colors"
-          >
-            Simular Pagamento (Aprovação Automática)
-          </button>
-          <button
-            onClick={onClose}
-            className="w-full py-2 text-sm text-gray-600 hover:text-gray-800"
-          >
-            Cancelar
-          </button>
+        <div className="bg-blue-50 border border-blue-200 text-blue-800 text-sm rounded-lg p-3 mb-6">
+          <div className="flex items-center justify-center">
+            <svg className="animate-spin h-5 w-5 mr-3" viewBox="0 0 24 24">
+              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+              <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+            </svg>
+            <span>Aguardando confirmação de pagamento...</span>
+          </div>
         </div>
+
+        <button
+          onClick={onClose}
+          className="w-full py-2 text-sm text-gray-500 hover:text-gray-700"
+        >
+          Fechar
+        </button>
       </div>
     </div>
   );

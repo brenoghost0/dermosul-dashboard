@@ -30,6 +30,7 @@ export const {
   createPublicOrder,
   updateLandingPageStatus,
   updateOrderStatusByExternalReference,
+  getOrderByExternalReference,
 } = sqlAdapter;
 
 // Exportar utilitários de data que são usados pelo server.ts

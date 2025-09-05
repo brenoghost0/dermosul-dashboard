@@ -20,7 +20,7 @@ RUN npx prisma generate
 RUN npm run build
 
 # Expor a porta que a aplicação usa
-EXPOSE 3007
+EXPOSE 3003
 
 # Definir o comando para iniciar a aplicação
 CMD ["npm", "start"]

@@ -20,7 +20,7 @@ export default function DashboardLayout() {
           <Link to="/dashboard">Home</Link>
           <Link to="/dashboard/pedidos">Pedidos</Link>
           <Link to="/dashboard/landing">Landing</Link>
-          <Link to="/dashboard/infos">Infos</Link>
+          <Link to="/dashboard/configuracoes">Configurações</Link>
         </nav>
         <button onClick={logout} style={{marginTop:"16px",padding:"8px 12px",borderRadius:"8px",border:"1px solid #194C33",background:"#fff",cursor:"pointer"}}>Sair</button>
       </aside>

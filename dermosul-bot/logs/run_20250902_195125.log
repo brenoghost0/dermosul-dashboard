@@ -1,0 +1,5 @@
+=== Dermosul Bot Run 20250902_195125 ===
+DASHBOARD_URL=http://localhost:5174/dashboard/pedidos
+BELEZA_URL=https://www.belezanaweb.com.br/
+FAST_SEARCH=True DELAY_SCALE=0.7 TYPING_DELAY=0.02
+[19:51:25] Mantendo o navegador aberto para inspeção.

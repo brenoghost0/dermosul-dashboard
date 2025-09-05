@@ -7,7 +7,7 @@ generator client {
 }
 
 datasource db {
-  provider = "sqlite"
+  provider = "postgresql"
   url      = env("DATABASE_URL")
 }
 
@@ -63,15 +63,16 @@ model Address {
 }
 
 model Order {
-  id          String        @id
-  customerId  String        @map("customer_id")
-  customer    Customer      @relation(fields: [customerId], references: [id])
-  status      OrderStatus
-  category    String
-  totalAmount Int           @map("total_amount") // Em centavos
-  createdAt   DateTime      @default(now()) @map("created_at")
-  items       OrderItem[]
-  payments    Payment[]
+  id                 String        @id
+  externalReference  String?       @unique @map("external_reference")
+  customerId         String        @map("customer_id")
+  customer           Customer      @relation(fields: [customerId], references: [id])
+  status             OrderStatus
+  category           String
+  totalAmount        Int        @map("total_amount") // Em centavos
+  createdAt          DateTime      @default(now()) @map("created_at")
+  items              OrderItem[]
+  payments           Payment[]
 
   @@index([createdAt])
   @@index([status])
@@ -85,7 +86,7 @@ model OrderItem {
   sku       String
   name      String
   qty       Int
-  unitPrice Int      @map("unit_price") // Em centavos
+  unitPrice Int   @map("unit_price") // Em centavos
 
   @@map("order_items")
 }
@@ -95,7 +96,7 @@ model Payment {
   orderId       String        @map("order_id")
   order         Order         @relation(fields: [orderId], references: [id], onDelete: Cascade)
   paymentMethod PaymentMethod @map("payment_method")
-  paidAmount    Int           @map("paid_amount") // Em centavos
+  paidAmount    Int        @map("paid_amount") // Em centavos
   status        String // Status do pagamento, pode ser mais detalhado que o status do pedido
   createdAt     DateTime      @default(now()) @map("created_at")
 
@@ -106,13 +107,14 @@ model Payment {
 model LandingPage {
   id            String            @id @default(cuid())
   slug          String            @unique
+  template      String            @default("MODELO_1")
   title         String
   brand         String
   description   String?
-  price         Int               // Em centavos
+  price         Int            // Em centavos
   freeShipping  Boolean           @map("free_shipping")
   imageUrl      String?           @map("image_url")
-  shippingPrice Int               @map("shipping_price") // Em centavos
+  shippingPrice Int            @map("shipping_price") // Em centavos
   status        LandingPageStatus @default(ATIVA)
   createdAt     DateTime          @default(now()) @map("created_at")
   updatedAt     DateTime?         @updatedAt
@@ -123,9 +125,25 @@ model LandingPage {
 
 model User {
   id           String   @id @default(cuid())
+  name         String? 
+  email        String?  @unique
   username     String   @unique
   passwordHash String   @map("password_hash")
   createdAt    DateTime @default(now()) @map("created_at")
 
   @@map("users")
+}
+
+model Operator {
+  id                  String   @id @default(cuid())
+  name                String
+  email               String
+  username            String   @unique
+  passwordHash        String   @map("password_hash")
+  canGenerateLandings Boolean  @default(true)
+  canViewOrders       Boolean  @default(true)
+  canManageAll        Boolean  @default(false)
+  createdAt           DateTime @default(now()) @map("created_at")
+
+  @@map("operators")
 }

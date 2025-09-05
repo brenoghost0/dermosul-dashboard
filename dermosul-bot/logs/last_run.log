@@ -1,0 +1,37 @@
+=== Dermosul Bot Run 20250902_201204 ===
+DASHBOARD_URL=http://localhost:5174/dashboard/pedidos
+BELEZA_URL=https://www.belezanaweb.com.br/
+FAST_SEARCH=True DELAY_SCALE=0.7 TYPING_DELAY=0.02
+[20:12:04] ✔ 9 infos carregadas
+[20:12:04] → Próximo cartão carregado: **** **** **** 3529
+[20:12:04] Iniciando navegador 1 (Dashboard Pedidos)...
+[20:12:09] → Acessou http://localhost:5174/dashboard/pedidos
+[20:12:09] → Fez login (admin/123)
+[20:12:11] ✔ Encontrados 20 pedidos na tabela
+[20:12:11] Leitura concluída: 20 pedidos
+[20:12:11] → Página 1: encontrados 6 pedidos com status PAGO
+[20:12:11] → Abrindo pedido PAGO #1 na página 1
+[20:12:12] ✔ Detalhe do pedido aberto com sucesso
+[20:12:12] ✔ Detalhe aberto: Pedido #47880617
+[20:12:12] → Produto identificado: SkinCeuticals HA Intensifier Multi-Glycan - Sérum Facial 30ml
+[20:12:12] → Quantidade do pedido: 2
+[20:12:12] → E-mail do cliente: Joaquim.Pereira72@bol.com.br
+[20:12:12] → Abrindo Beleza na Web para pesquisar: SkinCeuticals HA Intensifier Multi-Glycan - Sérum Facial 30ml
+[20:12:14] ⏱ Início do pedido (cronômetro iniciado)
+[20:12:15] ✔ Pesquisa enviada (rápida)
+[20:12:15] ⏱ Etapa 'Pesquisa' concluída em 0.2s
+[20:12:35] ⏱ Etapa 'Adicionar à sacola' concluída em 20.3s
+[20:12:35] ↻ Repetindo fluxo na Beleza na Web…
+[20:12:35] → Abrindo Beleza na Web para pesquisar: SkinCeuticals HA Intensifier Multi-Glycan - Sérum Facial 30ml
+[20:12:38] ⏱ Início do pedido (cronômetro iniciado)
+[20:12:38] ✔ Pesquisa enviada (rápida)
+[20:12:38] ⏱ Etapa 'Pesquisa' concluída em 0.2s
+[20:12:58] ⏱ Etapa 'Adicionar à sacola' concluída em 20.1s
+[20:12:58] ↻ Repetindo fluxo na Beleza na Web…
+[20:12:58] → Abrindo Beleza na Web para pesquisar: SkinCeuticals HA Intensifier Multi-Glycan - Sérum Facial 30ml
+[20:13:00] ⏱ Início do pedido (cronômetro iniciado)
+[20:13:01] ✔ Pesquisa enviada (rápida)
+[20:13:01] ⏱ Etapa 'Pesquisa' concluída em 0.2s
+[20:13:21] ⏱ Etapa 'Adicionar à sacola' concluída em 20.2s
+[20:13:21] ↻ Repetindo fluxo na Beleza na Web…
+[20:13:21] ! Fluxo não concluído — verifique a janela do navegador para preencher/corrigir.

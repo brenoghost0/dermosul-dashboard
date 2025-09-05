@@ -5,7 +5,7 @@ import { toISO, lastNDays, generateUniqueId, generateSlug, generateShortId } fro
 
 // --- Funções Utilitárias para Mapeamento e Conversão ---
 
-// Converte valores monetários para centavos (inteiros)
+// Converte valores monetários para centavos (Int)
 const toCents = (value: number): number => Math.round(value * 100);
 const fromCents = (value: number): number => value / 100;
 
@@ -57,9 +57,18 @@ const validateCpf = (cpf: string): boolean => {
 };
 
 // Mapeia um pedido do DB (Prisma) para o formato do frontend
-function mapOrderFromPrisma(o: any): any { // Usar 'any' para o objeto bruto do Prisma
+function mapOrderFromPrisma(o: any): any {
   const first = o?.customer?.firstName || "";
   const last = o?.customer?.lastName || "";
+
+  const itemsTotal = Array.isArray(o?.items) 
+    ? o.items.reduce((sum: number, item: any) => {
+        const itemPrice = Number(item.unitPrice || 0);
+        const itemQty = Number(item.qty || 0);
+        return sum + (itemQty * itemPrice);
+      }, 0)
+    : 0;
+
   return {
     id: o.id.substring(0, 8),
     fullId: o.id,
@@ -72,7 +81,7 @@ function mapOrderFromPrisma(o: any): any { // Usar 'any' para o objeto bruto do 
     payment: o.payments && o.payments.length > 0 ? {
       method: o.payments[0].paymentMethod || "desconhecido",
       status: o.payments[0].status || "pendente",
-      installments: 1, // Prisma não tem installments, assumir 1
+      installments: 1,
       paidAmount: fromCents(o.payments[0].paidAmount || 0),
     } : { method: "desconhecido", status: "pendente", installments: 1, paidAmount: 0 },
     clientInfo: o.customer ? { name: `${first} ${last}`.trim(), email: o.customer.email, phone: o.customer.phone } : { name: "Cliente", email: "", phone: "" },
@@ -104,18 +113,17 @@ function mapOrderFromPrisma(o: any): any { // Usar 'any' para o objeto bruto do 
       name: item.name || "Produto",
       qty: item.qty || 0,
       price: fromCents(item.unitPrice || 0),
-      subtotal: fromCents((item.qty || 0) * (item.unitPrice || 0)),
+      subtotal: fromCents(Number(item.qty || 0) * Number(item.unitPrice || 0)),
     })) : [],
     totals: {
-      itemsTotal: fromCents(o.items.reduce((sum: number, item: any) => sum + (item.qty * item.unitPrice), 0)),
+      itemsTotal: fromCents(itemsTotal),
       shipping: 0,
       discount: 0,
       grandTotal: fromCents(o.totalAmount),
-      subTotal: fromCents(o.items.reduce((sum: number, item: any) => sum + (item.qty * item.unitPrice), 0)),
+      subTotal: fromCents(itemsTotal),
       total: fromCents(o.totalAmount),
     },
-    timeline: [],
-    _raw: o
+    timeline: []
   };
 }
 
@@ -158,25 +166,31 @@ export async function listOrders(params: any): Promise<any> {
 
   let orderBy: any = { createdAt: 'desc' };
   if (sort) {
+    // Aceita formatos antigos (dateAsc/dateDesc/valueAsc/valueDesc/clientAsc/clientDesc)
     switch (sort) {
-      case 'dateAsc':
-        orderBy = { createdAt: 'asc' };
-        break;
-      case 'dateDesc':
-        orderBy = { createdAt: 'desc' };
-        break;
-      case 'valueAsc':
-        orderBy = { totalAmount: 'asc' };
-        break;
-      case 'valueDesc':
-        orderBy = { totalAmount: 'desc' };
-        break;
-      case 'clientAsc':
-        orderBy = [{ customer: { firstName: 'asc' } }, { customer: { lastName: 'asc' } }];
-        break;
-      case 'clientDesc':
-        orderBy = [{ customer: { firstName: 'desc' } }, { customer: { lastName: 'desc' } }];
-        break;
+      case 'dateAsc': orderBy = { createdAt: 'asc' }; break;
+      case 'dateDesc': orderBy = { createdAt: 'desc' }; break;
+      case 'valueAsc': orderBy = { totalAmount: 'asc' }; break;
+      case 'valueDesc': orderBy = { totalAmount: 'desc' }; break;
+      case 'clientAsc': orderBy = [{ customer: { firstName: 'asc' } }, { customer: { lastName: 'asc' } }]; break;
+      case 'clientDesc': orderBy = [{ customer: { firstName: 'desc' } }, { customer: { lastName: 'desc' } }]; break;
+      default: {
+        // Também aceita "createdAt:desc" ou "createdAt,desc"
+        const s = String(sort);
+        let field = '';
+        let dir = '';
+        if (s.includes(':')) {
+          [field, dir] = s.split(':');
+        } else if (s.includes(',')) {
+          [field, dir] = s.split(',');
+        }
+        field = (field || '').trim();
+        dir = (dir || '').trim().toLowerCase();
+        if ((field === 'createdAt' || field === 'total' || field === 'totalAmount') && (dir === 'asc' || dir === 'desc')) {
+          if (field === 'total') field = 'totalAmount';
+          orderBy = { [field]: dir } as any;
+        }
+      }
     }
   }
 
@@ -184,24 +198,44 @@ export async function listOrders(params: any): Promise<any> {
   const ps = Math.max(parseInt(pageSize, 10) || 20, 1);
   const skip = (p - 1) * ps;
 
-  const [orders, total] = await prisma.$transaction([
-    prisma.order.findMany({
-      where,
-      orderBy,
-      skip,
-      take: ps,
-      include: {
-        customer: {
-          include: {
-            addresses: true
-          }
+  let orders: any[] = [];
+  let total = 0;
+  try {
+    [orders, total] = await prisma.$transaction([
+      prisma.order.findMany({
+        where,
+        orderBy,
+        skip,
+        take: ps,
+        include: {
+          customer: { include: { addresses: true } },
+          items: true,
+          payments: true,
         },
-        items: true,
-        payments: true,
-      },
-    }),
-    prisma.order.count({ where }),
-  ]);
+      }),
+      prisma.order.count({ where }),
+    ]);
+  } catch (e) {
+    // Fallback: se orderBy composto não for aceito por alguma versão do Prisma
+    try {
+      [orders, total] = await prisma.$transaction([
+        prisma.order.findMany({
+          where,
+          orderBy: { createdAt: 'desc' },
+          skip,
+          take: ps,
+          include: {
+            customer: { include: { addresses: true } },
+            items: true,
+            payments: true,
+          },
+        }),
+        prisma.order.count({ where }),
+      ]);
+    } catch (err) {
+      throw err;
+    }
+  }
 
   return {
     items: orders.map(mapOrderFromPrisma),
@@ -382,7 +416,7 @@ export async function updateOrder(id: string, updatedFields: any): Promise<any |
     data: {
       status: updatedFields.status ? updatedFields.status.toLowerCase() as any : existingOrder.status,
       category: updatedFields.category || existingOrder.category,
-      totalAmount: updatedFields.total ? toCents(updatedFields.total) : existingOrder.totalAmount,
+      totalAmount: updatedFields.total ? toCents(updatedFields.total) : Number(existingOrder.totalAmount),
       createdAt: updatedFields.createdAt ? new Date(updatedFields.createdAt) : existingOrder.createdAt,
     },
   });
@@ -443,28 +477,26 @@ export async function statsLast14Days(): Promise<any> {
   const days = lastNDays(14);
   const startDate = new Date(days[0]);
 
-  const orders = await prisma.order.findMany({
+  // Conta todos os pedidos (qualquer status) para calcular taxa de conversão
+  const allOrdersCount = await prisma.order.count({
     where: {
-      createdAt: {
-        gte: startDate,
-      },
-    },
-    include: {
-      payments: true,
+      createdAt: { gte: startDate },
     },
   });
 
-  let totalRevenue = 0;
-  let totalOrders = orders.length;
-  let paidOrders = 0;
+  // Considera apenas pedidos pagos (e enviados) para métricas principais
+  const paidOrders = await prisma.order.findMany({
+    where: {
+      createdAt: { gte: startDate },
+      status: { in: ['pago', 'enviado'] },
+    },
+    include: { payments: true },
+  });
 
-  for (const o of orders) {
-    totalRevenue += fromCents(o.totalAmount);
-    if (o.status === "pago") paidOrders += 1;
-  }
-
+  const totalOrders = paidOrders.length;
+  const totalRevenue = paidOrders.reduce((sum, o) => sum + fromCents(o.totalAmount), 0);
   const avgTicket = totalOrders ? totalRevenue / totalOrders : 0;
-  const convAvg = totalOrders ? (paidOrders / totalOrders) * 100 : 0;
+  const convAvg = allOrdersCount ? (totalOrders / allOrdersCount) * 100 : 0;
   const breakdown = await paymentsBreakdown();
 
   return {
@@ -503,7 +535,7 @@ export async function paymentsBreakdown(): Promise<{ method: string; amount: num
     return [];
   }
 
-  const breakdown = paymentAggregates.map((group: { paymentMethod: string; _sum: { paidAmount: number | null } }) => ({
+  const breakdown = paymentAggregates.map((group) => ({
     method: group.paymentMethod || 'desconhecido',
     amount: fromCents(group._sum.paidAmount || 0),
   }));
@@ -517,10 +549,26 @@ export async function listLandingPages(): Promise<any[]> {
       orderBy: {
         createdAt: 'desc',
       },
+      select: {
+        id: true,
+        slug: true,
+        template: true,
+        title: true,
+        description: true,
+        brand: true,
+        price: true,
+        freeShipping: true,
+        imageUrl: true,
+        shippingPrice: true,
+        status: true,
+        createdAt: true,
+        updatedAt: true,
+      }
     });
     return landingPages.map((lp: any) => ({
       id: lp.id,
       slug: lp.slug || '',
+      template: lp.template || 'MODELO_1',
       productTitle: lp.title || 'Produto sem Título',
       productDescription: lp.description || '',
       productBrand: lp.brand || 'Marca Desconhecida',
@@ -553,11 +601,12 @@ export async function createLandingPage(data: any): Promise<any> {
     throw new Error("Valor do frete é obrigatório quando frete grátis não está marcado.");
   }
 
-  const slug = data.slug || generateSlug(data.productTitle);
+  const slug = data.slug || await generateSlug(data.productTitle);
 
   const newLandingPage = await prisma.landingPage.create({
     data: {
       slug,
+      template: data.template || 'MODELO_1',
       title: data.productTitle,
       brand: data.productBrand,
       description: data.productDescription || "",
@@ -572,6 +621,7 @@ export async function createLandingPage(data: any): Promise<any> {
   return {
     id: newLandingPage.id,
     slug: newLandingPage.slug,
+    template: newLandingPage.template,
     productTitle: newLandingPage.title,
     productDescription: newLandingPage.description || '',
     productBrand: newLandingPage.brand,
@@ -609,13 +659,14 @@ export async function updateLandingPage(id: string, data: any): Promise<any | nu
 
   let updatedSlug = existingLandingPage.slug;
   if (data.productTitle !== existingLandingPage.title) {
-    updatedSlug = generateSlug(data.productTitle);
+    updatedSlug = await generateSlug(data.productTitle);
   }
 
   const updatedLandingPage = await prisma.landingPage.update({
     where: { id },
     data: {
       slug: updatedSlug,
+      template: data.template || existingLandingPage.template,
       title: data.productTitle,
       brand: data.productBrand,
       description: data.productDescription || "",
@@ -630,6 +681,7 @@ export async function updateLandingPage(id: string, data: any): Promise<any | nu
   return {
     id: updatedLandingPage.id,
     slug: updatedLandingPage.slug,
+    template: updatedLandingPage.template,
     productTitle: updatedLandingPage.title,
     productDescription: updatedLandingPage.description || '',
     productBrand: updatedLandingPage.brand,
@@ -656,11 +708,29 @@ export async function deleteLandingPage(id: string): Promise<boolean> {
 }
 
 export async function getLandingBySlug(slug: string) {
-  const lp = await prisma.landingPage.findUnique({ where: { slug } });
+  const lp = await prisma.landingPage.findUnique({
+    where: { slug },
+    select: {
+      id: true,
+      slug: true,
+      template: true,
+      title: true,
+      brand: true,
+      description: true,
+      price: true,
+      freeShipping: true,
+      shippingPrice: true,
+      imageUrl: true,
+      status: true,
+      createdAt: true,
+      updatedAt: true,
+    }
+  });
   if (!lp) return null;
   return {
     id: lp.id,
     slug: lp.slug,
+    template: lp.template,
     productTitle: lp.title,
     productBrand: lp.brand,
     productDescription: lp.description,
@@ -675,15 +745,70 @@ export async function getLandingBySlug(slug: string) {
 }
 
 export async function updateLandingPageStatus(id: string, status: 'ATIVA' | 'PAUSADA'): Promise<any | null> {
-  const updatedLandingPage = await prisma.landingPage.update({
+  const lp = await prisma.landingPage.update({
     where: { id },
     data: { status },
+    select: {
+      id: true,
+      slug: true,
+      template: true,
+      title: true,
+      brand: true,
+      description: true,
+      price: true,
+      freeShipping: true,
+      imageUrl: true,
+      shippingPrice: true,
+      status: true,
+      createdAt: true,
+      updatedAt: true,
+    }
   });
-  return updatedLandingPage;
+  // Normalize response to avoid BigInt serialization and keep API consistent
+  return {
+    id: lp.id,
+    slug: lp.slug,
+    template: lp.template,
+    productTitle: lp.title,
+    productBrand: lp.brand,
+    productDescription: lp.description || '',
+    productPrice: fromCents(lp.price || 0),
+    freeShipping: lp.freeShipping,
+    imageUrl: lp.imageUrl || '',
+    shippingValue: fromCents(lp.shippingPrice || 0),
+    status: lp.status,
+    createdAt: lp.createdAt.toISOString(),
+    updatedAt: lp.updatedAt ? lp.updatedAt.toISOString() : undefined,
+    url: `/l/${lp.slug}`,
+  };
+}
+
+export async function getOrderByExternalReference(externalReference: string): Promise<any | null> {
+  const order = await prisma.order.findUnique({
+    where: { externalReference },
+    include: {
+      customer: {
+        include: {
+          addresses: true
+        }
+      },
+      items: true,
+      payments: true,
+    },
+  });
+  return order ? mapOrderFromPrisma(order) : null;
+}
+
+function safeStringify(value: any) {
+  try {
+    return JSON.stringify(value, (_k, v) => (typeof v === 'bigint' ? v.toString() : v), 2);
+  } catch {
+    return String(value);
+  }
 }
 
 export async function createPublicOrder(orderData: any): Promise<any> {
-  console.log("1. Recebido payload bruto:", JSON.stringify(orderData, null, 2));
+  console.log("1. Recebido payload bruto:", safeStringify(orderData));
 
   const errors: { [key: string]: string } = {};
 
@@ -694,6 +819,7 @@ export async function createPublicOrder(orderData: any): Promise<any> {
     cep, address, addressNumber, district, city, state,
     cpf, phone, birthDate, gender,
     productId, productTitle, productPrice, qty,
+    externalReference, // Captura a referência externa
   } = orderData;
 
   // Validações de campos obrigatórios
@@ -782,7 +908,7 @@ export async function createPublicOrder(orderData: any): Promise<any> {
     paymentMethod: orderData.paymentMethod || 'cartao',
   };
 
-  console.log("3. Payload normalizado:", JSON.stringify(normalizedPayload, null, 2));
+  console.log("3. Payload normalizado:", safeStringify(normalizedPayload));
 
   // --- 4. Transação Atômica ---
   try {
@@ -821,8 +947,9 @@ export async function createPublicOrder(orderData: any): Promise<any> {
       const order = await tx.order.create({
         data: {
           id: generateShortId(),
+          externalReference: externalReference, // Salva a referência externa
           customer: { connect: { id: customer.id } },
-          status: 'pago', // Simulado como pago, pois não há gateway
+          status: orderData.status || 'pendente', // Usa o status do payload
           category: "Online",
           totalAmount: normalizedPayload.totalAmount,
           items: { create: [normalizedPayload.item] },
@@ -830,7 +957,7 @@ export async function createPublicOrder(orderData: any): Promise<any> {
             create: {
               paymentMethod: mapPaymentMethodToPrisma(normalizedPayload.paymentMethod),
               paidAmount: normalizedPayload.totalAmount,
-              status: 'confirmado',
+              status: orderData.status === 'pago' ? 'confirmado' : 'pendente',
             },
           },
         },
@@ -858,25 +985,17 @@ export async function createPublicOrder(orderData: any): Promise<any> {
 }
 
 export async function updateOrderStatusByExternalReference(externalReference: string, status: 'pago' | 'cancelado' | 'pendente'): Promise<any | null> {
-  // Esta função é um placeholder. A referência externa está no pagamento, não no pedido diretamente no schema atual.
-  // A lógica real pode precisar ser mais complexa, buscando o pagamento e depois o pedido.
-  // Por simplicidade aqui, vamos assumir que a lógica de busca seria implementada.
   console.log(`Updating order with externalReference ${externalReference} to status ${status}`);
   
-  // Simulação: Encontrar o pedido associado ao externalReference e atualizá-lo.
-  // Como não temos o campo no Pedido, esta função não terá efeito real sem uma migração do schema.
-  // No entanto, a chamaremos para completar o fluxo do webhook.
-  
-  // Exemplo de como seria com o campo no lugar:
-  /*
-  const order = await prisma.order.findFirst({
+  const order = await prisma.order.findUnique({
     where: { externalReference: externalReference }
   });
 
   if (order) {
+    console.log(`Order ${order.id} found. Updating status to ${status}.`);
     return await updateOrder(order.id, { status });
   }
-  */
 
+  console.warn(`Order with externalReference ${externalReference} not found.`);
   return null;
 }

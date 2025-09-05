@@ -1,0 +1,34 @@
+=== Dermosul Bot Run 20250902_203109 ===
+DASHBOARD_URL=http://localhost:5174/dashboard/pedidos
+BELEZA_URL=https://www.belezanaweb.com.br/
+FAST_SEARCH=True DELAY_SCALE=0.7 TYPING_DELAY=0.02
+[20:31:09] ✔ 8 infos carregadas
+[20:31:09] → Próximo cartão carregado: **** **** **** 2916
+[20:31:09] Iniciando navegador 1 (Dashboard Pedidos)...
+[20:31:11] → Acessou http://localhost:5174/dashboard/pedidos
+[20:31:11] → Fez login (admin/123)
+[20:31:13] ✔ Encontrados 20 pedidos na tabela
+[20:31:13] Leitura concluída: 20 pedidos
+[20:31:14] → Página 1: encontrados 6 pedidos com status PAGO
+[20:31:14] → Abrindo pedido PAGO #1 na página 1
+[20:31:14] ✔ Detalhe do pedido aberto com sucesso
+[20:31:14] ✔ Detalhe aberto: Pedido #47880617
+[20:31:15] → Produto identificado: SkinCeuticals HA Intensifier Multi-Glycan - Sérum Facial 30ml
+[20:31:15] → Quantidade do pedido: 2
+[20:31:15] → E-mail do cliente: Joaquim.Pereira72@bol.com.br
+[20:31:15] → Abrindo Beleza na Web para pesquisar: SkinCeuticals HA Intensifier Multi-Glycan - Sérum Facial 30ml
+[20:31:45] ⏱ Início do pedido (cronômetro iniciado)
+[20:31:46] ✔ Pesquisa enviada (rápida)
+[20:31:46] ⏱ Etapa 'Pesquisa' concluída em 1.3s
+[20:32:50] ✔ Adicionado à sacola (página do produto)
+[20:32:50] ⏱ Etapa 'Adicionar à sacola' concluída em 48.9s
+[20:32:57] → CEP do pedido: 69076488
+[20:33:04] ⏱ Etapa 'Validar sacola / Checkout' concluída em 14.1s
+[20:33:04] ⏱ Etapa 'Pagamento' concluída em 0.0s
+[20:33:04] ⏱ Pedido finalizado (sem sucesso) em 79.8s
+[20:33:04]   ⏱ Etapa 'Pesquisa': 1.3s
+[20:33:04]   ⏱ Etapa 'Adicionar à sacola': 48.9s
+[20:33:04]   ⏱ Etapa 'Validar sacola / Checkout': 14.1s
+[20:33:04]   ⏱ Etapa 'Pagamento': 0.0s
+[20:33:05] ↻ Repetindo fluxo na Beleza na Web…
+[20:33:05] → Abrindo Beleza na Web para pesquisar: SkinCeuticals HA Intensifier Multi-Glycan - Sérum Facial 30ml

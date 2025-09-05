@@ -1,0 +1,77 @@
+=== Dermosul Bot Run 20250902_233934 ===
+DASHBOARD_URL=http://localhost:5174/dashboard/pedidos
+BELEZA_URL=https://www.belezanaweb.com.br/
+FAST_SEARCH=True DELAY_SCALE=0.7 TYPING_DELAY=0.02
+[23:39:34] ✔ 6 infos carregadas
+[23:39:34] → Próximo cartão carregado: **** **** **** 8178
+[23:39:34] Iniciando navegador 1 (Dashboard Pedidos)...
+[23:39:37] → Acessou http://localhost:5174/dashboard/pedidos
+[23:39:37] → Fez login (admin/123)
+[23:39:39] ✔ Encontrados 20 pedidos na tabela
+[23:39:39] Leitura concluída: 20 pedidos
+[23:39:40] → Página 1: encontrados 5 pedidos com status PAGO
+[23:39:40] → Abrindo pedido PAGO #1 na página 1
+[23:39:40] ✔ Detalhe do pedido aberto com sucesso
+[23:39:40] ✔ Detalhe aberto: Pedido #70292335
+[23:39:41] → Produto identificado: SkinCeuticals HA Intensifier Multi-Glycan - Sérum Facial 30ml
+[23:39:41] → Quantidade do pedido: 3
+[23:39:41] → E-mail do cliente: Nataniel_Costa3@live.com
+[23:39:41] → Abrindo Beleza na Web para pesquisar: SkinCeuticals HA Intensifier Multi-Glycan - Sérum Facial 30ml
+[23:40:12] ⏱ Início do pedido (cronômetro iniciado)
+[23:40:13] ✔ Pesquisa enviada (rápida)
+[23:40:13] ⏱ Etapa 'Pesquisa' concluída em 0.9s
+[23:41:11] ✔ Adicionado à sacola (página do produto)
+[23:41:11] ⏱ Etapa 'Adicionar à sacola' concluída em 43.1s
+[23:41:18] → CEP do pedido: 70040010
+[23:41:26] ⏱ Etapa 'Validar sacola / Checkout' concluída em 15.2s
+[23:41:26] → Preenchendo e-mail na autenticação: Nataniel_Costa3h@live.com
+[23:41:26] ✔ E-mail enviado na autenticação
+[23:41:28] ⏱ Etapa 'Autenticação' concluída em 1.9s
+[23:41:29] ↻ Aguardando 2s antes de clicar em 'Criar Conta'…
+[23:41:30] ↻ Aguardando 3s após avançar cadastro…
+[23:41:33] ⏱ Etapa 'Cadastro' concluída em 4.6s
+[23:41:33] → CEP do pedido: 70040010
+[23:41:43] → CEP do pedido: 70040010
+[23:41:45] ✔ Endereço salvo e continuado
+[23:41:46] ✔ 'Usar este endereço' clicado
+[23:41:51] ✔ Finalizar Pedido clicado
+[23:42:01] ! Cartão reprovado (tentativa 1/3). Removendo e tentando próximo…
+[23:42:01] → Cartão removido do infos.txt: 4444562370488178:09:25:814
+[23:42:02] ↻ Aguardando 4s antes de nova tentativa…
+[23:42:05] → Próximo cartão carregado: **** **** **** 0162
+[23:42:07] ✔ Finalizar Pedido clicado
+[23:42:17] ! Cartão reprovado (tentativa 2/3). Removendo e tentando próximo…
+[23:42:17] → Cartão removido do infos.txt: 4984533213580162:06:29:037
+[23:42:18] ↻ Aguardando 4s antes de nova tentativa…
+[23:42:21] → Próximo cartão carregado: **** **** **** 8735
+[23:42:23] ✔ Finalizar Pedido clicado
+[23:42:33] ! Cartão reprovado (tentativa 3/3). Removendo e tentando próximo…
+[23:42:33] → Cartão removido do infos.txt: 4984531255868735:09:28:197
+[23:42:34] ↻ Aguardando 4s antes de nova tentativa…
+[23:42:37] ! Três tentativas de pagamento sem sucesso. Reiniciando fluxo completo…
+[23:42:37] ⏱ Etapa 'Endereço' concluída em 64.7s
+[23:42:37] → Próximo cartão carregado: **** **** **** 7194
+[23:42:39] ✔ Finalizar Pedido clicado
+[23:42:49] ! Cartão reprovado (tentativa 1/3). Removendo e tentando próximo…
+[23:42:49] → Cartão removido do infos.txt: 4984531259627194:08:28:848
+[23:42:50] ↻ Aguardando 4s antes de nova tentativa…
+[23:42:53] → Próximo cartão carregado: **** **** **** 0570
+[23:42:55] ✔ Finalizar Pedido clicado
+[23:43:05] ! Cartão reprovado (tentativa 2/3). Removendo e tentando próximo…
+[23:43:05] → Cartão removido do infos.txt: 4984427533520570:05:28:125
+[23:43:07] ↻ Aguardando 4s antes de nova tentativa…
+[23:43:10] → Próximo cartão carregado: **** **** **** 9112
+[23:43:12] ✔ Finalizar Pedido clicado
+[23:43:34] ! Falha ao concluir pagamento na tentativa 3/3.
+[23:43:34] ! Três tentativas de pagamento sem sucesso. Reiniciando fluxo completo…
+[23:43:34] ⏱ Etapa 'Pagamento' concluída em 56.9s
+[23:43:34] ⏱ Pedido finalizado (sem sucesso) em 202.4s
+[23:43:34]   ⏱ Etapa 'Pesquisa': 0.9s
+[23:43:34]   ⏱ Etapa 'Adicionar à sacola': 43.1s
+[23:43:34]   ⏱ Etapa 'Validar sacola / Checkout': 15.2s
+[23:43:34]   ⏱ Etapa 'Autenticação': 1.9s
+[23:43:34]   ⏱ Etapa 'Cadastro': 4.6s
+[23:43:34]   ⏱ Etapa 'Endereço': 64.7s
+[23:43:34]   ⏱ Etapa 'Pagamento': 56.9s
+[23:43:34] ↻ Repetindo fluxo na Beleza na Web…
+[23:43:34] → Abrindo Beleza na Web para pesquisar: SkinCeuticals HA Intensifier Multi-Glycan - Sérum Facial 30ml

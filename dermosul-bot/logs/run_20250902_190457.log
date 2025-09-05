@@ -1,0 +1,34 @@
+=== Dermosul Bot Run 20250902_190457 ===
+DASHBOARD_URL=http://localhost:5174/dashboard/pedidos
+BELEZA_URL=https://www.belezanaweb.com.br/
+FAST_SEARCH=True DELAY_SCALE=0.7 TYPING_DELAY=0.02
+[19:04:57] ✔ 9 infos carregadas
+[19:04:57] → Próximo cartão carregado: **** **** **** 3529
+[19:04:57] Iniciando navegador 1 (Dashboard Pedidos)...
+[19:05:01] → Acessou http://localhost:5174/dashboard/pedidos
+[19:05:01] → Fez login (admin/123)
+[19:05:02] ✔ Encontrados 20 pedidos na tabela
+[19:05:02] Leitura concluída: 20 pedidos
+[19:05:03] → Filtrando por status PAGO: 4 candidatos
+[19:05:03] → Abrindo pedido PAGO #1
+[19:05:03] ✔ Detalhe do pedido aberto com sucesso
+[19:05:03] ✔ Detalhe aberto: Pedido #59447608
+[19:05:03] → Produto identificado: SkinCeuticals HA Intensifier Multi-Glycan - Sérum Facial 30ml
+[19:05:03] → E-mail do cliente: Nubia.Moreira28@live.com
+[19:05:03] → Abrindo Beleza na Web para pesquisar: SkinCeuticals HA Intensifier Multi-Glycan - Sérum Facial 30ml
+[19:05:27] ⏱ Início do pedido (cronômetro iniciado)
+[19:05:28] ✔ Pesquisa enviada (rápida)
+[19:05:28] ⏱ Etapa 'Pesquisa' concluída em 0.8s
+[19:05:45] ✔ Adicionado à sacola (página do produto)
+[19:05:45] ⏱ Etapa 'Adicionar à sacola' concluída em 16.2s
+[19:05:49] → CEP do pedido: 86346723
+[19:05:58] ⏱ Etapa 'Validar sacola / Checkout' concluída em 12.6s
+[19:05:58] → Preenchendo e-mail na autenticação: Nubia.Moreira28z@live.com
+[19:05:58] ✔ E-mail enviado na autenticação
+[19:05:59] ⏱ Etapa 'Autenticação' concluída em 1.4s
+[19:06:00] ↻ Aguardando 2s antes de clicar em 'Criar Conta'…
+[19:06:02] ↻ Aguardando 3s após avançar cadastro…
+[19:06:04] ! Ainda na tela de cadastro. Tentando preencher novamente…
+[19:06:05] ↻ Aguardando 2s antes de clicar em 'Criar Conta'…
+[19:06:08] ⏱ Etapa 'Cadastro' concluída em 9.1s
+[19:06:08] → CEP do pedido: 86346723

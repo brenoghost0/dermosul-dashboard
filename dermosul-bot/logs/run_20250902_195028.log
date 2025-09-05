@@ -1,0 +1,303 @@
+=== Dermosul Bot Run 20250902_195028 ===
+DASHBOARD_URL=http://localhost:5174/dashboard/pedidos
+BELEZA_URL=https://www.belezanaweb.com.br/
+FAST_SEARCH=True DELAY_SCALE=0.7 TYPING_DELAY=0.02
+[19:50:28] ✔ 9 infos carregadas
+[19:50:28] → Próximo cartão carregado: **** **** **** 3529
+[19:50:28] Iniciando navegador 1 (Dashboard Pedidos)...
+[19:50:29] → Acessou http://localhost:5174/dashboard/pedidos
+[19:50:30] → Fez login (admin/123)
+[19:50:31] ✔ Encontrados 20 pedidos na tabela
+[19:50:31] Leitura concluída: 20 pedidos
+[19:50:32] → Página 1: encontrados 6 pedidos com status PAGO
+[19:50:32] → Abrindo pedido PAGO #1 na página 1
+[19:50:32] ✔ Detalhe do pedido aberto com sucesso
+[19:50:32] ✔ Detalhe aberto: Pedido #47880617
+[19:50:32] ! Falha ao abrir linha: 'Bot' object has no attribute '_extract_product_qty_from_detail'
+[19:50:33] → Abrindo pedido PAGO #2 na página 1
+[19:50:33] ✔ Detalhe do pedido aberto com sucesso
+[19:50:33] ✔ Detalhe aberto: Pedido #54125844
+[19:50:33] ! Falha ao abrir linha: 'Bot' object has no attribute '_extract_product_qty_from_detail'
+[19:50:33] → Abrindo pedido PAGO #3 na página 1
+[19:50:34] ✔ Detalhe do pedido aberto com sucesso
+[19:50:34] ✔ Detalhe aberto: Pedido #99946914
+[19:50:34] ! Falha ao abrir linha: 'Bot' object has no attribute '_extract_product_qty_from_detail'
+[19:50:34] → Abrindo pedido PAGO #4 na página 1
+[19:50:34] ✔ Detalhe do pedido aberto com sucesso
+[19:50:34] ✔ Detalhe aberto: Pedido #46352580
+[19:50:34] ! Falha ao abrir linha: 'Bot' object has no attribute '_extract_product_qty_from_detail'
+[19:50:34] → Abrindo pedido PAGO #5 na página 1
+[19:50:35] ✔ Detalhe do pedido aberto com sucesso
+[19:50:35] ✔ Detalhe aberto: Pedido #15883065
+[19:50:35] ! Falha ao abrir linha: 'Bot' object has no attribute '_extract_product_qty_from_detail'
+[19:50:35] → Abrindo pedido PAGO #6 na página 1
+[19:50:36] ✔ Detalhe do pedido aberto com sucesso
+[19:50:36] ✔ Detalhe aberto: Pedido #64168531
+[19:50:36] ! Falha ao abrir linha: 'Bot' object has no attribute '_extract_product_qty_from_detail'
+[19:50:37] → Página 2: encontrados 5 pedidos com status PAGO
+[19:50:37] → Abrindo pedido PAGO #1 na página 2
+[19:50:37] ✔ Detalhe do pedido aberto com sucesso
+[19:50:37] ✔ Detalhe aberto: Pedido #21449829
+[19:50:37] ! Falha ao abrir linha: 'Bot' object has no attribute '_extract_product_qty_from_detail'
+[19:50:37] → Abrindo pedido PAGO #2 na página 2
+[19:50:37] ✔ Detalhe do pedido aberto com sucesso
+[19:50:37] ✔ Detalhe aberto: Pedido #54125844
+[19:50:37] ! Falha ao abrir linha: 'Bot' object has no attribute '_extract_product_qty_from_detail'
+[19:50:38] → Abrindo pedido PAGO #3 na página 2
+[19:50:38] ✔ Detalhe do pedido aberto com sucesso
+[19:50:38] ✔ Detalhe aberto: Pedido #99946914
+[19:50:38] ! Falha ao abrir linha: 'Bot' object has no attribute '_extract_product_qty_from_detail'
+[19:50:38] → Abrindo pedido PAGO #4 na página 2
+[19:50:39] ✔ Detalhe do pedido aberto com sucesso
+[19:50:39] ✔ Detalhe aberto: Pedido #46352580
+[19:50:39] ! Falha ao abrir linha: 'Bot' object has no attribute '_extract_product_qty_from_detail'
+[19:50:39] → Abrindo pedido PAGO #5 na página 2
+[19:50:40] ✔ Detalhe do pedido aberto com sucesso
+[19:50:40] ✔ Detalhe aberto: Pedido #15883065
+[19:50:40] ! Falha ao abrir linha: 'Bot' object has no attribute '_extract_product_qty_from_detail'
+[19:50:40] → Abrindo pedido PAGO #6 na página 2
+[19:50:40] ✔ Detalhe do pedido aberto com sucesso
+[19:50:40] ✔ Detalhe aberto: Pedido #64168531
+[19:50:40] ! Falha ao abrir linha: 'Bot' object has no attribute '_extract_product_qty_from_detail'
+[19:50:41] → Página 3: encontrados 5 pedidos com status PAGO
+[19:50:41] → Abrindo pedido PAGO #1 na página 3
+[19:50:41] ✔ Detalhe do pedido aberto com sucesso
+[19:50:41] ✔ Detalhe aberto: Pedido #21449829
+[19:50:41] ! Falha ao abrir linha: 'Bot' object has no attribute '_extract_product_qty_from_detail'
+[19:50:41] → Abrindo pedido PAGO #2 na página 3
+[19:50:41] ✔ Detalhe do pedido aberto com sucesso
+[19:50:41] ✔ Detalhe aberto: Pedido #54125844
+[19:50:41] ! Falha ao abrir linha: 'Bot' object has no attribute '_extract_product_qty_from_detail'
+[19:50:41] → Abrindo pedido PAGO #3 na página 3
+[19:50:42] ✔ Detalhe do pedido aberto com sucesso
+[19:50:42] ✔ Detalhe aberto: Pedido #99946914
+[19:50:42] ! Falha ao abrir linha: 'Bot' object has no attribute '_extract_product_qty_from_detail'
+[19:50:42] → Abrindo pedido PAGO #4 na página 3
+[19:50:42] ✔ Detalhe do pedido aberto com sucesso
+[19:50:42] ✔ Detalhe aberto: Pedido #46352580
+[19:50:42] ! Falha ao abrir linha: 'Bot' object has no attribute '_extract_product_qty_from_detail'
+[19:50:42] → Abrindo pedido PAGO #5 na página 3
+[19:50:42] ✔ Detalhe do pedido aberto com sucesso
+[19:50:42] ✔ Detalhe aberto: Pedido #15883065
+[19:50:42] ! Falha ao abrir linha: 'Bot' object has no attribute '_extract_product_qty_from_detail'
+[19:50:42] → Abrindo pedido PAGO #6 na página 3
+[19:50:43] ✔ Detalhe do pedido aberto com sucesso
+[19:50:43] ✔ Detalhe aberto: Pedido #64168531
+[19:50:43] ! Falha ao abrir linha: 'Bot' object has no attribute '_extract_product_qty_from_detail'
+[19:50:44] → Página 4: encontrados 5 pedidos com status PAGO
+[19:50:44] → Abrindo pedido PAGO #1 na página 4
+[19:50:44] ✔ Detalhe do pedido aberto com sucesso
+[19:50:44] ✔ Detalhe aberto: Pedido #21449829
+[19:50:44] ! Falha ao abrir linha: 'Bot' object has no attribute '_extract_product_qty_from_detail'
+[19:50:44] → Abrindo pedido PAGO #2 na página 4
+[19:50:44] ✔ Detalhe do pedido aberto com sucesso
+[19:50:44] ✔ Detalhe aberto: Pedido #54125844
+[19:50:44] ! Falha ao abrir linha: 'Bot' object has no attribute '_extract_product_qty_from_detail'
+[19:50:45] → Abrindo pedido PAGO #3 na página 4
+[19:50:45] ✔ Detalhe do pedido aberto com sucesso
+[19:50:45] ✔ Detalhe aberto: Pedido #99946914
+[19:50:45] ! Falha ao abrir linha: 'Bot' object has no attribute '_extract_product_qty_from_detail'
+[19:50:45] → Abrindo pedido PAGO #4 na página 4
+[19:50:45] ✔ Detalhe do pedido aberto com sucesso
+[19:50:45] ✔ Detalhe aberto: Pedido #46352580
+[19:50:45] ! Falha ao abrir linha: 'Bot' object has no attribute '_extract_product_qty_from_detail'
+[19:50:46] → Abrindo pedido PAGO #5 na página 4
+[19:50:46] ✔ Detalhe do pedido aberto com sucesso
+[19:50:46] ✔ Detalhe aberto: Pedido #15883065
+[19:50:46] ! Falha ao abrir linha: 'Bot' object has no attribute '_extract_product_qty_from_detail'
+[19:50:46] → Abrindo pedido PAGO #6 na página 4
+[19:50:46] ✔ Detalhe do pedido aberto com sucesso
+[19:50:46] ✔ Detalhe aberto: Pedido #64168531
+[19:50:46] ! Falha ao abrir linha: 'Bot' object has no attribute '_extract_product_qty_from_detail'
+[19:50:46] → Página 5: encontrados 5 pedidos com status PAGO
+[19:50:46] → Abrindo pedido PAGO #1 na página 5
+[19:50:47] ✔ Detalhe do pedido aberto com sucesso
+[19:50:47] ✔ Detalhe aberto: Pedido #21449829
+[19:50:47] ! Falha ao abrir linha: 'Bot' object has no attribute '_extract_product_qty_from_detail'
+[19:50:47] → Abrindo pedido PAGO #2 na página 5
+[19:50:47] ✔ Detalhe do pedido aberto com sucesso
+[19:50:47] ✔ Detalhe aberto: Pedido #54125844
+[19:50:47] ! Falha ao abrir linha: 'Bot' object has no attribute '_extract_product_qty_from_detail'
+[19:50:47] → Abrindo pedido PAGO #3 na página 5
+[19:50:48] ✔ Detalhe do pedido aberto com sucesso
+[19:50:48] ✔ Detalhe aberto: Pedido #99946914
+[19:50:48] ! Falha ao abrir linha: 'Bot' object has no attribute '_extract_product_qty_from_detail'
+[19:50:48] → Abrindo pedido PAGO #4 na página 5
+[19:50:49] ✔ Detalhe do pedido aberto com sucesso
+[19:50:49] ✔ Detalhe aberto: Pedido #46352580
+[19:50:49] ! Falha ao abrir linha: 'Bot' object has no attribute '_extract_product_qty_from_detail'
+[19:50:49] → Abrindo pedido PAGO #5 na página 5
+[19:50:49] ✔ Detalhe do pedido aberto com sucesso
+[19:50:49] ✔ Detalhe aberto: Pedido #15883065
+[19:50:49] ! Falha ao abrir linha: 'Bot' object has no attribute '_extract_product_qty_from_detail'
+[19:50:49] → Abrindo pedido PAGO #6 na página 5
+[19:50:50] ✔ Detalhe do pedido aberto com sucesso
+[19:50:50] ✔ Detalhe aberto: Pedido #64168531
+[19:50:50] ! Falha ao abrir linha: 'Bot' object has no attribute '_extract_product_qty_from_detail'
+[19:50:51] → Página 6: encontrados 5 pedidos com status PAGO
+[19:50:51] → Abrindo pedido PAGO #1 na página 6
+[19:50:51] ✔ Detalhe do pedido aberto com sucesso
+[19:50:51] ✔ Detalhe aberto: Pedido #21449829
+[19:50:51] ! Falha ao abrir linha: 'Bot' object has no attribute '_extract_product_qty_from_detail'
+[19:50:51] → Abrindo pedido PAGO #2 na página 6
+[19:50:51] ✔ Detalhe do pedido aberto com sucesso
+[19:50:51] ✔ Detalhe aberto: Pedido #54125844
+[19:50:51] ! Falha ao abrir linha: 'Bot' object has no attribute '_extract_product_qty_from_detail'
+[19:50:51] → Abrindo pedido PAGO #3 na página 6
+[19:50:52] ✔ Detalhe do pedido aberto com sucesso
+[19:50:52] ✔ Detalhe aberto: Pedido #99946914
+[19:50:52] ! Falha ao abrir linha: 'Bot' object has no attribute '_extract_product_qty_from_detail'
+[19:50:52] → Abrindo pedido PAGO #4 na página 6
+[19:50:53] ✔ Detalhe do pedido aberto com sucesso
+[19:50:53] ✔ Detalhe aberto: Pedido #46352580
+[19:50:53] ! Falha ao abrir linha: 'Bot' object has no attribute '_extract_product_qty_from_detail'
+[19:50:53] → Abrindo pedido PAGO #5 na página 6
+[19:50:54] ✔ Detalhe do pedido aberto com sucesso
+[19:50:54] ✔ Detalhe aberto: Pedido #15883065
+[19:50:54] ! Falha ao abrir linha: 'Bot' object has no attribute '_extract_product_qty_from_detail'
+[19:50:54] → Abrindo pedido PAGO #6 na página 6
+[19:50:54] ✔ Detalhe do pedido aberto com sucesso
+[19:50:54] ✔ Detalhe aberto: Pedido #64168531
+[19:50:54] ! Falha ao abrir linha: 'Bot' object has no attribute '_extract_product_qty_from_detail'
+[19:50:55] → Página 7: encontrados 5 pedidos com status PAGO
+[19:50:55] → Abrindo pedido PAGO #1 na página 7
+[19:50:55] ✔ Detalhe do pedido aberto com sucesso
+[19:50:55] ✔ Detalhe aberto: Pedido #21449829
+[19:50:55] ! Falha ao abrir linha: 'Bot' object has no attribute '_extract_product_qty_from_detail'
+[19:50:55] → Abrindo pedido PAGO #2 na página 7
+[19:50:56] ✔ Detalhe do pedido aberto com sucesso
+[19:50:56] ✔ Detalhe aberto: Pedido #54125844
+[19:50:56] ! Falha ao abrir linha: 'Bot' object has no attribute '_extract_product_qty_from_detail'
+[19:50:56] → Abrindo pedido PAGO #3 na página 7
+[19:50:56] ✔ Detalhe do pedido aberto com sucesso
+[19:50:56] ✔ Detalhe aberto: Pedido #99946914
+[19:50:56] ! Falha ao abrir linha: 'Bot' object has no attribute '_extract_product_qty_from_detail'
+[19:50:57] → Abrindo pedido PAGO #4 na página 7
+[19:50:57] ✔ Detalhe do pedido aberto com sucesso
+[19:50:57] ✔ Detalhe aberto: Pedido #46352580
+[19:50:57] ! Falha ao abrir linha: 'Bot' object has no attribute '_extract_product_qty_from_detail'
+[19:50:57] → Abrindo pedido PAGO #5 na página 7
+[19:50:57] ✔ Detalhe do pedido aberto com sucesso
+[19:50:57] ✔ Detalhe aberto: Pedido #15883065
+[19:50:57] ! Falha ao abrir linha: 'Bot' object has no attribute '_extract_product_qty_from_detail'
+[19:50:58] → Abrindo pedido PAGO #6 na página 7
+[19:50:58] ✔ Detalhe do pedido aberto com sucesso
+[19:50:58] ✔ Detalhe aberto: Pedido #64168531
+[19:50:58] ! Falha ao abrir linha: 'Bot' object has no attribute '_extract_product_qty_from_detail'
+[19:50:59] → Página 8: encontrados 5 pedidos com status PAGO
+[19:50:59] → Abrindo pedido PAGO #1 na página 8
+[19:50:59] ✔ Detalhe do pedido aberto com sucesso
+[19:50:59] ✔ Detalhe aberto: Pedido #21449829
+[19:50:59] ! Falha ao abrir linha: 'Bot' object has no attribute '_extract_product_qty_from_detail'
+[19:50:59] → Abrindo pedido PAGO #2 na página 8
+[19:51:00] ✔ Detalhe do pedido aberto com sucesso
+[19:51:00] ✔ Detalhe aberto: Pedido #54125844
+[19:51:00] ! Falha ao abrir linha: 'Bot' object has no attribute '_extract_product_qty_from_detail'
+[19:51:00] → Abrindo pedido PAGO #3 na página 8
+[19:51:01] ✔ Detalhe do pedido aberto com sucesso
+[19:51:01] ✔ Detalhe aberto: Pedido #99946914
+[19:51:01] ! Falha ao abrir linha: 'Bot' object has no attribute '_extract_product_qty_from_detail'
+[19:51:01] → Abrindo pedido PAGO #4 na página 8
+[19:51:01] ✔ Detalhe do pedido aberto com sucesso
+[19:51:01] ✔ Detalhe aberto: Pedido #46352580
+[19:51:01] ! Falha ao abrir linha: 'Bot' object has no attribute '_extract_product_qty_from_detail'
+[19:51:02] → Abrindo pedido PAGO #5 na página 8
+[19:51:02] ✔ Detalhe do pedido aberto com sucesso
+[19:51:02] ✔ Detalhe aberto: Pedido #15883065
+[19:51:02] ! Falha ao abrir linha: 'Bot' object has no attribute '_extract_product_qty_from_detail'
+[19:51:02] → Abrindo pedido PAGO #6 na página 8
+[19:51:03] ✔ Detalhe do pedido aberto com sucesso
+[19:51:03] ✔ Detalhe aberto: Pedido #64168531
+[19:51:03] ! Falha ao abrir linha: 'Bot' object has no attribute '_extract_product_qty_from_detail'
+[19:51:04] → Página 9: encontrados 5 pedidos com status PAGO
+[19:51:04] → Abrindo pedido PAGO #1 na página 9
+[19:51:04] ✔ Detalhe do pedido aberto com sucesso
+[19:51:04] ✔ Detalhe aberto: Pedido #21449829
+[19:51:04] ! Falha ao abrir linha: 'Bot' object has no attribute '_extract_product_qty_from_detail'
+[19:51:05] → Abrindo pedido PAGO #2 na página 9
+[19:51:05] ✔ Detalhe do pedido aberto com sucesso
+[19:51:05] ✔ Detalhe aberto: Pedido #54125844
+[19:51:05] ! Falha ao abrir linha: 'Bot' object has no attribute '_extract_product_qty_from_detail'
+[19:51:05] → Abrindo pedido PAGO #3 na página 9
+[19:51:05] ✔ Detalhe do pedido aberto com sucesso
+[19:51:05] ✔ Detalhe aberto: Pedido #99946914
+[19:51:06] ! Falha ao abrir linha: 'Bot' object has no attribute '_extract_product_qty_from_detail'
+[19:51:06] → Abrindo pedido PAGO #4 na página 9
+[19:51:06] ✔ Detalhe do pedido aberto com sucesso
+[19:51:06] ✔ Detalhe aberto: Pedido #46352580
+[19:51:06] ! Falha ao abrir linha: 'Bot' object has no attribute '_extract_product_qty_from_detail'
+[19:51:06] → Abrindo pedido PAGO #5 na página 9
+[19:51:06] ✔ Detalhe do pedido aberto com sucesso
+[19:51:06] ✔ Detalhe aberto: Pedido #15883065
+[19:51:07] ! Falha ao abrir linha: 'Bot' object has no attribute '_extract_product_qty_from_detail'
+[19:51:07] → Abrindo pedido PAGO #6 na página 9
+[19:51:07] ✔ Detalhe do pedido aberto com sucesso
+[19:51:07] ✔ Detalhe aberto: Pedido #64168531
+[19:51:07] ! Falha ao abrir linha: 'Bot' object has no attribute '_extract_product_qty_from_detail'
+[19:51:08] → Página 10: encontrados 5 pedidos com status PAGO
+[19:51:08] → Abrindo pedido PAGO #1 na página 10
+[19:51:09] ✔ Detalhe do pedido aberto com sucesso
+[19:51:09] ✔ Detalhe aberto: Pedido #21449829
+[19:51:09] ! Falha ao abrir linha: 'Bot' object has no attribute '_extract_product_qty_from_detail'
+[19:51:09] → Abrindo pedido PAGO #2 na página 10
+[19:51:10] ✔ Detalhe do pedido aberto com sucesso
+[19:51:10] ✔ Detalhe aberto: Pedido #54125844
+[19:51:10] ! Falha ao abrir linha: 'Bot' object has no attribute '_extract_product_qty_from_detail'
+[19:51:10] → Abrindo pedido PAGO #3 na página 10
+[19:51:10] ✔ Detalhe do pedido aberto com sucesso
+[19:51:10] ✔ Detalhe aberto: Pedido #99946914
+[19:51:10] ! Falha ao abrir linha: 'Bot' object has no attribute '_extract_product_qty_from_detail'
+[19:51:10] → Abrindo pedido PAGO #4 na página 10
+[19:51:11] ✔ Detalhe do pedido aberto com sucesso
+[19:51:11] ✔ Detalhe aberto: Pedido #46352580
+[19:51:11] ! Falha ao abrir linha: 'Bot' object has no attribute '_extract_product_qty_from_detail'
+[19:51:11] → Abrindo pedido PAGO #5 na página 10
+[19:51:11] ✔ Detalhe do pedido aberto com sucesso
+[19:51:11] ✔ Detalhe aberto: Pedido #15883065
+[19:51:11] ! Falha ao abrir linha: 'Bot' object has no attribute '_extract_product_qty_from_detail'
+[19:51:12] → Abrindo pedido PAGO #6 na página 10
+[19:51:12] ✔ Detalhe do pedido aberto com sucesso
+[19:51:12] ✔ Detalhe aberto: Pedido #64168531
+[19:51:12] ! Falha ao abrir linha: 'Bot' object has no attribute '_extract_product_qty_from_detail'
+[19:51:12] → Página 11: encontrados 5 pedidos com status PAGO
+[19:51:12] → Abrindo pedido PAGO #1 na página 11
+[19:51:13] ✔ Detalhe do pedido aberto com sucesso
+[19:51:13] ✔ Detalhe aberto: Pedido #21449829
+[19:51:13] ! Falha ao abrir linha: 'Bot' object has no attribute '_extract_product_qty_from_detail'
+[19:51:13] → Abrindo pedido PAGO #2 na página 11
+[19:51:13] ✔ Detalhe do pedido aberto com sucesso
+[19:51:13] ✔ Detalhe aberto: Pedido #54125844
+[19:51:13] ! Falha ao abrir linha: 'Bot' object has no attribute '_extract_product_qty_from_detail'
+[19:51:13] → Abrindo pedido PAGO #3 na página 11
+[19:51:14] ✔ Detalhe do pedido aberto com sucesso
+[19:51:14] ✔ Detalhe aberto: Pedido #99946914
+[19:51:14] ! Falha ao abrir linha: 'Bot' object has no attribute '_extract_product_qty_from_detail'
+[19:51:14] → Abrindo pedido PAGO #4 na página 11
+[19:51:15] ✔ Detalhe do pedido aberto com sucesso
+[19:51:15] ✔ Detalhe aberto: Pedido #46352580
+[19:51:15] ! Falha ao abrir linha: 'Bot' object has no attribute '_extract_product_qty_from_detail'
+[19:51:15] → Abrindo pedido PAGO #5 na página 11
+[19:51:25] ! Erro ao abrir o pedido. Voltando à lista para tentar o próximo PAGO…
+[19:51:25] ! Falha ao abrir linha: Message: no such window: target window already closed
+from unknown error: web view not found
+  (Session info: chrome=139.0.7258.155)
+Stacktrace:
+0   chromedriver                        0x000000010549ee00 cxxbridge1$str$ptr + 2742224
+1   chromedriver                        0x0000000105496d00 cxxbridge1$str$ptr + 2709200
+2   chromedriver                        0x0000000104fe10b8 cxxbridge1$string$len + 90520
+3   chromedriver                        0x0000000104fbaea0 chromedriver + 143008
+4   chromedriver                        0x00000001050506b8 cxxbridge1$string$len + 546712
+5   chromedriver                        0x00000001050694c0 cxxbridge1$string$len + 648608
+6   chromedriver                        0x000000010501c8f4 cxxbridge1$string$len + 334292
+7   chromedriver                        0x0000000105462478 cxxbridge1$str$ptr + 2494024
+8   chromedriver                        0x00000001054656a4 cxxbridge1$str$ptr + 2506868
+9   chromedriver                        0x00000001054433b0 cxxbridge1$str$ptr + 2366848
+10  chromedriver                        0x0000000105465f4c cxxbridge1$str$ptr + 2509084
+11  chromedriver                        0x00000001054344a8 cxxbridge1$str$ptr + 2305656
+12  chromedriver                        0x0000000105485644 cxxbridge1$str$ptr + 2637844
+13  chromedriver                        0x00000001054857d0 cxxbridge1$str$ptr + 2638240
+14  chromedriver                        0x000000010549694c cxxbridge1$str$ptr + 2708252
+15  libsystem_pthread.dylib             0x00000001879f6c0c _pthread_start + 136
+16  libsystem_pthread.dylib             0x00000001879f1b80 thread_start + 8
+
+[19:51:25] ! Fluxo não concluído — verifique a janela do navegador para preencher/corrigir.

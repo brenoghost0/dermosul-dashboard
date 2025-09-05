@@ -204,11 +204,11 @@ export default function Pedidos() {
             <tbody>
               {data.items.map((o) => (
                 <tr key={o.id} className="border-t hover:bg-gray-50">
-                  <td className="px-4 py-2 cursor-pointer" onClick={() => navigate(`/dashboard/pedidos/${o.fullId}`)}>{ptDate(o.createdAt)}</td>
-                  <td className="px-4 py-2 cursor-pointer" onClick={() => navigate(`/dashboard/pedidos/${o.fullId}`)}>{o.id}</td>
-                  <td className="px-4 py-2 cursor-pointer" onClick={() => navigate(`/dashboard/pedidos/${o.fullId}`)}>{o.client}</td>
-                  <td className="px-4 py-2 cursor-pointer" onClick={() => navigate(`/dashboard/pedidos/${o.fullId}`)}>{o.category}</td>
-                  <td className="px-4 py-2 cursor-pointer" onClick={() => navigate(`/dashboard/pedidos/${o.fullId}`)}>
+                  <td className="px-4 py-2 cursor-pointer" onClick={() => navigate(`/dashboard/pedidos/${encodeURIComponent(o.fullId)}`)}>{ptDate(o.createdAt)}</td>
+                  <td className="px-4 py-2 cursor-pointer" onClick={() => navigate(`/dashboard/pedidos/${encodeURIComponent(o.fullId)}`)}>{o.id}</td>
+                  <td className="px-4 py-2 cursor-pointer" onClick={() => navigate(`/dashboard/pedidos/${encodeURIComponent(o.fullId)}`)}>{o.client}</td>
+                  <td className="px-4 py-2 cursor-pointer" onClick={() => navigate(`/dashboard/pedidos/${encodeURIComponent(o.fullId)}`)}>{o.category}</td>
+                  <td className="px-4 py-2 cursor-pointer" onClick={() => navigate(`/dashboard/pedidos/${encodeURIComponent(o.fullId)}`)}>
                     <span className={[
                       "inline-flex px-2 py-1 rounded-full text-xs font-medium",
                       o.status === "pago" ? "bg-green-100 text-green-700" :
@@ -219,7 +219,7 @@ export default function Pedidos() {
                       {o.status}
                     </span>
                   </td>
-                  <td className="px-4 py-2 cursor-pointer" onClick={() => navigate(`/dashboard/pedidos/${o.fullId}`)}>{brl(o.total)}</td>
+                  <td className="px-4 py-2 cursor-pointer" onClick={() => navigate(`/dashboard/pedidos/${encodeURIComponent(o.fullId)}`)}>{brl(o.total)}</td>
                   <td className="px-4 py-2">
                     <button
                       onClick={(e) => {

@@ -131,6 +131,23 @@ class AsaasProvider implements PaymentProvider {
       };
     }
   }
+
+  async getPaymentStatusByExternalReference(externalReference: string): Promise<{ success: boolean; status?: string; paid: boolean; paymentId?: string; }>{
+    try {
+      const resp = await apiClient.get('/payments', { params: { externalReference } });
+      const payment = Array.isArray(resp.data?.data) && resp.data.data.length > 0 ? resp.data.data[0] : null;
+      if (!payment) {
+        return { success: true, paid: false };
+      }
+      const status: string = payment.status;
+      const paidStatuses = ['RECEIVED', 'CONFIRMED', 'RECEIVED_IN_CASH'];
+      const paid = paidStatuses.includes(status);
+      return { success: true, status, paid, paymentId: payment.id };
+    } catch (error: any) {
+      console.error('Asaas - Error fetching payment by externalReference:', error.response?.data || error.message);
+      return { success: false, paid: false };
+    }
+  }
 }
 
 export default AsaasProvider;

@@ -13,14 +13,15 @@ exports.updateLandingPage = updateLandingPage;
 exports.deleteLandingPage = deleteLandingPage;
 exports.getLandingBySlug = getLandingBySlug;
 exports.updateLandingPageStatus = updateLandingPageStatus;
+exports.getOrderByExternalReference = getOrderByExternalReference;
 exports.createPublicOrder = createPublicOrder;
 exports.updateOrderStatusByExternalReference = updateOrderStatusByExternalReference;
 const prisma_js_1 = require("../db/prisma.js");
 const index_js_1 = require("../utils/index.js"); // Importar utilitários
 // --- Funções Utilitárias para Mapeamento e Conversão ---
-// Converte valores monetários para centavos (inteiros)
-const toCents = (value) => Math.round(value * 100);
-const fromCents = (value) => value / 100;
+// Converte valores monetários para centavos (BigInt)
+const toCents = (value) => BigInt(Math.round(value * 100));
+const fromCents = (value) => Number(value) / 100;
 // Mapeia o método de pagamento do formato JSON para o enum do Prisma
 const mapPaymentMethodToPrisma = (method) => {
     switch (method.toLowerCase()) {
@@ -70,6 +71,13 @@ const validateCpf = (cpf) => {
 function mapOrderFromPrisma(o) {
     const first = o?.customer?.firstName || "";
     const last = o?.customer?.lastName || "";
+    const itemsTotal = Array.isArray(o?.items)
+        ? o.items.reduce((sum, item) => {
+            const itemPrice = item.unitPrice || BigInt(0);
+            const itemQty = BigInt(item.qty || 0);
+            return sum + (itemQty * itemPrice);
+        }, BigInt(0))
+        : BigInt(0);
     return {
         id: o.id.substring(0, 8),
         fullId: o.id,
@@ -82,7 +90,7 @@ function mapOrderFromPrisma(o) {
         payment: o.payments && o.payments.length > 0 ? {
             method: o.payments[0].paymentMethod || "desconhecido",
             status: o.payments[0].status || "pendente",
-            installments: 1, // Prisma não tem installments, assumir 1
+            installments: 1,
             paidAmount: fromCents(o.payments[0].paidAmount || 0),
         } : { method: "desconhecido", status: "pendente", installments: 1, paidAmount: 0 },
         clientInfo: o.customer ? { name: `${first} ${last}`.trim(), email: o.customer.email, phone: o.customer.phone } : { name: "Cliente", email: "", phone: "" },
@@ -114,18 +122,17 @@ function mapOrderFromPrisma(o) {
             name: item.name || "Produto",
             qty: item.qty || 0,
             price: fromCents(item.unitPrice || 0),
-            subtotal: fromCents((item.qty || 0) * (item.unitPrice || 0)),
+            subtotal: fromCents(BigInt(item.qty || 0) * (item.unitPrice || BigInt(0))),
         })) : [],
         totals: {
-            itemsTotal: fromCents(o.items.reduce((sum, item) => sum + (item.qty * item.unitPrice), 0)),
+            itemsTotal: fromCents(itemsTotal),
             shipping: 0,
             discount: 0,
             grandTotal: fromCents(o.totalAmount),
-            subTotal: fromCents(o.items.reduce((sum, item) => sum + (item.qty * item.unitPrice), 0)),
+            subTotal: fromCents(itemsTotal),
             total: fromCents(o.totalAmount),
         },
-        timeline: [],
-        _raw: o
+        timeline: []
     };
 }
 // --- Funções do Adaptador de Dados SQL ---
@@ -155,6 +162,7 @@ async function listOrders(params) {
     }
     let orderBy = { createdAt: 'desc' };
     if (sort) {
+        // Aceita formatos antigos (dateAsc/dateDesc/valueAsc/valueDesc/clientAsc/clientDesc)
         switch (sort) {
             case 'dateAsc':
                 orderBy = { createdAt: 'asc' };
@@ -174,29 +182,70 @@ async function listOrders(params) {
             case 'clientDesc':
                 orderBy = [{ customer: { firstName: 'desc' } }, { customer: { lastName: 'desc' } }];
                 break;
+            default: {
+                // Também aceita "createdAt:desc" ou "createdAt,desc"
+                const s = String(sort);
+                let field = '';
+                let dir = '';
+                if (s.includes(':')) {
+                    [field, dir] = s.split(':');
+                }
+                else if (s.includes(',')) {
+                    [field, dir] = s.split(',');
+                }
+                field = (field || '').trim();
+                dir = (dir || '').trim().toLowerCase();
+                if ((field === 'createdAt' || field === 'total' || field === 'totalAmount') && (dir === 'asc' || dir === 'desc')) {
+                    if (field === 'total')
+                        field = 'totalAmount';
+                    orderBy = { [field]: dir };
+                }
+            }
         }
     }
     const p = Math.max(parseInt(page, 10) || 1, 1);
     const ps = Math.max(parseInt(pageSize, 10) || 20, 1);
     const skip = (p - 1) * ps;
-    const [orders, total] = await prisma_js_1.prisma.$transaction([
-        prisma_js_1.prisma.order.findMany({
-            where,
-            orderBy,
-            skip,
-            take: ps,
-            include: {
-                customer: {
-                    include: {
-                        addresses: true
-                    }
+    let orders = [];
+    let total = 0;
+    try {
+        [orders, total] = await prisma_js_1.prisma.$transaction([
+            prisma_js_1.prisma.order.findMany({
+                where,
+                orderBy,
+                skip,
+                take: ps,
+                include: {
+                    customer: { include: { addresses: true } },
+                    items: true,
+                    payments: true,
                 },
-                items: true,
-                payments: true,
-            },
-        }),
-        prisma_js_1.prisma.order.count({ where }),
-    ]);
+            }),
+            prisma_js_1.prisma.order.count({ where }),
+        ]);
+    }
+    catch (e) {
+        // Fallback: se orderBy composto não for aceito por alguma versão do Prisma
+        try {
+            [orders, total] = await prisma_js_1.prisma.$transaction([
+                prisma_js_1.prisma.order.findMany({
+                    where,
+                    orderBy: { createdAt: 'desc' },
+                    skip,
+                    take: ps,
+                    include: {
+                        customer: { include: { addresses: true } },
+                        items: true,
+                        payments: true,
+                    },
+                }),
+                prisma_js_1.prisma.order.count({ where }),
+            ]);
+        }
+        catch (err) {
+            throw err;
+        }
+    }
     return {
         items: orders.map(mapOrderFromPrisma),
         total,
@@ -365,7 +414,7 @@ async function updateOrder(id, updatedFields) {
         data: {
             status: updatedFields.status ? updatedFields.status.toLowerCase() : existingOrder.status,
             category: updatedFields.category || existingOrder.category,
-            totalAmount: updatedFields.total ? toCents(updatedFields.total) : existingOrder.totalAmount,
+            totalAmount: updatedFields.total ? toCents(updatedFields.total) : Number(existingOrder.totalAmount),
             createdAt: updatedFields.createdAt ? new Date(updatedFields.createdAt) : existingOrder.createdAt,
         },
     });
@@ -421,26 +470,24 @@ async function deleteOrder(id) {
 async function statsLast14Days() {
     const days = (0, index_js_1.lastNDays)(14);
     const startDate = new Date(days[0]);
-    const orders = await prisma_js_1.prisma.order.findMany({
+    // Conta todos os pedidos (qualquer status) para calcular taxa de conversão
+    const allOrdersCount = await prisma_js_1.prisma.order.count({
         where: {
-            createdAt: {
-                gte: startDate,
-            },
-        },
-        include: {
-            payments: true,
+            createdAt: { gte: startDate },
         },
     });
-    let totalRevenue = 0;
-    let totalOrders = orders.length;
-    let paidOrders = 0;
-    for (const o of orders) {
-        totalRevenue += fromCents(o.totalAmount);
-        if (o.status === "pago")
-            paidOrders += 1;
-    }
+    // Considera apenas pedidos pagos (e enviados) para métricas principais
+    const paidOrders = await prisma_js_1.prisma.order.findMany({
+        where: {
+            createdAt: { gte: startDate },
+            status: { in: ['pago', 'enviado'] },
+        },
+        include: { payments: true },
+    });
+    const totalOrders = paidOrders.length;
+    const totalRevenue = paidOrders.reduce((sum, o) => sum + fromCents(o.totalAmount), 0);
     const avgTicket = totalOrders ? totalRevenue / totalOrders : 0;
-    const convAvg = totalOrders ? (paidOrders / totalOrders) * 100 : 0;
+    const convAvg = allOrdersCount ? (totalOrders / allOrdersCount) * 100 : 0;
     const breakdown = await paymentsBreakdown();
     return {
         totalRevenue,
@@ -490,6 +537,7 @@ async function listLandingPages() {
         return landingPages.map((lp) => ({
             id: lp.id,
             slug: lp.slug || '',
+            template: lp.template || 'MODELO_1',
             productTitle: lp.title || 'Produto sem Título',
             productDescription: lp.description || '',
             productBrand: lp.brand || 'Marca Desconhecida',
@@ -521,10 +569,11 @@ async function createLandingPage(data) {
     if (!Boolean(data.freeShipping) && (data.shippingValue === undefined || isNaN(Number(data.shippingValue)))) {
         throw new Error("Valor do frete é obrigatório quando frete grátis não está marcado.");
     }
-    const slug = data.slug || (0, index_js_1.generateSlug)(data.productTitle);
+    const slug = data.slug || await (0, index_js_1.generateSlug)(data.productTitle);
     const newLandingPage = await prisma_js_1.prisma.landingPage.create({
         data: {
             slug,
+            template: data.template || 'MODELO_1',
             title: data.productTitle,
             brand: data.productBrand,
             description: data.productDescription || "",
@@ -538,6 +587,7 @@ async function createLandingPage(data) {
     return {
         id: newLandingPage.id,
         slug: newLandingPage.slug,
+        template: newLandingPage.template,
         productTitle: newLandingPage.title,
         productDescription: newLandingPage.description || '',
         productBrand: newLandingPage.brand,
@@ -571,12 +621,13 @@ async function updateLandingPage(id, data) {
     }
     let updatedSlug = existingLandingPage.slug;
     if (data.productTitle !== existingLandingPage.title) {
-        updatedSlug = (0, index_js_1.generateSlug)(data.productTitle);
+        updatedSlug = await (0, index_js_1.generateSlug)(data.productTitle);
     }
     const updatedLandingPage = await prisma_js_1.prisma.landingPage.update({
         where: { id },
         data: {
             slug: updatedSlug,
+            template: data.template || existingLandingPage.template,
             title: data.productTitle,
             brand: data.productBrand,
             description: data.productDescription || "",
@@ -590,6 +641,7 @@ async function updateLandingPage(id, data) {
     return {
         id: updatedLandingPage.id,
         slug: updatedLandingPage.slug,
+        template: updatedLandingPage.template,
         productTitle: updatedLandingPage.title,
         productDescription: updatedLandingPage.description || '',
         productBrand: updatedLandingPage.brand,
@@ -621,6 +673,7 @@ async function getLandingBySlug(slug) {
     return {
         id: lp.id,
         slug: lp.slug,
+        template: lp.template,
         productTitle: lp.title,
         productBrand: lp.brand,
         productDescription: lp.description,
@@ -634,17 +687,57 @@ async function getLandingBySlug(slug) {
     };
 }
 async function updateLandingPageStatus(id, status) {
-    const updatedLandingPage = await prisma_js_1.prisma.landingPage.update({
+    const lp = await prisma_js_1.prisma.landingPage.update({
         where: { id },
         data: { status },
     });
-    return updatedLandingPage;
+    // Normalize response to avoid BigInt serialization and keep API consistent
+    return {
+        id: lp.id,
+        slug: lp.slug,
+        template: lp.template,
+        productTitle: lp.title,
+        productBrand: lp.brand,
+        productDescription: lp.description || '',
+        productPrice: fromCents(lp.price || 0),
+        freeShipping: lp.freeShipping,
+        imageUrl: lp.imageUrl || '',
+        shippingValue: fromCents(lp.shippingPrice || 0),
+        status: lp.status,
+        createdAt: lp.createdAt.toISOString(),
+        updatedAt: lp.updatedAt ? lp.updatedAt.toISOString() : undefined,
+        url: `/l/${lp.slug}`,
+    };
+}
+async function getOrderByExternalReference(externalReference) {
+    const order = await prisma_js_1.prisma.order.findUnique({
+        where: { externalReference },
+        include: {
+            customer: {
+                include: {
+                    addresses: true
+                }
+            },
+            items: true,
+            payments: true,
+        },
+    });
+    return order ? mapOrderFromPrisma(order) : null;
+}
+function safeStringify(value) {
+    try {
+        return JSON.stringify(value, (_k, v) => (typeof v === 'bigint' ? v.toString() : v), 2);
+    }
+    catch {
+        return String(value);
+    }
 }
 async function createPublicOrder(orderData) {
-    console.log("1. Recebido payload bruto:", JSON.stringify(orderData, null, 2));
+    console.log("1. Recebido payload bruto:", safeStringify(orderData));
     const errors = {};
     // --- 2. Validação e Normalização ---
-    const { email, firstName, lastName, cep, address, addressNumber, district, city, state, cpf, phone, birthDate, gender, productId, productTitle, productPrice, qty, } = orderData;
+    const { email, firstName, lastName, cep, address, addressNumber, district, city, state, cpf, phone, birthDate, gender, productId, productTitle, productPrice, qty, externalReference, // Captura a referência externa
+     } = orderData;
     // Validações de campos obrigatórios
     if (!firstName)
         errors.firstName = "Nome é obrigatório.";
@@ -710,7 +803,7 @@ async function createPublicOrder(orderData) {
         error.details = errors; // Adiciona detalhes ao erro
         throw error;
     }
-    const totalAmountInCents = toCents(numPrice) * numQty;
+    const totalAmountInCents = toCents(numPrice) * BigInt(numQty);
     const normalizedPayload = {
         customer: {
             firstName,
@@ -739,7 +832,7 @@ async function createPublicOrder(orderData) {
         totalAmount: totalAmountInCents,
         paymentMethod: orderData.paymentMethod || 'cartao',
     };
-    console.log("3. Payload normalizado:", JSON.stringify(normalizedPayload, null, 2));
+    console.log("3. Payload normalizado:", safeStringify(normalizedPayload));
     // --- 4. Transação Atômica ---
     try {
         const newOrder = await prisma_js_1.prisma.$transaction(async (tx) => {
@@ -775,8 +868,9 @@ async function createPublicOrder(orderData) {
             const order = await tx.order.create({
                 data: {
                     id: (0, index_js_1.generateShortId)(),
+                    externalReference: externalReference, // Salva a referência externa
                     customer: { connect: { id: customer.id } },
-                    status: 'pago', // Simulado como pago, pois não há gateway
+                    status: orderData.status || 'pendente', // Usa o status do payload
                     category: "Online",
                     totalAmount: normalizedPayload.totalAmount,
                     items: { create: [normalizedPayload.item] },
@@ -784,7 +878,7 @@ async function createPublicOrder(orderData) {
                         create: {
                             paymentMethod: mapPaymentMethodToPrisma(normalizedPayload.paymentMethod),
                             paidAmount: normalizedPayload.totalAmount,
-                            status: 'confirmado',
+                            status: orderData.status === 'pago' ? 'confirmado' : 'pendente',
                         },
                     },
                 },
@@ -810,22 +904,14 @@ async function createPublicOrder(orderData) {
     }
 }
 async function updateOrderStatusByExternalReference(externalReference, status) {
-    // Esta função é um placeholder. A referência externa está no pagamento, não no pedido diretamente no schema atual.
-    // A lógica real pode precisar ser mais complexa, buscando o pagamento e depois o pedido.
-    // Por simplicidade aqui, vamos assumir que a lógica de busca seria implementada.
     console.log(`Updating order with externalReference ${externalReference} to status ${status}`);
-    // Simulação: Encontrar o pedido associado ao externalReference e atualizá-lo.
-    // Como não temos o campo no Pedido, esta função não terá efeito real sem uma migração do schema.
-    // No entanto, a chamaremos para completar o fluxo do webhook.
-    // Exemplo de como seria com o campo no lugar:
-    /*
-    const order = await prisma.order.findFirst({
-      where: { externalReference: externalReference }
+    const order = await prisma_js_1.prisma.order.findUnique({
+        where: { externalReference: externalReference }
     });
-  
     if (order) {
-      return await updateOrder(order.id, { status });
+        console.log(`Order ${order.id} found. Updating status to ${status}.`);
+        return await updateOrder(order.id, { status });
     }
-    */
+    console.warn(`Order with externalReference ${externalReference} not found.`);
     return null;
 }

@@ -1,24 +1,12 @@
 export const generateShortId = (length = 8) => {
-  const lower = 'abcdefghijklmnopqrstuvwxyz';
-  const upper = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+  // Gera um ID numérico de 'length' dígitos (default 8)
+  // Sem zeros à esquerda sendo removidos: string fixa, ex.: '00342189'
   const nums = '0123456789';
-  const specials = '!@#$%^&*()_+-=[]{}|;:,.<>?';
-
-  // Garantir pelo menos um de cada tipo
   let result = '';
-  result += lower.charAt(Math.floor(Math.random() * lower.length));
-  result += upper.charAt(Math.floor(Math.random() * upper.length));
-  result += nums.charAt(Math.floor(Math.random() * nums.length));
-  result += specials.charAt(Math.floor(Math.random() * specials.length));
-
-  // Preencher o restante com caracteres aleatórios de todos os tipos
-  const allChars = lower + upper + nums + specials;
-  for (let i = 4; i < length; i++) {
-    result += allChars.charAt(Math.floor(Math.random() * allChars.length));
+  for (let i = 0; i < length; i++) {
+    result += nums.charAt(Math.floor(Math.random() * nums.length));
   }
-
-  // Embaralhar o resultado para que os primeiros caracteres não sejam sempre os mesmos
-  return result.split('').sort(() => 0.5 - Math.random()).join('');
+  return result;
 };
 
 export const toISO = (date: Date) => date.toISOString().slice(0, 10);
@@ -33,13 +21,26 @@ export const lastNDays = (n: number) => {
   return dates.reverse();
 };
 
+import { prisma } from '../db/prisma.js';
+
 export const generateUniqueId = () => {
   return Math.random().toString(36).substr(2, 9);
 };
 
-export const generateSlug = (text: string): string => {
-  return text
+export const generateSlug = async (text: string): Promise<string> => {
+  const baseSlug = text
     .toLowerCase()
     .replace(/ /g, '-')
     .replace(/[^\w-]+/g, '');
+
+  let finalSlug = baseSlug;
+  let counter = 1;
+
+  // Verifica se o slug já existe no banco de dados
+  while (await prisma.landingPage.findUnique({ where: { slug: finalSlug } })) {
+    finalSlug = `${baseSlug}-${counter}`;
+    counter++;
+  }
+
+  return finalSlug;
 };

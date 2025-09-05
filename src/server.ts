@@ -44,6 +44,7 @@ import {
 } from './data/index';
 import { prisma } from './db/prisma';
 import { faker } from '@faker-js/faker/locale/pt_BR';
+import { generateShortId } from './utils';
 
 const app = express();
 app.use(cors());
@@ -91,10 +92,12 @@ const upload = multer({
   }
 });
 
-// Servir arquivos estáticos: usa process.cwd() para independência de __dirname/ESM
-const publicPath = path.join(process.cwd(), 'backend', 'public');
-console.log(`Servindo arquivos estáticos de: ${publicPath}`);
-app.use(express.static(publicPath));
+// Servir arquivos estáticos do frontend
+const frontendPath = path.join(process.cwd(), 'dist');
+console.log(`Servindo arquivos estáticos de: ${frontendPath}`);
+app.use(express.static(frontendPath));
+
+// Servir uploads
 app.use('/uploads', express.static(UPLOADS_DIR));
 
 // --------- ENDPOINTS ---------
@@ -105,10 +108,77 @@ app.use("/api", apiRouter);
 // Healthcheck simples
 app.get("/api/health", (_req: Request, res: Response) => res.json({ ok: true }));
 
+// --- Fallback das rotas de notas (garante funcionamento mesmo que apiRouter não tenha recarregado) ---
+const NOTES_FILE = path.join(process.cwd(), 'backend', 'notes.json');
+function loadNotesFile(): Record<string, string> {
+  try {
+    if (!fs.existsSync(NOTES_FILE)) {
+      fs.mkdirSync(path.dirname(NOTES_FILE), { recursive: true });
+      fs.writeFileSync(NOTES_FILE, JSON.stringify({}), 'utf-8');
+    }
+    const raw = fs.readFileSync(NOTES_FILE, 'utf-8');
+    return JSON.parse(raw || '{}');
+  } catch {
+    return {};
+  }
+}
+function saveNotesFile(data: Record<string, string>) {
+  fs.writeFileSync(NOTES_FILE, JSON.stringify(data, null, 2), 'utf-8');
+}
+app.get('/api/orders/:id/notes', (req: Request, res: Response) => {
+  const id = req.params.id;
+  const notesMap = loadNotesFile();
+  res.json({ notes: notesMap[id] || '' });
+});
+app.use(express.json());
+app.patch('/api/orders/:id/notes', (req: Request, res: Response) => {
+  const id = req.params.id;
+  const notes = (req.body && (req.body as any).notes) || '';
+  if (typeof notes !== 'string') {
+    return res.status(400).json({ error: 'validation_failed', message: 'Campo notes deve ser string.' });
+  }
+  try {
+    const map = loadNotesFile();
+    map[id] = notes;
+    saveNotesFile(map);
+    res.json({ success: true, notes });
+  } catch (e: any) {
+    res.status(500).json({ error: 'server_error', message: e?.message || 'Falha ao salvar notas.' });
+  }
+});
+
+// Fallback para o index.html do frontend (para rotas de SPA)
+app.get('*', (req, res) => {
+  const indexPath = path.join(frontendPath, 'index.html');
+  if (fs.existsSync(indexPath)) {
+    res.sendFile(indexPath);
+  } else {
+    res.status(404).send('Frontend não encontrado. Execute `npm run build`.');
+  }
+});
+
+import bcrypt from 'bcrypt';
+
 async function runSeedIfNeeded() {
+  // Garante que o usuário admin exista
+  const userCount = await prisma.user.count();
+  if (userCount === 0) {
+    console.log('Nenhum usuário admin encontrado, criando um...');
+    const passwordHash = await bcrypt.hash('123', 10);
+    await prisma.user.create({
+      data: {
+        username: 'admin',
+        passwordHash,
+        name: 'Administrador',
+        email: 'admin@example.com',
+      },
+    });
+    console.log('Usuário "admin" / senha "123" criado.');
+  }
+
   const orderCount = await prisma.order.count();
   if (orderCount > 0) {
-    console.log('Banco de dados já populado. Seed não será executado.');
+    console.log('Banco de dados já populado com pedidos. Seed de pedidos não será executado.');
     return;
   }
 
@@ -144,23 +214,43 @@ async function runSeedIfNeeded() {
 
     // 2. Criar 4 Pedidos com Clientes, Endereços e Pagamentos
     for (let i = 0; i < 4; i++) {
+      // CEPs reais (amostra) para autofill
+      const REAL_CEPS = [
+        { cep: '01001-000', city: 'São Paulo', state: 'SP' },
+        { cep: '20010-000', city: 'Rio de Janeiro', state: 'RJ' },
+        { cep: '30110-012', city: 'Belo Horizonte', state: 'MG' },
+        { cep: '40020-000', city: 'Salvador', state: 'BA' },
+        { cep: '60025-001', city: 'Fortaleza', state: 'CE' },
+        { cep: '70040-010', city: 'Brasília', state: 'DF' },
+        { cep: '80010-000', city: 'Curitiba', state: 'PR' },
+        { cep: '88010-400', city: 'Florianópolis', state: 'SC' },
+        { cep: '69005-010', city: 'Manaus', state: 'AM' },
+        { cep: '66010-000', city: 'Belém', state: 'PA' },
+      ];
+      const rc = REAL_CEPS[Math.floor(Math.random() * REAL_CEPS.length)];
+
       const customer = await prisma.customer.create({
         data: {
           firstName: faker.person.firstName(),
           lastName: faker.person.lastName(),
           email: faker.internet.email({ firstName: `test_${i}` }),
-          phone: faker.phone.number(),
+          phone: (() => {
+            const ddd = '11';
+            const rest8 = Array.from({ length: 8 }, () => Math.floor(Math.random() * 10)).join('');
+            const digits = `${ddd}9${rest8}`;
+            return `(${digits.slice(0,2)}) ${digits.slice(2,3)}${digits.slice(3,7)}-${digits.slice(7)}`;
+          })(),
           cpf: `${faker.string.numeric(3)}.${faker.string.numeric(3)}.${faker.string.numeric(3)}-${faker.string.numeric(2)}`,
           birthDate: faker.date.birthdate({ min: 18, max: 65, mode: 'age' }).toISOString().split('T')[0],
           addresses: {
             create: {
-              cep: faker.location.zipCode(),
+              cep: rc.cep,
               street: faker.location.street(),
               number: faker.location.buildingNumber(),
               complement: faker.location.secondaryAddress(),
               district: faker.location.streetAddress().split(',')[1]?.trim() || 'Centro',
-              city: faker.location.city(),
-              state: faker.location.state({ abbreviated: true }),
+              city: rc.city,
+              state: rc.state,
             },
           },
         },
@@ -179,7 +269,7 @@ async function runSeedIfNeeded() {
 
       await prisma.order.create({
         data: {
-          id: faker.string.uuid(),
+          id: generateShortId(),
           customerId: customer.id,
           status: orderStatus,
           category: faker.helpers.arrayElement(['Skincare', 'Maquiagem', 'Cabelo']),
@@ -217,9 +307,9 @@ async function runSeedIfNeeded() {
 }
 
 // Start
-const PORT = process.env.PORT || 3003;
-app.listen(PORT, () => {
-  console.log(`Backend listening on http://localhost:${PORT}`);
+const PORT = parseInt(process.env.PORT || '3003', 10);
+app.listen(PORT, '0.0.0.0', () => {
+  console.log(`Backend listening on http://0.0.0.0:${PORT}`);
   runSeedIfNeeded().catch(e => {
       console.error("Falha ao executar o seed no boot:", e);
   });

@@ -65,6 +65,9 @@ export default function OrderDetail() {
   const [isSaving, setIsSaving] = useState(false);
   const [saveMessage, setSaveMessage] = useState<string | null>(null);
   const [validationErrors, setValidationErrors] = useState<Record<string, string | undefined>>({});
+  const [notes, setNotes] = useState<string>("");
+  const [notesSaving, setNotesSaving] = useState(false);
+  const [notesMessage, setNotesMessage] = useState<string | null>(null);
 
   // Carrega dados do pedido
   useEffect(() => {
@@ -101,6 +104,22 @@ export default function OrderDetail() {
     }
     load();
     return () => { alive = false; };
+  }, [id]);
+
+  // Carrega notas do pedido
+  useEffect(() => {
+    let mounted = true;
+    async function loadNotes() {
+      if (!id) return;
+      try {
+        const r = await api.getOrderNotes(id);
+        if (mounted) setNotes(r.notes || "");
+      } catch (e) {
+        // silencioso
+      }
+    }
+    loadNotes();
+    return () => { mounted = false; };
   }, [id]);
 
   // Handlers de mudança de input
@@ -142,6 +161,21 @@ export default function OrderDetail() {
   const handleStatusChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
     setFormState((prev) => ({ ...prev, status: e.target.value as OrderDetail['status'] }));
     setValidationErrors((prev) => ({ ...prev, status: undefined }));
+  };
+
+  const handleSaveNotes = async () => {
+    if (!id || notesSaving) return;
+    setNotesSaving(true);
+    setNotesMessage(null);
+    try {
+      await api.saveOrderNotes(id, notes);
+      setNotesMessage("Anotações salvas!");
+    } catch (e: any) {
+      setNotesMessage(e?.message || "Falha ao salvar anotações.");
+    } finally {
+      setNotesSaving(false);
+      setTimeout(() => setNotesMessage(null), 3000);
+    }
   };
 
   // Salvar alterações
@@ -545,6 +579,27 @@ export default function OrderDetail() {
               </p>
               <p className="text-sm text-zinc-500">Status: <span className="font-medium text-emerald-700">{orderData.payment.status}</span></p>
               <p className="text-zinc-500">Valor Pago: <span className="font-medium">{currency(orderData.payment.paidAmount)}</span></p>
+            </div>
+          </div>
+
+          {/* Anotações */}
+          <div className="rounded-xl border bg-white p-4">
+            <h2 className="font-semibold mb-4 text-zinc-800">Anotações</h2>
+            <textarea
+              value={notes}
+              onChange={(e) => setNotes(e.target.value)}
+              placeholder="Escreva observações sobre o pedido..."
+              className="w-full min-h-[120px] border rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+            />
+            <div className="mt-3 flex items-center gap-3">
+              <button
+                onClick={handleSaveNotes}
+                disabled={notesSaving}
+                className="px-4 py-2 rounded-md bg-emerald-700 text-white hover:bg-emerald-800 disabled:opacity-50"
+              >
+                {notesSaving ? 'Salvando...' : 'Salvar Anotações'}
+              </button>
+              {notesMessage && <span className="text-sm text-zinc-600">{notesMessage}</span>}
             </div>
           </div>
         </div>

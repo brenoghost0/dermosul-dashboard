@@ -2,7 +2,9 @@ import React, { useEffect, useState, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { landingPageApi, LandingPage, publicOrderApi, apiClient } from '../../lib/api';
 import PixPaymentModal from '../../components/PixPaymentModal';
+import CountdownTimer from '../../components/CountdownTimer'; // Importa o novo componente
 import logoDermosul from '../../assets/logo-dermosul.png';
+import Template2 from './Template2'; // Importa o novo template
 
 // --- Helper Functions ---
 const BRL = (v: number) => v.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
@@ -96,17 +98,13 @@ const AnimatedChat = () => {
 };
 
 
-// --- Main Component ---
-function LandingPageContent() {
-  const { slug } = useParams<{ slug: string }>();
+// --- Template 1 Component (Layout Atual) ---
+function Template1({ landingPageData }: { landingPageData: LandingPage }) {
   const navigate = useNavigate();
-  const [landingPage, setLandingPage] = useState<LandingPage | null>(null);
+  const [landingPage, setLandingPage] = useState<LandingPage>(landingPageData);
   const birthDayRef = useRef<HTMLInputElement>(null);
   const birthMonthRef = useRef<HTMLInputElement>(null);
   const birthYearRef = useRef<HTMLInputElement>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-
   // Form states
   const [formData, setFormData] = useState({
     firstName: '', lastName: '', email: '', phone: '',
@@ -127,6 +125,11 @@ function LandingPageContent() {
   const [externalReference, setExternalReference] = useState<string>('');
 
   // --- Validation and API Functions ---
+
+  useEffect(() => {
+    // Mantém o estado sincronizado caso a prop mude
+    setLandingPage(landingPageData);
+  }, [landingPageData]);
 
   const validateField = (name: string, value: string) => {
     let error = '';
@@ -227,15 +230,6 @@ function LandingPageContent() {
     }
   };
 
-  useEffect(() => {
-    if (slug) {
-      landingPageApi.getLandingPageBySlug(slug)
-        .then(setLandingPage)
-        .catch(err => setError(err.message || "Landing Page não encontrada."))
-        .finally(() => setLoading(false));
-    }
-  }, [slug]);
-
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
     let formattedValue = value;
@@ -309,6 +303,46 @@ function LandingPageContent() {
     }
   };
 
+  // --- Helper function to build the final order payload ---
+  const buildOrderPayload = (gatewayPaymentId: string, paymentType: 'card' | 'pix', status: string = 'pago') => {
+    if (!landingPage) {
+      throw new Error("Dados da landing page não estão disponíveis para criar o pedido.");
+    }
+    const payload: any = {
+      ...formData,
+      addressNumber: formData.number,
+      phone: formData.phone.replace(/\D/g, ''),
+      cpf: formData.cpf.replace(/\D/g, ''),
+      birthDate: `${formData.birthYear}-${formData.birthMonth.padStart(2, '0')}-${formData.birthDay.padStart(2, '0')}`,
+      gender: formData.gender,
+      productId: landingPage.id,
+      productTitle: landingPage.productTitle,
+      qty: quantity,
+      productPrice: landingPage.productPrice,
+      gatewayPaymentId: gatewayPaymentId,
+      status,
+      paymentMethod: paymentType,
+      externalReference,
+    };
+    return payload;
+  };
+
+  // --- Helper function to create the order summary for the success page ---
+  const createOrderSummary = (order: any, paymentType: 'card' | 'pix') => {
+    if (!landingPage) return null;
+    return {
+      slug: landingPage.slug,
+      productImage: landingPage.imageUrl,
+      productTitle: landingPage.productTitle,
+      totalAmount: landingPage.productPrice * quantity,
+      installments: paymentType === 'card' ? installments : 1,
+      quantity,
+      paymentMethod: paymentType,
+      orderId: order?.id,
+      createdAt: order?.createdAt,
+    };
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setFormLoading(true);
@@ -319,8 +353,13 @@ function LandingPageContent() {
       setFormLoading(false);
       return;
     }
+    if (landingPage.status === 'PAUSADA') {
+      setFormError('Produto indisponível no momento.');
+      setFormLoading(false);
+      return;
+    }
 
-    const extRef = `${slug}-${Date.now()}`;
+    const extRef = `${landingPage.slug}-${Date.now()}`;
     setExternalReference(extRef);
 
     try {
@@ -368,32 +407,9 @@ function LandingPageContent() {
         };
         const response = await apiClient.post('/payments/credit-card', cardPayload);
         if (response.data.success) {
-          const finalOrderData: any = {
-            ...formData,
-            addressNumber: formData.number,
-            phone: formData.phone.replace(/\D/g, ''),
-            cpf: formData.cpf.replace(/\D/g, ''),
-            birthDate: `${formData.birthYear}-${formData.birthMonth.padStart(2, '0')}-${formData.birthDay.padStart(2, '0')}`,
-            gender: formData.gender,
-            productId: landingPage.id,
-            productTitle: landingPage.productTitle,
-            qty: quantity,
-            productPrice: landingPage.productPrice,
-            gatewayPaymentId: response.data.gatewayPaymentId,
-            status: 'pago',
-          };
-          const order = await publicOrderApi.createPublicOrder(finalOrderData);
-          const summary = {
-            slug,
-            productImage: landingPage.imageUrl,
-            productTitle: landingPage.productTitle,
-            totalAmount: landingPage.productPrice * quantity,
-            installments,
-            quantity,
-            paymentMethod: 'cartao' as const,
-            orderId: order?.id,
-            createdAt: order?.createdAt,
-          };
+          const orderPayload = buildOrderPayload(response.data.gatewayPaymentId, 'card');
+          const order = await publicOrderApi.createPublicOrder(orderPayload);
+          const summary = createOrderSummary(order, 'card');
           sessionStorage.setItem('lastOrderSummary', JSON.stringify(summary));
           navigate('/purchase-success');
         } else {
@@ -408,48 +424,62 @@ function LandingPageContent() {
     }
   };
 
-  const handleConfirmPixPayment = async () => {
+  const handleConfirmPixPayment = async (gatewayPaymentId: string) => {
     if (!landingPage) return;
     try {
-      const finalOrderData: any = {
-        ...formData,
-        addressNumber: formData.number,
-        phone: formData.phone.replace(/\D/g, ''),
-        cpf: formData.cpf.replace(/\D/g, ''),
-        birthDate: `${formData.birthYear}-${formData.birthMonth.padStart(2, '0')}-${formData.birthDay.padStart(2, '0')}`,
-        gender: formData.gender,
-        productId: landingPage.id,
-        productTitle: landingPage.productTitle,
-        qty: quantity,
-        productPrice: landingPage.productPrice,
-        gatewayPaymentId: pixGatewayPaymentId,
-        status: 'pago',
-        paymentMethod: 'pix',
-        externalReference,
-      };
-      const order = await publicOrderApi.createPublicOrder(finalOrderData);
-      const summary = {
-        slug,
-        productImage: landingPage.imageUrl,
-        productTitle: landingPage.productTitle,
-        totalAmount: landingPage.productPrice * quantity,
-        installments: 1,
-        quantity,
-        paymentMethod: 'pix' as const,
-        orderId: order?.id,
-        createdAt: order?.createdAt,
-      };
-      sessionStorage.setItem('lastOrderSummary', JSON.stringify(summary));
-      setIsPixOpen(false);
-      navigate('/purchase-success');
+      const orderPayload = buildOrderPayload(gatewayPaymentId, 'pix', 'pendente');
+      await publicOrderApi.createPublicOrder(orderPayload);
     } catch (err: any) {
-      setFormError(err.message || 'Falha ao registrar pedido PIX.');
+      console.error("Erro ao criar pedido pendente:", err);
+      const message = err.response?.data?.message || err.message || 'Falha ao registrar o pedido PIX inicial.';
+      // Mostra o erro no formulário principal e fecha o modal para que o usuário veja
+      setFormError(message);
+      setIsPixOpen(false); 
     }
   };
 
-  if (loading) return <div className="flex items-center justify-center min-h-screen bg-indigo-900 text-white">Carregando...</div>;
-  if (error) return <div className="flex items-center justify-center min-h-screen bg-indigo-900 text-red-400">Erro: {error}</div>;
-  if (!landingPage) return <div className="flex items-center justify-center min-h-screen bg-indigo-900 text-white">Landing Page não encontrada.</div>;
+  const checkPixPaymentStatus = async (): Promise<boolean> => {
+    if (!externalReference) return false;
+
+    try {
+      // 1) Verifica pedido no banco
+      const response = await apiClient.get(`/orders/by-reference/${externalReference}`);
+      if (response.data && response.data.status === 'pago') {
+        const summary = createOrderSummary(response.data, 'pix');
+        sessionStorage.setItem('lastOrderSummary', JSON.stringify(summary));
+        setIsPixOpen(false);
+        navigate('/purchase-success');
+        return true;
+      }
+
+      // 2) Fallback: consulta gateway; se pago, cria o pedido se ainda não existir
+      const gateway = await apiClient.get(`/payments/status/by-reference/${externalReference}`);
+      if (gateway.data?.paid) {
+        try {
+          const updated = await apiClient.get(`/orders/by-reference/${externalReference}`);
+          const summary = createOrderSummary(updated.data, 'pix');
+          sessionStorage.setItem('lastOrderSummary', JSON.stringify(summary));
+          setIsPixOpen(false);
+          navigate('/purchase-success');
+          return true;
+        } catch (e) {
+          if (pixGatewayPaymentId) {
+            const orderPayload = buildOrderPayload(pixGatewayPaymentId, 'pix', 'pago');
+            const order = await publicOrderApi.createPublicOrder(orderPayload);
+            const summary = createOrderSummary(order, 'pix');
+            sessionStorage.setItem('lastOrderSummary', JSON.stringify(summary));
+            setIsPixOpen(false);
+            navigate('/purchase-success');
+            return true;
+          }
+        }
+      }
+      return false;
+    } catch (error) {
+      console.error('Erro ao verificar status do pagamento:', error);
+      return false;
+    }
+  };
 
   return (
     <div className="bg-[#2A2A3A] min-h-screen font-sans text-white">
@@ -461,14 +491,17 @@ function LandingPageContent() {
       <div className="max-w-6xl mx-auto p-4 sm:p-8">
         <main>
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 lg:gap-16 items-center mb-12">
-            {/* Product Image */}
-            <div className="flex justify-center overflow-hidden rounded-lg">
-              <img 
-                src={landingPage.imageUrl} 
-                alt={landingPage.productTitle} 
-                className="w-full h-auto object-contain rounded-lg transition-transform duration-300 ease-in-out hover:scale-125 cursor-zoom-in"
-                style={{ maxWidth: '868px' }}
-              />
+            {/* Product Image & Timer */}
+            <div className="flex flex-col items-center">
+              <div className="flex justify-center overflow-hidden rounded-lg">
+                <img 
+                  src={landingPage.imageUrl} 
+                  alt={landingPage.productTitle} 
+                  className="w-full h-auto object-contain rounded-lg transition-transform duration-300 ease-in-out hover:scale-125 cursor-zoom-in"
+                  style={{ maxWidth: '868px' }}
+                />
+              </div>
+              <CountdownTimer targetDate={new Date(Date.now() + 3 * 24 * 60 * 60 * 1000).toISOString()} />
             </div>
 
             {/* Product Details */}
@@ -491,7 +524,9 @@ function LandingPageContent() {
           {/* Quantity Selector Section */}
           <div className="mb-8">
             <h3 className="text-2xl font-bold text-center mb-4">Selecione a Quantidade</h3>
-            <QuantitySelector quantity={quantity} setQuantity={setQuantity} />
+            <div className={landingPage.status === 'PAUSADA' ? 'opacity-50 pointer-events-none' : ''}>
+              <QuantitySelector quantity={quantity} setQuantity={setQuantity} />
+            </div>
           </div>
 
           {/* Form Section */}
@@ -547,14 +582,16 @@ function LandingPageContent() {
                   <button
                     type="button"
                     onClick={() => setPaymentMethod('card')}
-                    className={`w-full px-4 py-2 rounded-lg border ${paymentMethod === 'card' ? 'bg-orange-500 border-orange-500 text-white' : 'bg-[#2A2A3A] border-gray-600 text-gray-200'}`}
+                    disabled={landingPage.status === 'PAUSADA'}
+                    className={`w-full px-4 py-2 rounded-lg border ${landingPage.status === 'PAUSADA' ? 'opacity-50 cursor-not-allowed' : paymentMethod === 'card' ? 'bg-orange-500 border-orange-500 text-white' : 'bg-[#2A2A3A] border-gray-600 text-gray-200'}`}
                   >
                     Cartão de crédito
                   </button>
                   <button
                     type="button"
                     onClick={() => setPaymentMethod('pix')}
-                    className={`w-full px-4 py-2 rounded-lg border ${paymentMethod === 'pix' ? 'bg-orange-500 border-orange-500 text-white' : 'bg-[#2A2A3A] border-gray-600 text-gray-200'}`}
+                    disabled={landingPage.status === 'PAUSADA'}
+                    className={`w-full px-4 py-2 rounded-lg border ${landingPage.status === 'PAUSADA' ? 'opacity-50 cursor-not-allowed' : paymentMethod === 'pix' ? 'bg-orange-500 border-orange-500 text-white' : 'bg-[#2A2A3A] border-gray-600 text-gray-200'}`}
                   >
                     Pix
                   </button>
@@ -591,9 +628,14 @@ function LandingPageContent() {
                   </>
                 )}
                 <div className="pt-4">
-                  <button type="submit" disabled={formLoading} className="w-full bg-orange-500 hover:bg-orange-600 text-white font-bold text-xl py-4 px-4 rounded-lg shadow-lg transition-transform transform hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed">
-                    {formLoading ? 'PROCESSANDO...' : paymentMethod === 'pix' ? `GERAR PIX (${BRL(landingPage.productPrice * quantity)})` : `COMPRAR (${BRL(landingPage.productPrice * quantity)})`}
+                <button type="submit" disabled={formLoading || landingPage.status === 'PAUSADA'} className={`w-full text-white font-bold text-xl py-4 px-4 rounded-lg shadow-lg transition-transform transform disabled:opacity-50 disabled:cursor-not-allowed ${landingPage.status === 'PAUSADA' ? 'bg-gray-500' : 'bg-orange-500 hover:bg-orange-600 hover:scale-105'}`}>
+                    {landingPage.status === 'PAUSADA' ? 'Produto indisponível' : (formLoading ? 'PROCESSANDO...' : paymentMethod === 'pix' ? `GERAR PIX (${BRL(landingPage.productPrice * quantity)})` : `COMPRAR (${BRL(landingPage.productPrice * quantity)})`)}
                   </button>
+                  {landingPage.status === 'PAUSADA' && (
+                    <div className="mt-3 bg-yellow-50 border border-yellow-200 text-yellow-800 text-sm rounded-md p-3 text-center">
+                      Produto fora de estoque no momento.
+                    </div>
+                  )}
                   {formError && <p className="text-red-400 text-center mt-4">{formError}</p>}
                 </div>
                 
@@ -652,7 +694,7 @@ function LandingPageContent() {
         onClose={() => setIsPixOpen(false)}
         qrCode={pixQrCode}
         pixCopyPaste={pixCopyPaste}
-        onConfirm={handleConfirmPixPayment}
+        onCheckPaymentStatus={checkPixPaymentStatus}
         amount={(landingPage?.productPrice || 0) * quantity}
       />
     </div>
@@ -683,6 +725,36 @@ const InputField = React.forwardRef<HTMLInputElement, InputFieldProps>(
   )
 );
 
+// --- Template Router Component ---
 export default function PublicLandingPage() {
-  return <LandingPageContent />;
+  const { slug } = useParams<{ slug: string }>();
+  const [landingPage, setLandingPage] = useState<LandingPage | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (slug) {
+      landingPageApi.getLandingPageBySlug(slug)
+        .then(setLandingPage)
+        .catch(err => setError(err.message || "Landing Page não encontrada."))
+        .finally(() => setLoading(false));
+    }
+  }, [slug]);
+
+  if (loading) return <div className="flex items-center justify-center min-h-screen bg-indigo-900 text-white">Carregando...</div>;
+  if (error) return <div className="flex items-center justify-center min-h-screen bg-indigo-900 text-red-400">Erro: {error}</div>;
+  if (!landingPage) return <div className="flex items-center justify-center min-h-screen bg-indigo-900 text-white">Landing Page não encontrada.</div>;
+
+  console.log("Dados da Landing Page para roteamento:", landingPage); // Adicionado para depuração
+
+  // Roteamento de template
+  switch (landingPage.template) {
+    case 'MODELO_2':
+      return <Template2 landingPageData={landingPage} />;
+    case 'MODELO_3':
+      return <div className="text-white">MODELO 3 EM CONSTRUÇÃO</div>;
+    case 'MODELO_1':
+    default:
+      return <Template1 landingPageData={landingPage} />;
+  }
 }
