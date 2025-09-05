@@ -89,7 +89,7 @@ router.post("/landings", requireAuth, upload.single('image'), async (req: Reques
       return res.status(400).json({ error: 'validation_failed', message: 'A imagem do produto é obrigatória.' });
     }
 
-    const imageUrl = `${process.env.API_BASE_URL}/uploads/${req.file.filename}`;
+    const imageUrl = `/uploads/${req.file.filename}`;
     
     const newLandingPage = await createLandingPage({ 
       productTitle, 
@@ -111,7 +111,7 @@ router.post("/landings", requireAuth, upload.single('image'), async (req: Reques
 router.put("/landings/:id", requireAuth, upload.single('image'), async (req: Request, res: Response) => {
   try {
     const { productTitle, productDescription, productBrand, productPrice, shippingValue, freeShipping, template, imageUrl: existingImageUrl } = req.body;
-    const imageUrl = req.file ? `${process.env.API_BASE_URL}/uploads/${req.file.filename}` : existingImageUrl;
+    const imageUrl = req.file ? `/uploads/${req.file.filename}` : existingImageUrl;
 
     const updatedLandingPage = await updateLandingPage(req.params.id, { 
       productTitle, 
