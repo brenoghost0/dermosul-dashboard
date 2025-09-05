@@ -21,7 +21,10 @@ services:
     ports:
       - "5050:80"
   app:
-    build: .
+    build:
+      context: .
+      args:
+        VITE_API_URL: http://191.252.110.64
     restart: always
     ports:
       - "80:3003"

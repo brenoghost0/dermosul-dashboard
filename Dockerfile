@@ -17,6 +17,7 @@ COPY . .
 RUN npx prisma generate
 
 # Construir a aplicação para produção
+ARG VITE_API_URL
 RUN npm run build
 
 # Expor a porta que a aplicação usa
