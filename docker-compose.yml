@@ -25,7 +25,7 @@ services:
       context: .
       args:
         VITE_API_URL: http://191.252.110.64
-    command: sh -c "npx prisma db push && npm start"
+    command: sh -c "npx prisma db push --force-reset && npm start"
     restart: always
     ports:
       - "80:3003"
