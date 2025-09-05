@@ -20,5 +20,16 @@ services:
       PGADMIN_DEFAULT_PASSWORD: admin
     ports:
       - "5050:80"
+  app:
+    build: .
+    restart: always
+    ports:
+      - "80:3007"
+    depends_on:
+      - db
+    environment:
+      - DATABASE_URL=postgresql://postgres:postgres@db:5432/dermosul
+    env_file:
+      - .env
 volumes:
   pgdata:
