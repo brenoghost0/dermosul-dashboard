@@ -18,6 +18,7 @@ exports.createPublicOrder = createPublicOrder;
 exports.updateOrderStatusByExternalReference = updateOrderStatusByExternalReference;
 const prisma_js_1 = require("../db/prisma.js");
 const index_js_1 = require("../utils/index.js"); // Importar utilitários
+const mailer_js_1 = require("../lib/email/mailer.js");
 // --- Funções Utilitárias para Mapeamento e Conversão ---
 // Converte valores monetários para centavos (Int)
 const toCents = (value) => Math.round(value * 100);
@@ -409,6 +410,7 @@ async function updateOrder(id, updatedFields) {
             }
         }
     }
+    const prevStatus = existingOrder.status;
     await prisma_js_1.prisma.order.update({
         where: { id },
         data: {
@@ -451,7 +453,36 @@ async function updateOrder(id, updatedFields) {
             payments: true,
         },
     });
-    return mapOrderFromPrisma(finalOrder);
+    const mapped = mapOrderFromPrisma(finalOrder);
+    // E-mail: dispara somente quando houver mudança de status
+    try {
+        const nextStatus = (updatedFields.status ? String(updatedFields.status).toLowerCase() : prevStatus);
+        const changed = nextStatus !== String(prevStatus);
+        const to = finalOrder?.customer?.email || '';
+        const name = [finalOrder?.customer?.firstName, finalOrder?.customer?.lastName].filter(Boolean).join(' ') || 'Cliente';
+        const orderId = id;
+        if (changed && to) {
+            if (nextStatus === 'pago') {
+                const total = Number(mapped?.totals?.grandTotal ?? mapped?.total ?? 0);
+                const installments = mapped?.payment?.installments || 1;
+                const itemName = mapped?.items?.[0]?.name || 'Pedido Dermosul';
+                await (0, mailer_js_1.sendMail)(to, `Dermosul • Pagamento aprovado do seu pedido #${orderId} ✅`, (0, mailer_js_1.renderPaymentApprovedEmail)({ name, orderId, total, installments, item: itemName }));
+            }
+            else if (nextStatus === 'pendente') {
+                const total = Number(mapped?.totals?.grandTotal ?? mapped?.total ?? 0);
+                const installments = mapped?.payment?.installments || 1;
+                const itemName = mapped?.items?.[0]?.name || 'Pedido Dermosul';
+                await (0, mailer_js_1.sendMail)(to, `Dermosul • Estamos preparando seu pedido #${orderId}`, (0, mailer_js_1.renderPendingEmail)({ name, orderId, total, installments, item: itemName }));
+            }
+            else if (nextStatus === 'enviado') {
+                await (0, mailer_js_1.sendMail)(to, `Dermosul • Seu pedido #${orderId} foi enviado 🚚`, (0, mailer_js_1.renderShippedEmail)({ name, orderId }));
+            }
+        }
+    }
+    catch (e) {
+        console.warn('[email] falha ao disparar notificação de pedido:', e?.message || e);
+    }
+    return mapped;
 }
 async function deleteOrder(id) {
     try {

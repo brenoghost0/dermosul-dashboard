@@ -4,7 +4,10 @@ import { landingPageApi, LandingPage, publicOrderApi, apiClient } from '../../li
 import PixPaymentModal from '../../components/PixPaymentModal';
 import CountdownTimer from '../../components/CountdownTimer'; // Importa o novo componente
 import logoDermosul from '../../assets/logo-dermosul.png';
-import Template2 from './Template2'; // Importa o novo template
+import { resolveImageUrl } from '../../lib/media';
+import Template2 from './Template2'; // Importa o template 2
+import Template3 from './Template3'; // Novo template 3 (checkout em etapas)
+import Template4 from './Template4'; // Novo template 4 (igual ao 3, tema claro)
 
 // --- Helper Functions ---
 const BRL = (v: number) => v.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
@@ -507,7 +510,7 @@ function Template1({ landingPageData }: { landingPageData: LandingPage }) {
             <div className="flex flex-col items-center">
               <div className="flex justify-center overflow-hidden rounded-lg">
                 <img 
-                  src={`${import.meta.env.VITE_API_URL || ''}${landingPage.imageUrl}`} 
+                  src={resolveImageUrl(landingPage.imageUrl)} 
                   alt={landingPage.productTitle} 
                   className="w-full h-auto object-contain rounded-lg transition-transform duration-300 ease-in-out hover:scale-125 cursor-zoom-in"
                   style={{ maxWidth: '868px' }}
@@ -764,7 +767,9 @@ export default function PublicLandingPage() {
     case 'MODELO_2':
       return <Template2 landingPageData={landingPage} />;
     case 'MODELO_3':
-      return <div className="text-white">MODELO 3 EM CONSTRUÇÃO</div>;
+      return <Template3 landingPageData={landingPage} />;
+    case 'MODELO_4':
+      return <Template4 landingPageData={landingPage} />;
     case 'MODELO_1':
     default:
       return <Template1 landingPageData={landingPage} />;

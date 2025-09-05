@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { resolveImageUrl } from '../../lib/media';
 import { Link, useNavigate } from 'react-router-dom';
 
 type OrderSummary = {
@@ -45,7 +46,7 @@ export default function PurchaseSuccessPage() {
         <div className="flex flex-col sm:flex-row gap-4 sm:gap-6 items-start bg-zinc-50 border border-zinc-200 rounded-xl p-4 sm:p-6 mb-8">
           <div className="w-full sm:w-28 sm:h-28 rounded-lg overflow-hidden bg-white border border-zinc-200 flex items-center justify-center">
             {summary?.productImage ? (
-              <img src={summary.productImage} alt={summary.productTitle || 'Produto'} className="object-contain w-full h-full" />
+              <img src={resolveImageUrl(summary.productImage)} alt={summary.productTitle || 'Produto'} className="object-contain w-full h-full" />
             ) : (
               <div className="text-zinc-400 text-sm">Imagem</div>
             )}

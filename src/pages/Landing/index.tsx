@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { landingPageApi, LandingPage, API_BASE_URL } from '../../lib/api';
+import { resolveImageUrl } from '../../lib/media';
 
 const BRL = (v: number) => v.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 const ddmmhh = (iso: string) => {
@@ -197,9 +198,9 @@ function EditLandingPageModal({ landingPage, onClose, onSave }: EditLandingPageM
           {/* Seleção de Modelo no Modal */}
           <div className="md:col-span-2 mt-4">
             <label className="block text-sm font-medium text-zinc-700 mb-2">Modelo da Landing Page</label>
-            <div className="flex items-center gap-4">
-              {['MODELO_1', 'MODELO_2', 'MODELO_3'].map((model) => (
-                <label key={model} htmlFor={`edit-template-${model}`} className={`cursor-pointer border rounded-md p-2 flex items-center gap-2 hover:bg-zinc-50 ${template === model ? 'border-emerald-500 ring-2 ring-emerald-200' : 'border-zinc-300'}`}>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              {['MODELO_1', 'MODELO_2', 'MODELO_3', 'MODELO_4'].map((model) => (
+                <label key={model} htmlFor={`edit-template-${model}`} className={`w-full cursor-pointer border rounded-md p-2 flex items-center gap-2 hover:bg-zinc-50 ${template === model ? 'border-emerald-500 ring-2 ring-emerald-200' : 'border-zinc-300'}`}>
                   <input
                     type="radio"
                     id={`edit-template-${model}`}
@@ -209,9 +210,9 @@ function EditLandingPageModal({ landingPage, onClose, onSave }: EditLandingPageM
                     onChange={(e) => setTemplate(e.target.value)}
                     className="h-4 w-4 text-emerald-600 border-zinc-300 focus:ring-emerald-500"
                   />
-                  <span className="text-sm text-zinc-900 w-20">{model.replace('_', ' ')}</span>
+                  <span className="text-sm text-zinc-900">{model.replace('_', ' ')}</span>
                   {/* Mini preview */}
-                  <span className="grid grid-cols-3 gap-0.5 w-20 h-8">
+                  <span className="grid grid-cols-3 gap-0.5 w-16 h-7">
                     {model === 'MODELO_1' && (<>
                       <span className="col-span-3 bg-zinc-300" />
                       <span className="col-span-3 bg-zinc-200" />
@@ -226,11 +227,16 @@ function EditLandingPageModal({ landingPage, onClose, onSave }: EditLandingPageM
                       <span className="col-span-2 bg-zinc-200" />
                       <span className="col-span-3 bg-zinc-100" />
                     </>)}
-                  </span>
-                </label>
-              ))}
-            </div>
+                    {model === 'MODELO_4' && (<>
+                      <span className="col-span-1 bg-zinc-200" />
+                      <span className="col-span-2 bg-zinc-100" />
+                      <span className="col-span-3 bg-white" />
+                    </>)}
+                </span>
+              </label>
+            ))}
           </div>
+        </div>
         </div>
 
         <div className="flex justify-end gap-3 mt-6">
@@ -455,12 +461,13 @@ export default function Landing() {
 
   // Helpers de visual
   const templateBadge = (tpl?: string) => {
-    const t = (tpl || 'MODELO_1') as 'MODELO_1' | 'MODELO_2' | 'MODELO_3';
-    const map: Record<typeof t, { cls: string; label: string }> = {
+    const t = (tpl || 'MODELO_1') as 'MODELO_1' | 'MODELO_2' | 'MODELO_3' | 'MODELO_4';
+    const map: Record<any, { cls: string; label: string }> = {
       MODELO_1: { cls: 'bg-zinc-100 text-zinc-700', label: 'Modelo 1' },
       MODELO_2: { cls: 'bg-blue-50 text-blue-700', label: 'Modelo 2' },
       MODELO_3: { cls: 'bg-purple-50 text-purple-700', label: 'Modelo 3' },
-    } as any;
+      MODELO_4: { cls: 'bg-emerald-50 text-emerald-700', label: 'Modelo 4' },
+    };
     return map[t] || map.MODELO_1;
   };
 
@@ -586,9 +593,9 @@ export default function Landing() {
           {/* Seleção de Modelo */}
           <div className="md:col-span-2 mt-4">
             <label className="block text-sm font-medium text-zinc-700 mb-2">Modelo da Landing Page</label>
-            <div className="flex items-center gap-4">
-              {['MODELO_1', 'MODELO_2', 'MODELO_3'].map((model) => (
-                <label key={model} htmlFor={`template-${model}`} className={`cursor-pointer border rounded-md p-2 flex items-center gap-2 hover:bg-zinc-50 ${template === model ? 'border-emerald-500 ring-2 ring-emerald-200' : 'border-zinc-300'}`}>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              {['MODELO_1', 'MODELO_2', 'MODELO_3', 'MODELO_4'].map((model) => (
+                <label key={model} htmlFor={`template-${model}`} className={`w-full cursor-pointer border rounded-md p-2 flex items-center gap-2 hover:bg-zinc-50 ${template === model ? 'border-emerald-500 ring-2 ring-emerald-200' : 'border-zinc-300'}`}>
                   <input
                     type="radio"
                     id={`template-${model}`}
@@ -598,9 +605,9 @@ export default function Landing() {
                     onChange={(e) => setTemplate(e.target.value)}
                     className="h-4 w-4 text-emerald-600 border-zinc-300 focus:ring-emerald-500"
                   />
-                  <span className="text-sm text-zinc-900 w-20">{model.replace('_', ' ')}</span>
+                  <span className="text-sm text-zinc-900">{model.replace('_', ' ')}</span>
                   {/* Mini preview */}
-                  <span className="grid grid-cols-3 gap-0.5 w-20 h-8">
+                  <span className="grid grid-cols-3 gap-0.5 w-16 h-7">
                     {model === 'MODELO_1' && (<>
                       <span className="col-span-3 bg-zinc-300" />
                       <span className="col-span-3 bg-zinc-200" />
@@ -615,11 +622,16 @@ export default function Landing() {
                       <span className="col-span-2 bg-zinc-200" />
                       <span className="col-span-3 bg-zinc-100" />
                     </>)}
-                  </span>
-                </label>
-              ))}
-            </div>
+                    {model === 'MODELO_4' && (<>
+                      <span className="col-span-1 bg-zinc-200" />
+                      <span className="col-span-2 bg-zinc-100" />
+                      <span className="col-span-3 bg-white" />
+                    </>)}
+                </span>
+              </label>
+            ))}
           </div>
+        </div>
         </div>
         <div className="mt-6">
           <button
@@ -661,6 +673,7 @@ export default function Landing() {
               <option value="MODELO_1">Modelo 1</option>
               <option value="MODELO_2">Modelo 2</option>
               <option value="MODELO_3">Modelo 3</option>
+              <option value="MODELO_4">Modelo 4</option>
             </select>
           </div>
         </div>
@@ -671,7 +684,7 @@ export default function Landing() {
           {filteredLandingPages.map((lp) => (
             <div key={lp.id} className="flex flex-col sm:flex-row items-start sm:items-center border border-zinc-200 rounded-lg shadow-sm p-3 gap-4">
               {lp.imageUrl && (
-                <img src={lp.imageUrl} alt={lp.productTitle} className="w-20 h-20 object-cover rounded-md shrink-0" />
+                <img src={resolveImageUrl(lp.imageUrl)} alt={lp.productTitle} className="w-20 h-20 object-cover rounded-md shrink-0" />
               )}
               <div className="flex-grow">
                 <h3 className="font-bold text-zinc-800 text-lg">{lp.productTitle}</h3>

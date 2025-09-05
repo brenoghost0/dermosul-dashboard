@@ -2,6 +2,7 @@
 import { Prisma, PaymentMethod } from '@prisma/client';
 import { prisma } from '../db/prisma.js';
 import { toISO, lastNDays, generateUniqueId, generateSlug, generateShortId } from '../utils/index.js'; // Importar utilitários
+import { sendMail, renderPaymentApprovedEmail, renderPendingEmail, renderShippedEmail } from '../lib/email/mailer.js';
 
 // --- Funções Utilitárias para Mapeamento e Conversão ---
 
@@ -411,6 +412,8 @@ export async function updateOrder(id: string, updatedFields: any): Promise<any |
     }
   }
 
+  const prevStatus: any = existingOrder.status;
+
   await prisma.order.update({
     where: { id },
     data: {
@@ -455,8 +458,36 @@ export async function updateOrder(id: string, updatedFields: any): Promise<any |
       payments: true,
     },
   });
+  const mapped = mapOrderFromPrisma(finalOrder);
 
-  return mapOrderFromPrisma(finalOrder);
+  // E-mail: dispara somente quando houver mudança de status
+  try {
+    const nextStatus = (updatedFields.status ? String(updatedFields.status).toLowerCase() : prevStatus) as string;
+    const changed = nextStatus !== String(prevStatus);
+    const to = finalOrder?.customer?.email || '';
+    const name = [finalOrder?.customer?.firstName, finalOrder?.customer?.lastName].filter(Boolean).join(' ') || 'Cliente';
+    const orderId = id;
+    if (changed && to) {
+      if (nextStatus === 'pago') {
+        const total = Number(mapped?.totals?.grandTotal ?? mapped?.total ?? 0);
+        const installments = mapped?.payment?.installments || 1;
+        const itemName = mapped?.items?.[0]?.name || 'Pedido Dermosul';
+        await sendMail(to, `Dermosul • Pagamento aprovado do seu pedido #${orderId} ✅`, renderPaymentApprovedEmail({ name, orderId, total, installments, item: itemName }));
+      } else if (nextStatus === 'pendente') {
+        const total = Number(mapped?.totals?.grandTotal ?? mapped?.total ?? 0);
+        const installments = mapped?.payment?.installments || 1;
+        const itemName = mapped?.items?.[0]?.name || 'Pedido Dermosul';
+        await sendMail(to, `Dermosul • Estamos preparando seu pedido #${orderId}`,
+          renderPendingEmail({ name, orderId, total, installments, item: itemName }));
+      } else if (nextStatus === 'enviado') {
+        await sendMail(to, `Dermosul • Seu pedido #${orderId} foi enviado 🚚`, renderShippedEmail({ name, orderId }));
+      }
+    }
+  } catch (e) {
+    console.warn('[email] falha ao disparar notificação de pedido:', (e as any)?.message || e);
+  }
+
+  return mapped;
 }
 
 export async function deleteOrder(id: string): Promise<boolean> {

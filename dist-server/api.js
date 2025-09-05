@@ -382,6 +382,52 @@ router.get('/settings/profile', requireAuth, async (_req, res) => {
         res.status(500).json({ message: e.message || 'Erro' });
     }
 });
+// --- SMTP/Email Settings (read-only from env) + Test send ---
+router.get('/settings/email', requireAuth, async (_req, res) => {
+    try {
+        const cfg = {
+            host: process.env.SMTP_HOST || '',
+            port: Number(process.env.SMTP_PORT || 0),
+            user: process.env.SMTP_USER ? '***' + process.env.SMTP_USER.slice(-4) : '',
+            from: process.env.SMTP_FROM || '',
+            replyTo: process.env.SMTP_REPLY_TO || '',
+            configured: !!(process.env.SMTP_HOST && process.env.SMTP_USER && process.env.SMTP_PASS),
+        };
+        res.json(cfg);
+    }
+    catch (e) {
+        res.status(500).json({ message: e.message || 'Erro' });
+    }
+});
+router.post('/settings/email/test', requireAuth, async (req, res) => {
+    try {
+        const { to, kind } = req.body || {};
+        if (!to || typeof to !== 'string')
+            return res.status(400).json({ message: 'Informe um e-mail de destino.' });
+        const { sendMail } = await Promise.resolve().then(() => __importStar(require('./lib/email/mailer.js')));
+        const { renderPaymentApprovedEmail, renderPendingEmail, renderShippedEmail } = await Promise.resolve().then(() => __importStar(require('./lib/email/mailer.js')));
+        const payload = { name: 'Cliente de Teste', orderId: 'TESTE123', item: 'Produto Teste', total: 123.45, installments: 1 };
+        if (kind === 'pago') {
+            const html = renderPaymentApprovedEmail(payload);
+            await sendMail(to, 'Dermosul • Pagamento aprovado (teste)', html);
+        }
+        else if (kind === 'pendente') {
+            const html = renderPendingEmail({ name: payload.name, orderId: payload.orderId, item: payload.item || 'Produto Teste', total: payload.total, installments: payload.installments });
+            await sendMail(to, 'Dermosul • Preparando seu pedido (teste)', html);
+        }
+        else if (kind === 'enviado') {
+            const html = renderShippedEmail({ name: payload.name, orderId: payload.orderId, tracking: 'TRK123456' });
+            await sendMail(to, 'Dermosul • Pedido enviado (teste)', html);
+        }
+        else {
+            return res.status(400).json({ message: 'Tipo inválido. Use pago|pendente|enviado.' });
+        }
+        res.json({ ok: true });
+    }
+    catch (e) {
+        res.status(500).json({ message: e.message || 'Falha ao enviar e-mail de teste.' });
+    }
+});
 router.put('/settings/profile', requireAuth, async (req, res) => {
     try {
         const { name, email, username, password } = req.body || {};

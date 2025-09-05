@@ -4,6 +4,7 @@ import { LandingPage, publicOrderApi, apiClient } from '../../lib/api';
 import PixPaymentModal from '../../components/PixPaymentModal';
 import CountdownTimer from '../../components/CountdownTimer';
 import logoDermosul from '../../assets/logo-dermosul.png';
+import { resolveImageUrl } from '../../lib/media';
 
 // --- Ícones e Componentes Auxiliares ---
 const StarIcon = (props: React.SVGProps<SVGSVGElement>) => (
@@ -294,7 +295,7 @@ export default function Template2({ landingPageData }: { landingPageData: Landin
               <div className="absolute top-3 right-3">
                 <CountdownTimer compact showLabel={false} targetDate={new Date(Date.now() + 72 * 60 * 60 * 1000).toISOString()} />
               </div>
-              <img src={landingPage.imageUrl} alt={landingPage.productTitle} className="w-full h-auto object-contain rounded-lg" />
+              <img src={resolveImageUrl(landingPage.imageUrl)} alt={landingPage.productTitle} className="w-full h-auto object-contain rounded-lg" />
             </div>
             <div className="mt-4 grid grid-cols-2 sm:grid-cols-4 gap-3">
               {['Entrega rápida', 'Produto original', 'Compra segura', 'Devolução fácil'].map((b) => (
