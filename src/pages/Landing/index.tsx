@@ -524,7 +524,6 @@ export default function Landing() {
               onChange={(e) => setProductDescription(e.target.value)}
               rows={4}
               placeholder="Ex: Fórmula com ácido hialurônico e vitaminas para hidratação intensa..."
-              maxLength={400}
               className="mt-1 block w-full border border-zinc-300 rounded-md shadow-sm p-2"
             ></textarea>
           </div>
