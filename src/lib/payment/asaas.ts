@@ -148,6 +148,21 @@ class AsaasProvider implements PaymentProvider {
       return { success: false, paid: false };
     }
   }
+
+  async getPaymentStatusById(paymentId: string): Promise<{ success: boolean; status?: string; paid: boolean; paymentId?: string; }>{
+    try {
+      const resp = await apiClient.get(`/payments/${paymentId}`);
+      const payment = resp.data;
+      if (!payment) return { success: true, paid: false };
+      const status: string = payment.status;
+      const paidStatuses = ['RECEIVED', 'CONFIRMED', 'RECEIVED_IN_CASH'];
+      const paid = paidStatuses.includes(status);
+      return { success: true, status, paid, paymentId };
+    } catch (error: any) {
+      console.error('Asaas - Error fetching payment by id:', error.response?.data || error.message);
+      return { success: false, paid: false };
+    }
+  }
 }
 
 export default AsaasProvider;

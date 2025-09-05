@@ -917,7 +917,7 @@ async function createPublicOrder(orderData) {
                     id: (0, index_js_1.generateShortId)(),
                     externalReference: externalReference, // Salva a referência externa
                     customer: { connect: { id: customer.id } },
-                    status: orderData.status || 'pendente', // Usa o status do payload
+                    status: orderData.status || 'aguardando_pagamento', // Usa o status do payload (novo padrão)
                     category: "Online",
                     totalAmount: normalizedPayload.totalAmount,
                     items: { create: [normalizedPayload.item] },

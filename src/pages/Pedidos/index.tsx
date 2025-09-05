@@ -10,7 +10,7 @@ function ptDate(ymd: string) {
   return new Date(y, m-1, d).toLocaleDateString("pt-BR");
 }
 
-const STATUSES = ["pago","pendente","cancelado","enviado"] as const;
+const STATUSES = ["pago","aguardando_pagamento","pendente","cancelado","enviado"] as const;
 
 export default function Pedidos() {
   const [searchParams, setSearchParams] = useSearchParams();
@@ -212,7 +212,7 @@ export default function Pedidos() {
                     <span className={[
                       "inline-flex px-2 py-1 rounded-full text-xs font-medium",
                       o.status === "pago" ? "bg-green-100 text-green-700" :
-                      o.status === "pendente" ? "bg-yellow-100 text-yellow-700" :
+                      (o.status === "pendente" || o.status === "aguardando_pagamento") ? "bg-yellow-100 text-yellow-700" :
                       o.status === "cancelado" ? "bg-red-100 text-red-700" :
                       "bg-blue-100 text-blue-700"
                     ].join(" ")}>

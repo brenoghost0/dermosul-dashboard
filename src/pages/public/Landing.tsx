@@ -304,7 +304,7 @@ function Template1({ landingPageData }: { landingPageData: LandingPage }) {
   };
 
   // --- Helper function to build the final order payload ---
-  const buildOrderPayload = (gatewayPaymentId: string, paymentType: 'card' | 'pix', status: string = 'pago') => {
+  const buildOrderPayload = (gatewayPaymentId: string, paymentType: 'card' | 'pix', status: string = 'pago', externalRefOverride?: string) => {
     if (!landingPage) {
       throw new Error("Dados da landing page não estão disponíveis para criar o pedido.");
     }
@@ -322,7 +322,7 @@ function Template1({ landingPageData }: { landingPageData: LandingPage }) {
       gatewayPaymentId: gatewayPaymentId,
       status,
       paymentMethod: paymentType,
-      externalReference,
+      externalReference: externalRefOverride || externalReference,
     };
     return payload;
   };
@@ -374,6 +374,8 @@ function Template1({ landingPageData }: { landingPageData: LandingPage }) {
           },
           externalReference: extRef,
         };
+        // Log de apoio para testes
+        try { console.log('[PIX] externalReference:', extRef); } catch {}
         const response = await apiClient.post('/payments/pix', pixPayload);
         if (response.data.success) {
           const qr = response.data.qrCode || '';
@@ -381,7 +383,12 @@ function Template1({ landingPageData }: { landingPageData: LandingPage }) {
           setPixQrCode(qrSrc);
           setPixCopyPaste(response.data.copyPaste || '');
           setPixGatewayPaymentId(response.data.gatewayPaymentId);
+          try { console.log('[PIX] gatewayPaymentId:', response.data.gatewayPaymentId); } catch {}
           setIsPixOpen(true);
+          // Cria imediatamente o pedido como pendente para permitir atualização por referência
+          try {
+            await handleConfirmPixPayment(response.data.gatewayPaymentId, extRef);
+          } catch {}
         } else {
           setFormError(response.data.message || 'Falha ao gerar PIX.');
         }
@@ -424,10 +431,10 @@ function Template1({ landingPageData }: { landingPageData: LandingPage }) {
     }
   };
 
-  const handleConfirmPixPayment = async (gatewayPaymentId: string) => {
+  const handleConfirmPixPayment = async (gatewayPaymentId: string, externalRef?: string) => {
     if (!landingPage) return;
     try {
-      const orderPayload = buildOrderPayload(gatewayPaymentId, 'pix', 'pendente');
+      const orderPayload = buildOrderPayload(gatewayPaymentId, 'pix', 'aguardando_pagamento', externalRef);
       await publicOrderApi.createPublicOrder(orderPayload);
     } catch (err: any) {
       console.error("Erro ao criar pedido pendente:", err);
@@ -453,7 +460,7 @@ function Template1({ landingPageData }: { landingPageData: LandingPage }) {
       }
 
       // 2) Fallback: consulta gateway; se pago, cria o pedido se ainda não existir
-      const gateway = await apiClient.get(`/payments/status/by-reference/${externalReference}`);
+      const gateway = await apiClient.get(`/payments/status/by-reference/${externalReference}` , { params: { paymentId: pixGatewayPaymentId } });
       if (gateway.data?.paid) {
         try {
           const updated = await apiClient.get(`/orders/by-reference/${externalReference}`);
@@ -464,13 +471,18 @@ function Template1({ landingPageData }: { landingPageData: LandingPage }) {
           return true;
         } catch (e) {
           if (pixGatewayPaymentId) {
-            const orderPayload = buildOrderPayload(pixGatewayPaymentId, 'pix', 'pago');
-            const order = await publicOrderApi.createPublicOrder(orderPayload);
-            const summary = createOrderSummary(order, 'pix');
-            sessionStorage.setItem('lastOrderSummary', JSON.stringify(summary));
-            setIsPixOpen(false);
-            navigate('/purchase-success');
-            return true;
+            try {
+              const orderPayload = buildOrderPayload(pixGatewayPaymentId, 'pix', 'pago');
+              const order = await publicOrderApi.createPublicOrder(orderPayload);
+              const summary = createOrderSummary(order, 'pix');
+              sessionStorage.setItem('lastOrderSummary', JSON.stringify(summary));
+              setIsPixOpen(false);
+              navigate('/purchase-success');
+              return true;
+            } catch (err: any) {
+              console.error('Falha ao criar pedido depois do pagamento PIX:', err);
+              setFormError(err?.response?.data?.message || err?.message || 'Falha ao registrar o pedido após o pagamento PIX.');
+            }
           }
         }
       }

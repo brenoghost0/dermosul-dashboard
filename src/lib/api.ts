@@ -25,7 +25,7 @@ export interface OrderRow {
   fullId: string;
   client: string;
   category: string;
-  status: "pago" | "pendente" | "cancelado" | "enviado";
+  status: "pago" | "pendente" | "aguardando_pagamento" | "cancelado" | "enviado";
   total: number;
   createdAt: string; // YYYY-MM-DD
   paymentMethod?: 'pix' | 'cartao' | 'boleto' | 'desconhecido';

@@ -92,6 +92,21 @@ const PixPaymentModal: React.FC<PixPaymentModalProps> = ({
         >
           Fechar
         </button>
+
+        <button
+          onClick={async () => {
+            try {
+              setIsChecking(true);
+              const ok = await onCheckPaymentStatus();
+              if (!ok) setIsChecking(false);
+            } catch {
+              setIsChecking(false);
+            }
+          }}
+          className="w-full mt-2 py-2 text-sm text-emerald-700 hover:text-emerald-800 font-medium"
+        >
+          Já paguei, verificar agora
+        </button>
       </div>
     </div>
   );

@@ -125,7 +125,7 @@ export default function Template2({ landingPageData }: { landingPageData: Landin
     if (name === 'birthMonth' && formattedValue.length === 2) { birthYearRef.current?.focus(); }
   };
 
-  const buildOrderPayload = (gatewayPaymentId: string, paymentType: 'card' | 'pix', status: string) => {
+  const buildOrderPayload = (gatewayPaymentId: string, paymentType: 'card' | 'pix', status: string, externalRefOverride?: string) => {
     if (!landingPage) throw new Error("Dados da landing page não estão disponíveis.");
     const qty = Math.max(1, Math.min(5, quantity));
     return {
@@ -142,7 +142,7 @@ export default function Template2({ landingPageData }: { landingPageData: Landin
       gatewayPaymentId,
       status,
       paymentMethod: paymentType === 'card' ? 'cartao' : 'pix',
-      externalReference,
+      externalReference: externalRefOverride || externalReference,
     };
   };
 
@@ -162,10 +162,10 @@ export default function Template2({ landingPageData }: { landingPageData: Landin
     };
   };
 
-  const handleConfirmPixPayment = async (gatewayPaymentId: string) => {
+  const handleConfirmPixPayment = async (gatewayPaymentId: string, externalRef?: string) => {
     if (!landingPage) return;
     try {
-      const orderPayload = buildOrderPayload(gatewayPaymentId, 'pix', 'pendente');
+      const orderPayload = buildOrderPayload(gatewayPaymentId, 'pix', 'aguardando_pagamento', externalRef);
       await publicOrderApi.createPublicOrder(orderPayload as any);
     } catch (err: any) {
       console.error("Erro ao criar pedido pendente:", err);
@@ -188,7 +188,7 @@ export default function Template2({ landingPageData }: { landingPageData: Landin
         return true;
       }
       // 2) Fallback: consulta no gateway e, se pago, garante criação do pedido (se ainda não existir)
-      const gateway = await apiClient.get(`/payments/status/by-reference/${externalReference}`);
+      const gateway = await apiClient.get(`/payments/status/by-reference/${externalReference}`, { params: { paymentId: pixGatewayPaymentId } });
       if (gateway.data?.paid) {
         try {
           const updated = await apiClient.get(`/orders/by-reference/${externalReference}`);
@@ -200,13 +200,18 @@ export default function Template2({ landingPageData }: { landingPageData: Landin
         } catch (e) {
           // Se não existe, cria como pago
           if (pixGatewayPaymentId) {
-            const orderPayload = buildOrderPayload(pixGatewayPaymentId, 'pix', 'pago');
-            const order = await publicOrderApi.createPublicOrder(orderPayload as any);
-            const summary = createOrderSummary(order, 'pix');
-            sessionStorage.setItem('lastOrderSummary', JSON.stringify(summary));
-            setIsPixOpen(false);
-            navigate('/purchase-success');
-            return true;
+            try {
+              const orderPayload = buildOrderPayload(pixGatewayPaymentId, 'pix', 'pago');
+              const order = await publicOrderApi.createPublicOrder(orderPayload as any);
+              const summary = createOrderSummary(order, 'pix');
+              sessionStorage.setItem('lastOrderSummary', JSON.stringify(summary));
+              setIsPixOpen(false);
+              navigate('/purchase-success');
+              return true;
+            } catch (err: any) {
+              console.error('Falha ao criar pedido depois do pagamento PIX:', err);
+              setFormError(err?.response?.data?.message || err?.message || 'Falha ao registrar o pedido após o pagamento PIX.');
+            }
           }
         }
       }
@@ -228,6 +233,8 @@ export default function Template2({ landingPageData }: { landingPageData: Landin
       if (paymentMethod === 'pix') {
         const qty = Math.max(1, Math.min(5, quantity));
         const pixPayload = { amount: landingPage.productPrice * qty, customer: { name: `${formData.firstName} ${formData.lastName}`, email: formData.email, cpf: formData.cpf.replace(/\D/g, ''), phone: formData.phone.replace(/\D/g, '') }, externalReference: extRef };
+        // Log de apoio para testes: copiar o externalReference do console
+        try { console.log('[PIX] externalReference:', extRef); } catch {}
         const response = await apiClient.post('/payments/pix', pixPayload);
         if (response.data.success) {
           const qr = response.data.qrCode || '';
@@ -235,7 +242,12 @@ export default function Template2({ landingPageData }: { landingPageData: Landin
           setPixQrCode(qrSrc);
           setPixCopyPaste(response.data.copyPaste || '');
           setPixGatewayPaymentId(response.data.gatewayPaymentId);
+          try { console.log('[PIX] gatewayPaymentId:', response.data.gatewayPaymentId); } catch {}
           setIsPixOpen(true);
+          // Cria imediatamente o pedido como pendente para permitir atualização por referência
+          try {
+            await handleConfirmPixPayment(response.data.gatewayPaymentId, extRef);
+          } catch {}
         } else {
           setFormError(response.data.message || 'Falha ao gerar PIX.');
         }

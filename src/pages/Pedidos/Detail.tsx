@@ -50,10 +50,11 @@ const unmaskPhone = (v?: string) => (v || "").replace(/\D/g, "");
 const STATUS_COLORS: { [key: string]: string } = {
   pago: "bg-emerald-100 text-emerald-700",
   pendente: "bg-amber-100 text-amber-700",
+  aguardando_pagamento: "bg-amber-100 text-amber-700",
   cancelado: "bg-rose-100 text-rose-700",
   enviado: "bg-sky-100 text-sky-700",
 };
-const ALL_STATUSES = ["pago", "pendente", "cancelado", "enviado"];
+const ALL_STATUSES = ["pago", "aguardando_pagamento", "pendente", "cancelado", "enviado"];
 
 // --- Componente principal ---
 export default function OrderDetail() {

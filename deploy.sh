@@ -1,15 +1,19 @@
 #!/bin/bash
+set -euo pipefail
 
-# Parar e remover contêineres, redes e volumes antigos
-echo "Parando e removendo contêineres antigos..."
-docker-compose down --volumes
+echo "[deploy] Atualizando imagens (pull opcional)..."
+docker-compose pull || true
 
-# Construir as imagens novamente
-echo "Construindo as imagens Docker..."
-docker-compose build
+echo "[deploy] Buildando imagem do app..."
+docker-compose build app
 
-# Iniciar os serviços em modo detached
-echo "Iniciando os serviços..."
+echo "[deploy] Subindo serviços..."
 docker-compose up -d
 
-echo "Deploy concluído! A aplicação deve estar acessível em breve."
+echo "[deploy] Aplicando schema Prisma (db push)..."
+docker-compose exec -T app npx prisma db push
+
+echo "[deploy] Healthcheck backend:"
+curl -sS http://localhost/api/health || true
+
+echo "[deploy] Pronto."

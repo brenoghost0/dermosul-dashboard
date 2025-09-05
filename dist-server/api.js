@@ -98,7 +98,7 @@ router.post("/landings", requireAuth, upload.single('image'), async (req, res) =
         if (!req.file) {
             return res.status(400).json({ error: 'validation_failed', message: 'A imagem do produto é obrigatória.' });
         }
-        const imageUrl = `${process.env.API_BASE_URL}/uploads/${req.file.filename}`;
+        const imageUrl = `/uploads/${req.file.filename}`;
         const newLandingPage = await (0, index_js_1.createLandingPage)({
             productTitle,
             productDescription,
@@ -119,7 +119,7 @@ router.post("/landings", requireAuth, upload.single('image'), async (req, res) =
 router.put("/landings/:id", requireAuth, upload.single('image'), async (req, res) => {
     try {
         const { productTitle, productDescription, productBrand, productPrice, shippingValue, freeShipping, template, imageUrl: existingImageUrl } = req.body;
-        const imageUrl = req.file ? `${process.env.API_BASE_URL}/uploads/${req.file.filename}` : existingImageUrl;
+        const imageUrl = req.file ? `/uploads/${req.file.filename}` : existingImageUrl;
         const updatedLandingPage = await (0, index_js_1.updateLandingPage)(req.params.id, {
             productTitle,
             productDescription,
@@ -253,17 +253,51 @@ router.post('/payments/pix', async (req, res) => {
         res.status(500).json({ success: false, message: error.message });
     }
 });
+// --- ENDPOINTS DE TESTE (somente quando habilitado por env) ---
+if (process.env.ENABLE_PAYMENT_TEST_ENDPOINTS === 'true') {
+    router.post('/payments/test/mark-paid', async (req, res) => {
+        try {
+            const { externalReference } = (req.body || {});
+            if (externalReference) {
+                const updated = await (0, index_js_1.updateOrderStatusByExternalReference)(externalReference, 'pago');
+                return res.json({ success: true, updatedId: updated?.id || null, externalReference });
+            }
+            const latest = await prisma_js_1.prisma.order.findFirst({
+                where: { status: 'aguardando_pagamento' },
+                orderBy: { createdAt: 'desc' },
+            });
+            if (!latest)
+                return res.status(404).json({ success: false, message: 'Nenhum pedido aguardando pagamento encontrado.' });
+            await prisma_js_1.prisma.order.update({ where: { id: latest.id }, data: { status: 'pago' } });
+            return res.json({ success: true, updatedId: latest.id, externalReference: latest.externalReference });
+        }
+        catch (e) {
+            console.error('[TEST] mark-paid error:', e?.message || e);
+            return res.status(500).json({ success: false, message: 'Falha ao simular pagamento.' });
+        }
+    });
+}
 // Confere status de pagamento por externalReference no gateway e atualiza o pedido caso pago
 router.get('/payments/status/by-reference/:ref', async (req, res) => {
     try {
         const externalReference = req.params.ref;
         const paymentProvider = (0, index_js_2.getPaymentProvider)();
-        // @ts-ignore - método específico do AsaasProvider
-        if (typeof paymentProvider.getPaymentStatusByExternalReference !== 'function') {
-            return res.status(400).json({ success: false, message: 'Provider does not support status lookup.' });
-        }
+        const paymentId = String((req.query?.paymentId ?? '') || '');
+        let result = null;
+        // Preferir por paymentId se informado
         // @ts-ignore
-        const result = await paymentProvider.getPaymentStatusByExternalReference(externalReference);
+        if (paymentId && typeof paymentProvider.getPaymentStatusById === 'function') {
+            // @ts-ignore
+            result = await paymentProvider.getPaymentStatusById(paymentId);
+        }
+        else {
+            // @ts-ignore - método específico do AsaasProvider
+            if (typeof paymentProvider.getPaymentStatusByExternalReference !== 'function') {
+                return res.status(400).json({ success: false, message: 'Provider does not support status lookup.' });
+            }
+            // @ts-ignore
+            result = await paymentProvider.getPaymentStatusByExternalReference(externalReference);
+        }
         if (result.success && result.paid) {
             await (0, index_js_1.updateOrderStatusByExternalReference)(externalReference, 'pago');
         }
@@ -297,15 +331,18 @@ router.post('/gateway/asaas/webhook', async (req, res) => {
 });
 // --- ROTAS DE AUTENTICAÇÃO ---
 router.post("/login", async (req, res) => {
-    const { username, password } = req.body;
-    // 1) Tenta autenticar como Admin (User)
-    const user = await prisma_js_1.prisma.user.findUnique({ where: { username } });
-    if (user && await bcrypt_1.default.compare(password, user.passwordHash)) {
-        const token = jsonwebtoken_1.default.sign({ role: 'admin', userId: user.id, username: user.username }, process.env.SESSION_SECRET || 'super-secret-key', { expiresIn: '1d' });
-        return res.json({ success: true, token });
-    }
-    // 2) Tenta autenticar como Operador
     try {
+        const { username, password } = req.body || {};
+        if (!username || !password) {
+            return res.status(400).json({ success: false, message: "Usuário e senha são obrigatórios." });
+        }
+        // 1) Tenta autenticar como Admin (User)
+        const user = await prisma_js_1.prisma.user.findUnique({ where: { username } });
+        if (user && await bcrypt_1.default.compare(password, user.passwordHash)) {
+            const token = jsonwebtoken_1.default.sign({ role: 'admin', userId: user.id, username: user.username }, process.env.SESSION_SECRET || 'super-secret-key', { expiresIn: '1d' });
+            return res.json({ success: true, token });
+        }
+        // 2) Tenta autenticar como Operador
         const op = await prisma_js_1.prisma.operator.findUnique({ where: { username } });
         if (op && await bcrypt_1.default.compare(password, op.passwordHash)) {
             const token = jsonwebtoken_1.default.sign({
@@ -320,11 +357,12 @@ router.post("/login", async (req, res) => {
             }, process.env.SESSION_SECRET || 'super-secret-key', { expiresIn: '1d' });
             return res.json({ success: true, token });
         }
+        return res.status(401).json({ success: false, message: "Usuário ou senha inválidos." });
     }
     catch (e) {
-        // ignore
+        console.error("[LOGIN] Erro inesperado:", e?.message || e);
+        return res.status(500).json({ success: false, message: "Falha ao autenticar. Verifique o banco de dados e tente novamente." });
     }
-    res.status(401).json({ success: false, message: "Usuário ou senha inválidos." });
 });
 router.post("/logout", (req, res) => {
     res.json({ success: true });

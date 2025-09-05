@@ -256,17 +256,50 @@ router.post('/payments/pix', async (req: Request, res: Response) => {
   }
 });
 
+// --- ENDPOINTS DE TESTE (somente quando habilitado por env) ---
+if (process.env.ENABLE_PAYMENT_TEST_ENDPOINTS === 'true') {
+  router.post('/payments/test/mark-paid', async (req: Request, res: Response) => {
+    try {
+      const { externalReference } = (req.body || {}) as { externalReference?: string };
+      if (externalReference) {
+        const updated = await updateOrderStatusByExternalReference(externalReference, 'pago');
+        return res.json({ success: true, updatedId: updated?.id || null, externalReference });
+      }
+      const latest = await prisma.order.findFirst({
+        where: { status: 'aguardando_pagamento' as any },
+        orderBy: { createdAt: 'desc' },
+      });
+      if (!latest) return res.status(404).json({ success: false, message: 'Nenhum pedido aguardando pagamento encontrado.' });
+      await prisma.order.update({ where: { id: latest.id }, data: { status: 'pago' as any } });
+      return res.json({ success: true, updatedId: latest.id, externalReference: latest.externalReference });
+    } catch (e: any) {
+      console.error('[TEST] mark-paid error:', e?.message || e);
+      return res.status(500).json({ success: false, message: 'Falha ao simular pagamento.' });
+    }
+  });
+}
+
 // Confere status de pagamento por externalReference no gateway e atualiza o pedido caso pago
 router.get('/payments/status/by-reference/:ref', async (req: Request, res: Response) => {
   try {
     const externalReference = req.params.ref;
     const paymentProvider = getPaymentProvider();
-    // @ts-ignore - método específico do AsaasProvider
-    if (typeof paymentProvider.getPaymentStatusByExternalReference !== 'function') {
-      return res.status(400).json({ success: false, message: 'Provider does not support status lookup.' });
-    }
+    const paymentId = String((req.query?.paymentId ?? '') || '');
+
+    let result: any = null;
+    // Preferir por paymentId se informado
     // @ts-ignore
-    const result = await paymentProvider.getPaymentStatusByExternalReference(externalReference);
+    if (paymentId && typeof paymentProvider.getPaymentStatusById === 'function') {
+      // @ts-ignore
+      result = await paymentProvider.getPaymentStatusById(paymentId);
+    } else {
+      // @ts-ignore - método específico do AsaasProvider
+      if (typeof paymentProvider.getPaymentStatusByExternalReference !== 'function') {
+        return res.status(400).json({ success: false, message: 'Provider does not support status lookup.' });
+      }
+      // @ts-ignore
+      result = await paymentProvider.getPaymentStatusByExternalReference(externalReference);
+    }
     if (result.success && result.paid) {
       await updateOrderStatusByExternalReference(externalReference, 'pago');
     }
@@ -305,17 +338,20 @@ router.post('/gateway/asaas/webhook', async (req: Request, res: Response) => {
 // --- ROTAS DE AUTENTICAÇÃO ---
 
 router.post("/login", async (req: Request, res: Response) => {
-  const { username, password } = req.body;
-
-  // 1) Tenta autenticar como Admin (User)
-  const user = await prisma.user.findUnique({ where: { username } });
-  if (user && await bcrypt.compare(password, user.passwordHash)) {
-    const token = jwt.sign({ role: 'admin', userId: user.id, username: user.username }, process.env.SESSION_SECRET || 'super-secret-key', { expiresIn: '1d' });
-    return res.json({ success: true, token });
-  }
-
-  // 2) Tenta autenticar como Operador
   try {
+    const { username, password } = req.body || {};
+    if (!username || !password) {
+      return res.status(400).json({ success: false, message: "Usuário e senha são obrigatórios." });
+    }
+
+    // 1) Tenta autenticar como Admin (User)
+    const user = await prisma.user.findUnique({ where: { username } });
+    if (user && await bcrypt.compare(password, user.passwordHash)) {
+      const token = jwt.sign({ role: 'admin', userId: user.id, username: user.username }, process.env.SESSION_SECRET || 'super-secret-key', { expiresIn: '1d' });
+      return res.json({ success: true, token });
+    }
+
+    // 2) Tenta autenticar como Operador
     const op = await prisma.operator.findUnique({ where: { username } });
     if (op && await bcrypt.compare(password, op.passwordHash)) {
       const token = jwt.sign({
@@ -330,11 +366,12 @@ router.post("/login", async (req: Request, res: Response) => {
       }, process.env.SESSION_SECRET || 'super-secret-key', { expiresIn: '1d' });
       return res.json({ success: true, token });
     }
-  } catch (e) {
-    // ignore
-  }
 
-  res.status(401).json({ success: false, message: "Usuário ou senha inválidos." });
+    return res.status(401).json({ success: false, message: "Usuário ou senha inválidos." });
+  } catch (e: any) {
+    console.error("[LOGIN] Erro inesperado:", e?.message || e);
+    return res.status(500).json({ success: false, message: "Falha ao autenticar. Verifique o banco de dados e tente novamente." });
+  }
 });
 
 router.post("/logout", (req: Request, res: Response) => {

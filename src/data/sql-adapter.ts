@@ -949,7 +949,7 @@ export async function createPublicOrder(orderData: any): Promise<any> {
           id: generateShortId(),
           externalReference: externalReference, // Salva a referência externa
           customer: { connect: { id: customer.id } },
-          status: orderData.status || 'pendente', // Usa o status do payload
+          status: (orderData.status as any) || 'aguardando_pagamento', // Usa o status do payload (novo padrão)
           category: "Online",
           totalAmount: normalizedPayload.totalAmount,
           items: { create: [normalizedPayload.item] },
@@ -984,7 +984,7 @@ export async function createPublicOrder(orderData: any): Promise<any> {
   }
 }
 
-export async function updateOrderStatusByExternalReference(externalReference: string, status: 'pago' | 'cancelado' | 'pendente'): Promise<any | null> {
+export async function updateOrderStatusByExternalReference(externalReference: string, status: 'pago' | 'cancelado' | 'pendente' | 'aguardando_pagamento'): Promise<any | null> {
   console.log(`Updating order with externalReference ${externalReference} to status ${status}`);
   
   const order = await prisma.order.findUnique({

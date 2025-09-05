@@ -95,7 +95,7 @@ export default function OrderDrawer({
                 "inline-block text-xs mt-1 px-2 py-1 rounded-full",
                 status === "pago"
                   ? "bg-green-100 text-green-700"
-                  : status === "pendente"
+                  : (status === "pendente" || status === "aguardando_pagamento")
                   ? "bg-yellow-100 text-yellow-700"
                   : status === "cancelado"
                   ? "bg-red-100 text-red-700"

@@ -66,7 +66,7 @@ function mapOrder(o) {
     const mappedOrder = {
         id: String(o?.id ?? ""),
         order_date: o?.order_date ? (0, utils_1.toISO)(o.order_date) : (0, utils_1.toISO)(new Date()),
-        status: o?.status || "pendente",
+        status: o?.status || "aguardando_pagamento",
         category: o?.category || "Outros",
         total_value: Number(o?.total_value ?? 0),
         paymentMethod: ["pix", "cartao", "boleto"].includes(o?.paymentMethod) ? o.paymentMethod : "desconhecido",
@@ -117,7 +117,7 @@ function mapOrder(o) {
             status: payment.status || "pendente",
             installments: Number(payment.installments || 1),
             paidAmount: Number(payment.paidAmount || 0),
-        })) : [{ method: "desconhecido", value: 0, status: "pendente", installments: 1, paidAmount: 0 }],
+        })) : [{ method: "desconhecido", value: 0, status: "aguardando_pagamento", installments: 1, paidAmount: 0 }],
         summary: o?.summary ? {
             subTotal: Number(o.summary.subTotal || 0),
             itemsTotal: Number(o.summary.itemsTotal || o.summary.subTotal || 0),
@@ -145,7 +145,7 @@ const isValidDate = (dateString) => {
 };
 const validateOrder = (order) => {
     const errors = {};
-    const validStatuses = ["pago", "pendente", "cancelado", "enviado"];
+    const validStatuses = ["pago", "aguardando_pagamento", "pendente", "cancelado", "enviado"];
     if (!order.status || !validStatuses.includes(order.status)) {
         errors.status = "Status inválido.";
     }
@@ -299,7 +299,7 @@ async function createOrder(orderData) {
     const newOrder = {
         id: newOrderId,
         order_date: orderDate,
-        status: orderData.status || "pendente",
+        status: orderData.status || "aguardando_pagamento",
         category: orderData.category || "Outros",
         total_value: Number(orderData.total_value || 0),
         paymentMethod: orderData.paymentMethod || "desconhecido",

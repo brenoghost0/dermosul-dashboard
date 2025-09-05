@@ -142,5 +142,21 @@ class AsaasProvider {
             return { success: false, paid: false };
         }
     }
+    async getPaymentStatusById(paymentId) {
+        try {
+            const resp = await apiClient.get(`/payments/${paymentId}`);
+            const payment = resp.data;
+            if (!payment)
+                return { success: true, paid: false };
+            const status = payment.status;
+            const paidStatuses = ['RECEIVED', 'CONFIRMED', 'RECEIVED_IN_CASH'];
+            const paid = paidStatuses.includes(status);
+            return { success: true, status, paid, paymentId };
+        }
+        catch (error) {
+            console.error('Asaas - Error fetching payment by id:', error.response?.data || error.message);
+            return { success: false, paid: false };
+        }
+    }
 }
 exports.default = AsaasProvider;

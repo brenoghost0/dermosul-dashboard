@@ -66,7 +66,7 @@ interface TimelineEvent {
 interface Order {
   id: string;
   order_date: string;
-  status: "pago" | "pendente" | "cancelado" | "enviado";
+  status: "pago" | "aguardando_pagamento" | "pendente" | "cancelado" | "enviado";
   category: string;
   total_value: number;
   paymentMethod: "pix" | "cartao" | "boleto" | "desconhecido";
@@ -125,7 +125,7 @@ function mapOrder(o: any): Order {
   const mappedOrder: Order = {
     id: String(o?.id ?? ""),
     order_date: o?.order_date ? toISO(o.order_date) : toISO(new Date()),
-    status: o?.status || "pendente",
+    status: o?.status || "aguardando_pagamento",
     category: o?.category || "Outros",
     total_value: Number(o?.total_value ?? 0),
     paymentMethod: ["pix", "cartao", "boleto"].includes(o?.paymentMethod) ? o.paymentMethod : "desconhecido",
@@ -176,7 +176,7 @@ function mapOrder(o: any): Order {
       status: payment.status || "pendente",
       installments: Number(payment.installments || 1),
       paidAmount: Number(payment.paidAmount || 0),
-    })) : [{ method: "desconhecido", value: 0, status: "pendente", installments: 1, paidAmount: 0 }],
+    })) : [{ method: "desconhecido", value: 0, status: "aguardando_pagamento", installments: 1, paidAmount: 0 }],
     summary: o?.summary ? {
       subTotal: Number(o.summary.subTotal || 0),
       itemsTotal: Number(o.summary.itemsTotal || o.summary.subTotal || 0),
@@ -225,7 +225,7 @@ interface OrderValidationErrors {
 const validateOrder = (order: Order): OrderValidationErrors => {
     const errors: OrderValidationErrors = {};
 
-    const validStatuses = ["pago", "pendente", "cancelado", "enviado"];
+    const validStatuses = ["pago", "aguardando_pagamento", "pendente", "cancelado", "enviado"];
     if (!order.status || !validStatuses.includes(order.status)) {
         errors.status = "Status inválido.";
     }
@@ -397,7 +397,7 @@ export async function createOrder(orderData: any): Promise<Order> {
   const newOrder: Order = {
     id: newOrderId,
     order_date: orderDate,
-    status: orderData.status || "pendente",
+    status: orderData.status || "aguardando_pagamento",
     category: orderData.category || "Outros",
     total_value: Number(orderData.total_value || 0),
     paymentMethod: orderData.paymentMethod || "desconhecido",
