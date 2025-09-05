@@ -495,7 +495,7 @@ function Template1({ landingPageData }: { landingPageData: LandingPage }) {
             <div className="flex flex-col items-center">
               <div className="flex justify-center overflow-hidden rounded-lg">
                 <img 
-                  src={landingPage.imageUrl} 
+                  src={`${import.meta.env.VITE_API_URL || ''}${landingPage.imageUrl}`} 
                   alt={landingPage.productTitle} 
                   className="w-full h-auto object-contain rounded-lg transition-transform duration-300 ease-in-out hover:scale-125 cursor-zoom-in"
                   style={{ maxWidth: '868px' }}
