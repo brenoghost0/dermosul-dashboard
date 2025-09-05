@@ -35,5 +35,8 @@ services:
       - DATABASE_URL=postgresql://postgres:postgres@db:5432/dermosul
     env_file:
       - .env
+    volumes:
+      - ./uploads:/usr/src/app/backend/public/uploads
 volumes:
   pgdata:
+  uploads:
