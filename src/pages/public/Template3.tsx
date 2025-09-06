@@ -33,6 +33,7 @@ export default function Template3({ landingPageData, theme = 'dark' }: { landing
   const birthDayRef = useRef<HTMLInputElement>(null);
   const birthMonthRef = useRef<HTMLInputElement>(null);
   const birthYearRef = useRef<HTMLInputElement>(null);
+  const dadosRef = useRef<HTMLDivElement>(null);
   const [formData, setFormData] = useState({
     firstName: '', lastName: '', email: '', phone: '',
     birthDay: '', birthMonth: '', birthYear: '', gender: '',
@@ -321,6 +322,13 @@ export default function Template3({ landingPageData, theme = 'dark' }: { landing
         footerBorder: 'border-gray-200',
       };
 
+  const goToDados = () => {
+    setStep('dados');
+    setTimeout(() => {
+      try { dadosRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }); } catch {}
+    }, 0);
+  };
+
   return (
     <div className={th.container}>
       <div className="max-w-5xl mx-auto px-4 py-6">
@@ -377,13 +385,13 @@ export default function Template3({ landingPageData, theme = 'dark' }: { landing
                 <div className="text-lg">Subtotal: {BRL(subtotal)} {discountPercent>0 && (<span className="text-emerald-400 ml-2">- {BRL(discountValue)}</span>)} </div>
                 <div className="text-2xl font-bold">Total: {BRL(total)}</div>
               </div>
-              <button onClick={() => setStep('dados')} className="w-full md:w-auto mt-2 px-6 py-3 bg-emerald-600 hover:bg-emerald-700 rounded-lg font-semibold">Comprar agora</button>
+              <button onClick={goToDados} className="w-full md:w-auto mt-2 px-6 py-3 bg-emerald-600 hover:bg-emerald-700 rounded-lg font-semibold">Comprar agora</button>
             </div>
           </section>
         )}
 
         {step === 'dados' && (
-          <section className={`${th.panelBg} rounded-xl p-6 border ${th.border}`}>
+          <section ref={dadosRef} className={`${th.panelBg} rounded-xl p-6 border ${th.border}`}>
             <h2 className="text-xl font-bold mb-4">Dados Pessoais e de entrega</h2>
             {formError && <div className="mb-3 text-red-400">{formError}</div>}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
