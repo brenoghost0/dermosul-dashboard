@@ -10,6 +10,7 @@
     "build:scripts": "tsc -p tsconfig.scripts.json",
     "start": "node dist-server/server.js",
     "db:push": "npx prisma db push",
+    "db:seed": "npx prisma db seed",
     "db:backfill-birthdate": "npx ts-node --project tsconfig.server.json scripts/backfill-birthdate.ts",
     "db:reset-seed-orders": "npx ts-node --project tsconfig.server.json scripts/reset-seed-orders.ts"
   },

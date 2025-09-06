@@ -516,7 +516,7 @@ function Template1({ landingPageData }: { landingPageData: LandingPage }) {
                   style={{ maxWidth: '868px' }}
                 />
               </div>
-              <CountdownTimer targetDate={new Date(Date.now() + 3 * 24 * 60 * 60 * 1000).toISOString()} />
+              <CountdownTimer targetDate={new Date(Date.now() + 40 * 60 * 1000).toISOString()} />
             </div>
 
             {/* Product Details */}

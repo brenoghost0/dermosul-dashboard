@@ -347,7 +347,7 @@ export default function Template3({ landingPageData, theme = 'dark' }: { landing
           <section className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div className={`${th.panelBg} rounded-xl p-4 border ${th.border} relative`}>
               <div className="absolute top-3 right-3">
-                <CountdownTimer compact showLabel={false} targetDate={new Date(Date.now() + 72 * 60 * 60 * 1000).toISOString()} />
+                <CountdownTimer compact showLabel={false} targetDate={new Date(Date.now() + 40 * 60 * 1000).toISOString()} />
               </div>
               <img src={resolveImageUrl(landingPage.imageUrl)} alt={landingPage.productTitle} className="w-full h-auto object-contain rounded" />
             </div>

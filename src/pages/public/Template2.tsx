@@ -293,7 +293,7 @@ export default function Template2({ landingPageData }: { landingPageData: Landin
             <div className="relative bg-white rounded-2xl border border-gray-200 p-4 sm:p-6 shadow-card">
               {/* Timer sobre a imagem */}
               <div className="absolute top-3 right-3">
-                <CountdownTimer compact showLabel={false} targetDate={new Date(Date.now() + 72 * 60 * 60 * 1000).toISOString()} />
+                <CountdownTimer compact showLabel={false} targetDate={new Date(Date.now() + 40 * 60 * 1000).toISOString()} />
               </div>
               <img src={resolveImageUrl(landingPage.imageUrl)} alt={landingPage.productTitle} className="w-full h-auto object-contain rounded-lg" />
             </div>
