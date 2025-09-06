@@ -13,7 +13,14 @@ docker-compose up -d
 echo "[deploy] Aplicando schema Prisma (db push)..."
 docker-compose exec -T app npx prisma db push
 
-echo "[deploy] Healthcheck backend:"
-curl -sS http://localhost/api/health || true
+echo "[deploy] Healthcheck (HTTPS via Nginx + Host; fallback :3003):"
+if curl -fsSLk -H "Host: dermosul.com.br" https://127.0.0.1/api/health; then
+  echo "\n[deploy] OK via Nginx (HTTPS)"
+elif curl -fsSL http://127.0.0.1:3003/api/health; then
+  echo "\n[deploy] OK direto no app :3003"
+else
+  echo "\n[deploy] Healthcheck falhou" >&2
+  docker-compose ps || true
+fi
 
 echo "[deploy] Pronto."

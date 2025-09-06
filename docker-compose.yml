@@ -27,7 +27,7 @@ services:
         VITE_API_URL: http://191.252.110.64
     restart: always
     ports:
-      - "80:3003"
+      - "3003:3003"
     depends_on:
       - db
     environment:
