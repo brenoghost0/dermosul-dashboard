@@ -1,14 +1,233 @@
-import React, { useState, useEffect } from 'react';
-import { landingPageApi, LandingPage, API_BASE_URL } from '../../lib/api';
-import { resolveImageUrl } from '../../lib/media';
+import React, { useEffect, useMemo, useRef, useState } from "react";
+import { landingPageApi, LandingPage, API_BASE_URL } from "../../lib/api";
+import { resolveImageUrl } from "../../lib/media";
 
 const BRL = (v: number) => v.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
-const ddmmhh = (iso: string) => {
-  const d = new Date(iso);
-  return `${String(d.getUTCDate()).padStart(2, '0')}/${String(d.getUTCMonth() + 1).padStart(2, '0')} ${String(d.getUTCHours()).padStart(2, '0')}:${String(d.getUTCMinutes()).padStart(2, '0')}`;
+
+const formatDateTime = (iso: string) => {
+  if (!iso) return "—";
+  const date = new Date(iso);
+  if (Number.isNaN(date.getTime())) return "—";
+  return date.toLocaleString("pt-BR", {
+    day: "2-digit",
+    month: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
 };
 
-// Componente de Modal de Edição
+type TemplateValue = "MODELO_1" | "MODELO_2" | "MODELO_3" | "MODELO_4";
+type StatusValue = "ATIVA" | "PAUSADA";
+type StatusFilterValue = "TODOS" | StatusValue;
+type TemplateFilterValue = "TODOS" | TemplateValue;
+
+const TEMPLATE_ORDER: TemplateValue[] = ["MODELO_1", "MODELO_2", "MODELO_3", "MODELO_4"];
+
+const TEMPLATE_META: Record<TemplateValue, { label: string; subtitle: string; gradient: string; badgeClass: string }> = {
+  MODELO_1: {
+    label: "Nebula Prime",
+    subtitle: "Hero imersivo com CTA em destaque",
+    gradient: "from-sky-500/40 via-cyan-500/15 to-fuchsia-500/20",
+    badgeClass: "border border-sky-400/50 bg-sky-500/10 text-sky-200",
+  },
+  MODELO_2: {
+    label: "Pulse Orbit",
+    subtitle: "Oferta lateral com storytelling progressivo",
+    gradient: "from-violet-500/30 via-slate-900/50 to-sky-500/20",
+    badgeClass: "border border-violet-400/40 bg-violet-500/10 text-violet-200",
+  },
+  MODELO_3: {
+    label: "Laser Grid",
+    subtitle: "Blocos alternados e depoimentos focados",
+    gradient: "from-cyan-500/25 via-emerald-500/10 to-fuchsia-500/15",
+    badgeClass: "border border-emerald-400/40 bg-emerald-500/10 text-emerald-200",
+  },
+  MODELO_4: {
+    label: "Photon Flow",
+    subtitle: "Vitrine modular com CTA contínuo",
+    gradient: "from-fuchsia-500/25 via-slate-900/55 to-cyan-500/15",
+    badgeClass: "border border-fuchsia-400/40 bg-fuchsia-500/10 text-fuchsia-200",
+  },
+};
+
+const TEMPLATE_OPTIONS = TEMPLATE_ORDER.map((value) => ({
+  value,
+  ...TEMPLATE_META[value],
+}));
+
+const STATUS_META: Record<StatusValue, { label: string; className: string }> = {
+  ATIVA: {
+    label: "Ativa",
+    className: "border border-emerald-400/50 bg-emerald-500/10 text-emerald-200",
+  },
+  PAUSADA: {
+    label: "Pausada",
+    className: "border border-amber-400/50 bg-amber-500/10 text-amber-200",
+  },
+};
+
+function cn(...classes: Array<string | boolean | null | undefined>) {
+  return classes.filter(Boolean).join(" ");
+}
+
+function TemplateBadge({ template }: { template?: TemplateValue | null }) {
+  const key: TemplateValue = template && TEMPLATE_META[template] ? template : "MODELO_1";
+  const meta = TEMPLATE_META[key];
+  return (
+    <span className={cn("inline-flex items-center rounded-full px-3 py-1 text-xs font-semibold uppercase tracking-[0.25em]", meta.badgeClass)}>
+      {meta.label}
+    </span>
+  );
+}
+
+function StatusBadge({ status }: { status: StatusValue | string | null | undefined }) {
+  const normalized: StatusValue = status === "ATIVA" || status === "PAUSADA" ? status : "PAUSADA";
+  const meta = STATUS_META[normalized];
+  const label =
+    status === "ATIVA" || status === "PAUSADA"
+      ? meta.label
+      : typeof status === "string" && status.trim().length > 0
+        ? status
+        : "Status indefinido";
+  return (
+    <span className={cn("inline-flex items-center rounded-full px-3 py-1 text-xs font-semibold uppercase tracking-[0.25em]", meta.className)}>
+      {label}
+    </span>
+  );
+}
+
+function MetricCard({ label, value, hint }: { label: string; value: string; hint: string }) {
+  return (
+    <div className="rounded-3xl border border-slate-800 bg-white/5 px-5 py-4 text-slate-200 shadow-[0_30px_120px_-90px_rgba(34,211,238,0.5)] backdrop-blur-xl">
+      <p className="text-[10px] uppercase tracking-[0.28em] text-slate-500">{label}</p>
+      <p className="mt-2 text-2xl font-semibold text-slate-50">{value}</p>
+      <p className="mt-1 text-xs text-slate-400">{hint}</p>
+    </div>
+  );
+}
+
+interface LandingCardProps {
+  landingPage: LandingPage;
+  shareBaseUrl: string;
+  onEdit: (landingPage: LandingPage) => void;
+  onToggleStatus: (landingPage: LandingPage) => void;
+  onDelete: (id: string) => void;
+  onCopyLink: (slug: string) => void;
+}
+
+function LandingCard({
+  landingPage,
+  shareBaseUrl,
+  onEdit,
+  onToggleStatus,
+  onDelete,
+  onCopyLink,
+}: LandingCardProps) {
+  const image = landingPage.imageUrl ? resolveImageUrl(landingPage.imageUrl) : null;
+  const shareUrl = `${shareBaseUrl}${landingPage.slug}`;
+
+  return (
+    <article
+      className="relative overflow-hidden rounded-4xl border border-slate-800 bg-[#091225]/70 px-6 py-6 shadow-[0_42px_140px_-90px_rgba(12,170,255,0.55)] transition duration-200 hover:border-slate-700 hover:shadow-[0_46px_140px_-80px_rgba(34,211,238,0.6)]"
+    >
+      <div
+        className="pointer-events-none absolute -top-28 right-0 h-56 w-56 rounded-full bg-gradient-to-br from-sky-500/20 via-cyan-400/10 to-fuchsia-500/20 blur-3xl"
+        aria-hidden
+      />
+      <div className="grid gap-6 md:grid-cols-[200px_1fr_auto] md:items-start">
+        <div className="relative order-2 flex h-40 w-full items-center justify-center overflow-hidden rounded-3xl border border-slate-800 bg-gradient-to-br from-slate-900 via-slate-950 to-slate-900 md:order-1">
+          {image ? (
+            <img src={image} alt={landingPage.productTitle} className="h-full w-full object-contain p-4" />
+          ) : (
+            <div className="text-center text-sm text-slate-500">Pré-visualização indisponível</div>
+          )}
+          <div className="absolute inset-x-4 bottom-4 flex items-center justify-between text-[10px] uppercase tracking-[0.25em] text-slate-500">
+            <span>{landingPage.productBrand || "Marca Dermosul"}</span>
+            <span>{landingPage.template}</span>
+          </div>
+        </div>
+
+        <div className="order-1 space-y-4 md:order-2">
+          <div className="flex flex-wrap items-center gap-3">
+            <TemplateBadge template={landingPage.template as TemplateValue} />
+            <StatusBadge status={landingPage.status} />
+            {landingPage.freeShipping && (
+              <span className="inline-flex items-center rounded-full border border-sky-400/50 bg-sky-500/10 px-3 py-1 text-xs font-semibold uppercase tracking-[0.25em] text-sky-200">
+                Frete grátis
+              </span>
+            )}
+          </div>
+
+          <div>
+            <h3 className="text-xl font-semibold text-slate-50">{landingPage.productTitle}</h3>
+            <p className="mt-1 text-sm text-slate-400">
+              {landingPage.productDescription || "Landing page otimizada para conversão de dermocosméticos."}
+            </p>
+          </div>
+
+          <div className="flex flex-wrap items-center gap-4 text-sm text-slate-300">
+            <span className="text-2xl font-semibold text-slate-50">{BRL(landingPage.productPrice || 0)}</span>
+            {!landingPage.freeShipping && (
+              <span className="rounded-full border border-slate-700 bg-slate-800/50 px-3 py-1 text-xs uppercase tracking-[0.25em] text-slate-400">
+                Frete {BRL(landingPage.shippingValue || 0)}
+              </span>
+            )}
+            <a
+              href={shareUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="truncate text-xs text-sky-300 underline-offset-2 hover:text-sky-200 hover:underline"
+            >
+              {shareUrl}
+            </a>
+          </div>
+
+          <div className="grid gap-1 text-xs text-slate-500">
+            <span>Criada em {formatDateTime(landingPage.createdAt)}</span>
+            {landingPage.updatedAt && <span>Atualizada em {formatDateTime(landingPage.updatedAt)}</span>}
+          </div>
+        </div>
+
+        <div className="order-3 flex flex-col gap-2">
+          <button
+            type="button"
+            onClick={() => onEdit(landingPage)}
+            className="inline-flex items-center justify-center rounded-full border border-slate-700 bg-slate-900/60 px-4 py-2 text-sm font-semibold text-slate-200 transition hover:border-sky-500/50 hover:text-sky-200"
+          >
+            ✏️ Editar
+          </button>
+          <button
+            type="button"
+            onClick={() => onToggleStatus(landingPage)}
+            className={cn(
+              "inline-flex items-center justify-center rounded-full border px-4 py-2 text-sm font-semibold transition",
+              landingPage.status === "ATIVA"
+                ? "border-amber-400/60 bg-amber-500/10 text-amber-200 hover:bg-amber-500/20"
+                : "border-emerald-400/60 bg-emerald-500/10 text-emerald-200 hover:bg-emerald-500/20"
+            )}
+          >
+            {landingPage.status === "ATIVA" ? "⏸ Pausar" : "▶ Ativar"}
+          </button>
+          <button
+            type="button"
+            onClick={() => onCopyLink(landingPage.slug)}
+            className="inline-flex items-center justify-center rounded-full border border-sky-500/50 bg-sky-500/10 px-4 py-2 text-sm font-semibold text-sky-200 transition hover:bg-sky-500/20"
+          >
+            🔗 Copiar link
+          </button>
+        <button
+          type="button"
+          onClick={() => onDelete(landingPage.id)}
+          className="inline-flex items-center justify-center rounded-full border border-rose-500/50 bg-rose-500/10 px-4 py-2 text-sm font-semibold text-rose-200 transition hover:bg-rose-500/20"
+        >
+          🗑 Excluir
+        </button>
+      </div>
+    </div>
+  </article>
+);
+}
+
 interface EditLandingPageModalProps {
   landingPage: LandingPage;
   onClose: () => void;
@@ -21,36 +240,52 @@ function EditLandingPageModal({ landingPage, onClose, onSave }: EditLandingPageM
   const [productTitle, setProductTitle] = useState(landingPage.productTitle);
   const [productDescription, setProductDescription] = useState(landingPage.productDescription);
   const [productBrand, setProductBrand] = useState(landingPage.productBrand);
-  const [productPrice, setProductPrice] = useState<number | ''>(landingPage.productPrice);
-  const [shippingValue, setShippingValue] = useState<number | ''>(landingPage.shippingValue);
+  const [productPrice, setProductPrice] = useState<number | "">(landingPage.productPrice ?? "");
+  const [shippingValue, setShippingValue] = useState<number | "">(landingPage.freeShipping ? "" : landingPage.shippingValue ?? "");
   const [freeShipping, setFreeShipping] = useState(landingPage.freeShipping);
-  const [template, setTemplate] = useState(landingPage.template || 'MODELO_1'); // Estado para o modelo
-  const [loading, setLoading] = useState(false);
+  const [template, setTemplate] = useState<TemplateValue>(
+    TEMPLATE_META[landingPage.template as TemplateValue] ? (landingPage.template as TemplateValue) : "MODELO_1"
+  );
+  const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // Estados para validação inline
   const [titleError, setTitleError] = useState<string | null>(null);
   const [priceError, setPriceError] = useState<string | null>(null);
   const [brandError, setBrandError] = useState<string | null>(null);
   const [shippingError, setShippingError] = useState<string | null>(null);
 
-  const handleImageUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
-    if (event.target.files && event.target.files[0]) {
-      const file = event.target.files[0];
-      setProductImageFile(file);
-      const reader = new FileReader();
-      reader.onloadend = () => {
-      setProductImagePreview(reader.result as string);
-    };
-    reader.readAsDataURL(file);
-  } else {
+  useEffect(() => {
     setProductImageFile(null);
     setProductImagePreview(landingPage.imageUrl ?? null);
-  }
-};
+    setProductTitle(landingPage.productTitle);
+    setProductDescription(landingPage.productDescription);
+    setProductBrand(landingPage.productBrand);
+    setProductPrice(landingPage.productPrice ?? "");
+    setShippingValue(landingPage.freeShipping ? "" : landingPage.shippingValue ?? "");
+    setFreeShipping(landingPage.freeShipping);
+    setTemplate(TEMPLATE_META[landingPage.template as TemplateValue] ? (landingPage.template as TemplateValue) : "MODELO_1");
+    setError(null);
+    setTitleError(null);
+    setPriceError(null);
+    setBrandError(null);
+    setShippingError(null);
+  }, [landingPage]);
 
-  const validateForm = () => {
-    let isValid = true;
+  const handleImageUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (file) {
+      setProductImageFile(file);
+      const reader = new FileReader();
+      reader.onloadend = () => setProductImagePreview(reader.result as string);
+      reader.readAsDataURL(file);
+    } else {
+      setProductImageFile(null);
+      setProductImagePreview(landingPage.imageUrl ?? null);
+    }
+  };
+
+  const validate = () => {
+    let valid = true;
     setTitleError(null);
     setPriceError(null);
     setBrandError(null);
@@ -58,200 +293,243 @@ function EditLandingPageModal({ landingPage, onClose, onSave }: EditLandingPageM
 
     if (!productTitle.trim()) {
       setTitleError("O título do produto é obrigatório.");
-      isValid = false;
+      valid = false;
     }
-    if (productPrice === '' || isNaN(Number(productPrice)) || Number(productPrice) <= 0) {
-      setPriceError("O preço do produto é obrigatório e deve ser um número positivo.");
-      isValid = false;
+    if (productPrice === "" || Number(productPrice) <= 0 || Number.isNaN(Number(productPrice))) {
+      setPriceError("Informe um preço positivo.");
+      valid = false;
     }
     if (!productBrand.trim()) {
-      setBrandError("A marca do produto é obrigatória.");
-      isValid = false;
+      setBrandError("Informe a marca do produto.");
+      valid = false;
     }
-    if (!freeShipping && (shippingValue === '' || isNaN(Number(shippingValue)) || Number(shippingValue) < 0)) {
-      setShippingError("O valor do frete é obrigatório e deve ser um número não negativo quando o frete grátis não está marcado.");
-      isValid = false;
+    if (!freeShipping && (shippingValue === "" || Number(shippingValue) < 0 || Number.isNaN(Number(shippingValue)))) {
+      setShippingError("Informe um frete válido ou marque frete grátis.");
+      valid = false;
     }
 
-    return isValid;
+    return valid;
   };
 
   const handleSave = async () => {
-    if (!validateForm()) {
-      setError("Por favor, preencha todos os campos obrigatórios corretamente.");
+    if (!validate()) {
+      setError("Ajuste os campos destacados para continuar.");
       return;
     }
 
-    setLoading(true);
+    setSaving(true);
     setError(null);
     try {
-      const updatedData = {
+      const updated = await landingPageApi.updateLandingPage(landingPage.id, {
         image: productImageFile || undefined,
-        template, // Envia o modelo selecionado
+        template,
         productTitle,
         productDescription,
         productBrand,
         productPrice: Number(productPrice),
         shippingValue: freeShipping ? 0 : Number(shippingValue),
         freeShipping,
-      };
-      const result = await landingPageApi.updateLandingPage(landingPage.id, updatedData);
-      onSave(result);
+      });
+      onSave(updated);
       onClose();
     } catch (err: any) {
-      console.error("Erro ao atualizar landing page:", err);
-      setError(err.message || "Falha ao atualizar landing page.");
+      setError(err?.message || "Falha ao atualizar a landing page.");
     } finally {
-      setLoading(false);
+      setSaving(false);
     }
   };
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-lg shadow-xl w-full max-w-2xl p-6">
-        <h2 className="text-xl font-bold text-emerald-900 mb-4">Editar Landing Page</h2>
-        {error && <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative mb-4" role="alert">{error}</div>}
-        
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-          <div>
-            <label htmlFor="editProductImage" className="block text-sm font-medium text-zinc-700">Foto do produto</label>
-            <input
-              type="file"
-              id="editProductImage"
-              accept="image/*"
-              onChange={handleImageUpload}
-              className="mt-1 block w-full text-sm text-zinc-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-emerald-50 file:text-emerald-700 hover:file:bg-emerald-100"
-            />
-            {productImagePreview && (
-              <img
-                src={productImagePreview}
-                alt="Pré-visualização do produto"
-                className="mt-2 max-h-40 object-cover rounded-md"
-              />
-            )}
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-[#01030a]/80 px-4 backdrop-blur">
+      <div className="relative w-full max-w-3xl overflow-hidden rounded-4xl border border-slate-800 bg-gradient-to-br from-[#071022] via-[#050914] to-[#02040a] px-6 py-6 shadow-[0_60px_160px_-80px_rgba(34,211,238,0.65)]">
+        <button
+          type="button"
+          onClick={onClose}
+          className="absolute right-4 top-4 inline-flex h-9 w-9 items-center justify-center rounded-full border border-slate-700 text-slate-400 transition hover:border-rose-500/60 hover:text-rose-200"
+        >
+          ✕
+        </button>
+
+        <header className="mb-6 space-y-2 pr-10">
+          <p className="text-[11px] uppercase tracking-[0.35em] text-slate-500">Editar landing</p>
+          <h2 className="text-2xl font-semibold text-slate-50">{landingPage.productTitle}</h2>
+          <p className="text-sm text-slate-400">
+            Ajuste copy, preços, template ou imagem da campanha sem perder o histórico de performance.
+          </p>
+        </header>
+
+        {error && (
+          <div className="mb-4 rounded-3xl border border-rose-500/40 bg-rose-900/30 px-4 py-3 text-sm text-rose-100">
+            {error}
           </div>
-          <div>
-            <label htmlFor="editProductTitle" className="block text-sm font-medium text-zinc-700">Título do produto</label>
-            <input
-              type="text"
-              id="editProductTitle"
-              value={productTitle}
-              onChange={(e) => { setProductTitle(e.target.value); setTitleError(null); }}
-              className={`mt-1 block w-full border ${titleError ? 'border-red-500' : 'border-zinc-300'} rounded-md shadow-sm p-2`}
-            />
-            {titleError && <p className="text-red-500 text-xs mt-1">{titleError}</p>}
-          </div>
-          <div className="md:col-span-2">
-            <label htmlFor="editProductDescription" className="block text-sm font-medium text-zinc-700">Descrição do produto</label>
-            <textarea
-              id="editProductDescription"
-              value={productDescription}
-              onChange={(e) => setProductDescription(e.target.value)}
-              rows={4}
-              className="mt-1 block w-full border border-zinc-300 rounded-md shadow-sm p-2"
-            ></textarea>
-          </div>
-          <div>
-            <label htmlFor="editProductBrand" className="block text-sm font-medium text-zinc-700">Marca</label>
-            <input
-              type="text"
-              id="editProductBrand"
-              value={productBrand}
-              onChange={(e) => { setProductBrand(e.target.value); setBrandError(null); }}
-              className={`mt-1 block w-full border ${brandError ? 'border-red-500' : 'border-zinc-300'} rounded-md shadow-sm p-2`}
-            />
-            {brandError && <p className="text-red-500 text-xs mt-1">{brandError}</p>}
-          </div>
-          <div>
-            <label htmlFor="editProductPrice" className="block text-sm font-medium text-zinc-700">Preço do produto (R$)</label>
-            <input
-              type="number"
-              id="editProductPrice"
-              value={productPrice}
-              onChange={(e) => { setProductPrice(Number(e.target.value)); setPriceError(null); }}
-              className={`mt-1 block w-full border ${priceError ? 'border-red-500' : 'border-zinc-300'} rounded-md shadow-sm p-2`}
-            />
-            {priceError && <p className="text-red-500 text-xs mt-1">{priceError}</p>}
-          </div>
-          <div className="md:col-span-2">
-            <label htmlFor="editShippingValue" className="block text-sm font-medium text-zinc-700">Valor do frete (R$)</label>
-            <input
-              type="number"
-              id="editShippingValue"
-              value={freeShipping ? '' : shippingValue}
-              onChange={(e) => { setShippingValue(Number(e.target.value)); setShippingError(null); }}
-              disabled={freeShipping}
-              className={`mt-1 block w-full border ${shippingError && !freeShipping ? 'border-red-500' : 'border-zinc-300'} rounded-md shadow-sm p-2 disabled:bg-zinc-100`}
-            />
-            {shippingError && !freeShipping && <p className="text-red-500 text-xs mt-1">{shippingError}</p>}
-            <div className="flex items-center mt-2">
+        )}
+
+        <div className="grid gap-6 md:grid-cols-2">
+          <div className="space-y-4">
+            <label className="block text-xs uppercase tracking-[0.25em] text-slate-500">
+              Foto do produto
               <input
-                type="checkbox"
-                id="editFreeShipping"
-                checked={freeShipping}
-                onChange={(e) => { setFreeShipping(e.target.checked); setShippingError(null); }}
-                className="h-4 w-4 text-emerald-600 border-zinc-300 rounded"
+                type="file"
+                accept="image/*"
+                onChange={handleImageUpload}
+                className="mt-2 w-full cursor-pointer rounded-2xl border border-slate-700 bg-slate-900/60 px-4 py-3 text-sm text-slate-300 file:mr-4 file:rounded-full file:border-0 file:bg-sky-500/10 file:px-4 file:py-2 file:text-xs file:uppercase file:tracking-[0.2em] file:text-sky-200 hover:border-sky-500/40"
               />
-              <label htmlFor="editFreeShipping" className="ml-2 block text-sm text-zinc-900">Frete grátis</label>
+            </label>
+            <div className="rounded-3xl border border-slate-800 bg-slate-900/40 p-4">
+              {productImagePreview ? (
+                <img src={productImagePreview} alt="Pré-visualização" className="h-40 w-full rounded-2xl object-cover" />
+              ) : (
+                <div className="flex h-40 items-center justify-center rounded-2xl border border-dashed border-slate-700 text-xs uppercase tracking-[0.25em] text-slate-500">
+                  Pré-visualização
+                </div>
+              )}
             </div>
           </div>
-          {/* Seleção de Modelo no Modal */}
-          <div className="md:col-span-2 mt-4">
-            <label className="block text-sm font-medium text-zinc-700 mb-2">Modelo da Landing Page</label>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              {['MODELO_1', 'MODELO_2', 'MODELO_3', 'MODELO_4'].map((model) => (
-                <label key={model} htmlFor={`edit-template-${model}`} className={`w-full cursor-pointer border rounded-md p-2 flex items-center gap-2 hover:bg-zinc-50 ${template === model ? 'border-emerald-500 ring-2 ring-emerald-200' : 'border-zinc-300'}`}>
-                  <input
-                    type="radio"
-                    id={`edit-template-${model}`}
-                    name="edit-template"
-                    value={model}
-                    checked={template === model}
-                    onChange={(e) => setTemplate(e.target.value)}
-                    className="h-4 w-4 text-emerald-600 border-zinc-300 focus:ring-emerald-500"
-                  />
-                  <span className="text-sm text-zinc-900">{model.replace('_', ' ')}</span>
-                  {/* Mini preview */}
-                  <span className="grid grid-cols-3 gap-0.5 w-16 h-7">
-                    {model === 'MODELO_1' && (<>
-                      <span className="col-span-3 bg-zinc-300" />
-                      <span className="col-span-3 bg-zinc-200" />
-                    </>)}
-                    {model === 'MODELO_2' && (<>
-                      <span className="col-span-2 bg-zinc-300" />
-                      <span className="col-span-1 bg-zinc-200" />
-                      <span className="col-span-3 bg-zinc-100" />
-                    </>)}
-                    {model === 'MODELO_3' && (<>
-                      <span className="col-span-1 bg-zinc-300" />
-                      <span className="col-span-2 bg-zinc-200" />
-                      <span className="col-span-3 bg-zinc-100" />
-                    </>)}
-                    {model === 'MODELO_4' && (<>
-                      <span className="col-span-1 bg-zinc-200" />
-                      <span className="col-span-2 bg-zinc-100" />
-                      <span className="col-span-3 bg-white" />
-                    </>)}
-                </span>
+
+          <div className="space-y-4">
+            <label className="block text-xs uppercase tracking-[0.25em] text-slate-500">
+              Título do produto
+              <input
+                type="text"
+                value={productTitle}
+                onChange={(event) => {
+                  setProductTitle(event.target.value);
+                  setTitleError(null);
+                }}
+                className={cn(
+                  "mt-2 w-full rounded-2xl border px-4 py-3 text-sm text-slate-100 outline-none transition focus:border-sky-400/60 focus:ring-0",
+                  titleError ? "border-rose-500/60 bg-rose-500/10" : "border-slate-700 bg-slate-900/60"
+                )}
+              />
+              {titleError && <span className="mt-2 block text-xs text-rose-200">{titleError}</span>}
+            </label>
+
+            <label className="block text-xs uppercase tracking-[0.25em] text-slate-500">
+              Marca
+              <input
+                type="text"
+                value={productBrand}
+                onChange={(event) => {
+                  setProductBrand(event.target.value);
+                  setBrandError(null);
+                }}
+                className={cn(
+                  "mt-2 w-full rounded-2xl border px-4 py-3 text-sm text-slate-100 outline-none transition focus:border-sky-400/60 focus:ring-0",
+                  brandError ? "border-rose-500/60 bg-rose-500/10" : "border-slate-700 bg-slate-900/60"
+                )}
+              />
+              {brandError && <span className="mt-2 block text-xs text-rose-200">{brandError}</span>}
+            </label>
+
+            <label className="block text-xs uppercase tracking-[0.25em] text-slate-500">
+              Descrição
+              <textarea
+                rows={4}
+                value={productDescription}
+                onChange={(event) => setProductDescription(event.target.value)}
+                className="mt-2 w-full rounded-2xl border border-slate-700 bg-slate-900/60 px-4 py-3 text-sm text-slate-100 outline-none transition focus:border-sky-400/60 focus:ring-0"
+              />
+            </label>
+          </div>
+        </div>
+
+        <div className="mt-6 grid gap-4 md:grid-cols-3">
+          <label className="block text-xs uppercase tracking-[0.25em] text-slate-500">
+            Preço
+            <input
+              type="number"
+              value={productPrice}
+              onChange={(event) => {
+                const value = event.target.value;
+                setProductPrice(value === "" ? "" : Number(value));
+                setPriceError(null);
+              }}
+              className={cn(
+                "mt-2 w-full rounded-2xl border px-4 py-3 text-sm text-slate-100 outline-none transition focus:border-sky-400/60 focus:ring-0",
+                priceError ? "border-rose-500/60 bg-rose-500/10" : "border-slate-700 bg-slate-900/60"
+              )}
+            />
+            {priceError && <span className="mt-2 block text-xs text-rose-200">{priceError}</span>}
+          </label>
+
+          <label className="block text-xs uppercase tracking-[0.25em] text-slate-500 md:col-span-2">
+            Frete
+            <div className="mt-2 flex items-center gap-3">
+              <input
+                type="number"
+                value={freeShipping ? "" : shippingValue}
+                onChange={(event) => {
+                  const value = event.target.value;
+                  setShippingValue(value === "" ? "" : Number(value));
+                  setShippingError(null);
+                }}
+                disabled={freeShipping}
+                className={cn(
+                  "w-full rounded-2xl border px-4 py-3 text-sm text-slate-100 outline-none transition focus:border-sky-400/60 focus:ring-0",
+                  freeShipping ? "cursor-not-allowed border-slate-700 bg-slate-800/40 text-slate-400" : "border-slate-700 bg-slate-900/60",
+                  shippingError && !freeShipping && "border-rose-500/60 bg-rose-500/10"
+                )}
+              />
+              <label className="inline-flex items-center gap-2 text-xs uppercase tracking-[0.25em] text-slate-400">
+                <input
+                  type="checkbox"
+                  checked={freeShipping}
+                  onChange={(event) => {
+                    setFreeShipping(event.target.checked);
+                    if (event.target.checked) {
+                      setShippingError(null);
+                    }
+                  }}
+                  className="h-4 w-4 rounded border-slate-600 bg-slate-900 text-sky-400 focus:ring-sky-500/30"
+                />
+                Frete grátis
               </label>
+            </div>
+            {shippingError && !freeShipping && <span className="mt-2 block text-xs text-rose-200">{shippingError}</span>}
+          </label>
+        </div>
+
+        <div className="mt-6">
+          <p className="text-xs uppercase tracking-[0.25em] text-slate-500">Template</p>
+          <div className="mt-3 grid gap-3 sm:grid-cols-2">
+            {TEMPLATE_OPTIONS.map((option) => (
+              <button
+                key={option.value}
+                type="button"
+                onClick={() => setTemplate(option.value)}
+                className={cn(
+                  "flex flex-col items-start gap-3 rounded-3xl border px-4 py-4 text-left transition",
+                  template === option.value
+                    ? "border-sky-400/60 bg-sky-500/10 text-slate-100 shadow-[0_30px_80px_-70px_rgba(34,211,238,0.6)]"
+                    : "border-slate-800 bg-slate-900/50 text-slate-300 hover:border-slate-700"
+                )}
+              >
+                <div className={cn("h-16 w-full rounded-2xl bg-gradient-to-br", option.gradient)} />
+                <div>
+                  <p className="text-sm font-semibold text-slate-100">{option.label}</p>
+                  <p className="text-xs text-slate-400">{option.subtitle}</p>
+                </div>
+              </button>
             ))}
           </div>
         </div>
-        </div>
 
-        <div className="flex justify-end gap-3 mt-6">
+        <div className="mt-8 flex flex-col gap-3 md:flex-row md:items-center md:justify-end">
           <button
+            type="button"
             onClick={onClose}
-            className="px-4 py-2 bg-zinc-200 text-zinc-800 font-semibold rounded-md hover:bg-zinc-300 focus:outline-none focus:ring-2 focus:ring-zinc-500 focus:ring-offset-2"
+            className="inline-flex items-center justify-center rounded-full border border-slate-700 bg-transparent px-5 py-2.5 text-sm font-semibold text-slate-300 transition hover:border-slate-500 hover:text-slate-100"
+            disabled={saving}
           >
             Cancelar
           </button>
           <button
+            type="button"
             onClick={handleSave}
-            disabled={loading}
-            className="px-4 py-2 bg-emerald-600 text-white font-semibold rounded-md shadow-md hover:bg-emerald-700 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed"
+            disabled={saving}
+            className="inline-flex items-center justify-center rounded-full border border-sky-500/60 bg-sky-500/20 px-6 py-2.5 text-sm font-semibold text-sky-100 transition hover:bg-sky-500/30 disabled:cursor-not-allowed disabled:opacity-60"
           >
-            {loading ? 'Salvando...' : 'Salvar Alterações'}
+            {saving ? "Salvando…" : "Salvar alterações"}
           </button>
         </div>
       </div>
@@ -259,69 +537,121 @@ function EditLandingPageModal({ landingPage, onClose, onSave }: EditLandingPageM
   );
 }
 
-
 export default function Landing() {
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
   const [productImageFile, setProductImageFile] = useState<File | null>(null);
   const [productImagePreview, setProductImagePreview] = useState<string | null>(null);
-  const [productTitle, setProductTitle] = useState('');
-  const [productDescription, setProductDescription] = useState('');
-  const [productBrand, setProductBrand] = useState('');
-  const [productPrice, setProductPrice] = useState<number | ''>('');
-  const [shippingValue, setShippingValue] = useState<number | ''>('');
+  const [productTitle, setProductTitle] = useState("");
+  const [productDescription, setProductDescription] = useState("");
+  const [productBrand, setProductBrand] = useState("");
+  const [productPrice, setProductPrice] = useState<number | "">("");
+  const [shippingValue, setShippingValue] = useState<number | "">("");
   const [freeShipping, setFreeShipping] = useState(false);
-  const [template, setTemplate] = useState('MODELO_1'); // Estado para o modelo
+  const [template, setTemplate] = useState<TemplateValue>("MODELO_1");
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [fetching, setFetching] = useState(true);
+  const [globalError, setGlobalError] = useState<string | null>(null);
+  const [formError, setFormError] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const [landingPages, setLandingPages] = useState<LandingPage[]>([]);
-  const [editingLandingPage, setEditingLandingPage] = useState<LandingPage | null>(null); // Estado para edição
-  // Filtros
-  const [filterStatus, setFilterStatus] = useState<'TODOS' | 'ATIVA' | 'PAUSADA'>('TODOS');
-  const [filterTemplate, setFilterTemplate] = useState<'TODOS' | 'MODELO_1' | 'MODELO_2' | 'MODELO_3'>('TODOS');
-
-  // Estados para validação inline do formulário de criação
+  const [editingLandingPage, setEditingLandingPage] = useState<LandingPage | null>(null);
+  const [filterStatus, setFilterStatus] = useState<StatusFilterValue>("TODOS");
+  const [filterTemplate, setFilterTemplate] = useState<TemplateFilterValue>("TODOS");
   const [createTitleError, setCreateTitleError] = useState<string | null>(null);
   const [createImageError, setCreateImageError] = useState<string | null>(null);
   const [createPriceError, setCreatePriceError] = useState<string | null>(null);
   const [createBrandError, setCreateBrandError] = useState<string | null>(null);
   const [createShippingError, setCreateShippingError] = useState<string | null>(null);
 
-
   useEffect(() => {
-    fetchLandingPages();
+    let mounted = true;
+    async function load() {
+      setFetching(true);
+      setGlobalError(null);
+      try {
+        const data = await landingPageApi.listLandingPages();
+        if (mounted) {
+          setLandingPages(Array.isArray(data) ? data : []);
+        }
+      } catch (err: any) {
+        if (mounted) setGlobalError(err?.message || "Não foi possível carregar as landing pages.");
+      } finally {
+        if (mounted) setFetching(false);
+      }
+    }
+    load();
+    return () => {
+      mounted = false;
+    };
   }, []);
 
-  const fetchLandingPages = async () => {
-    try {
-      setError(null);
-      const data = await landingPageApi.listLandingPages();
-      setLandingPages(data);
-    } catch (err: any) {
-      console.error("Erro ao carregar landing pages:", err);
-      setError(err.message || "Não foi possível carregar as landing pages.");
+  useEffect(() => {
+    if (successMessage || formError) {
+      const timer = window.setTimeout(() => {
+        setSuccessMessage(null);
+        setFormError(null);
+      }, 3200);
+      return () => window.clearTimeout(timer);
     }
+    return undefined;
+  }, [successMessage, formError]);
+
+  const shareBaseUrl = useMemo(() => {
+    if (typeof window !== "undefined" && window.location) {
+      return `${window.location.origin.replace(/\/$/, "")}/l/`;
+    }
+    const base = (API_BASE_URL || "").replace(/\/$/, "");
+    return base ? `${base}/l/` : "/l/";
+  }, []);
+
+  const templateCount = useMemo(() => {
+    const initial: Record<TemplateValue, number> = {
+      MODELO_1: 0,
+      MODELO_2: 0,
+      MODELO_3: 0,
+      MODELO_4: 0,
+    };
+    landingPages.forEach((page) => {
+      const key = TEMPLATE_META[page.template as TemplateValue] ? (page.template as TemplateValue) : "MODELO_1";
+      initial[key] += 1;
+    });
+    return initial;
+  }, [landingPages]);
+
+  const metrics = useMemo(() => {
+    const total = landingPages.length;
+    const active = landingPages.filter((page) => page.status === "ATIVA").length;
+    const paused = landingPages.filter((page) => page.status === "PAUSADA").length;
+    const avgTicketRaw = total > 0 ? landingPages.reduce((acc, page) => acc + (page.productPrice || 0), 0) / total : 0;
+    return {
+      total,
+      active,
+      paused,
+      avgTicket: avgTicketRaw,
+    };
+  }, [landingPages]);
+
+  const statusCount: Record<StatusFilterValue, number> = {
+    TODOS: metrics.total,
+    ATIVA: metrics.active,
+    PAUSADA: metrics.paused,
   };
 
-  // Limpeza automática de mensagens de sucesso/erro
-  useEffect(() => {
-    if (successMessage || error) {
-      const t = setTimeout(() => {
-        setSuccessMessage(null);
-        setError(null);
-      }, 3000);
-      return () => clearTimeout(t);
-    }
-  }, [successMessage, error]);
+  const filteredLandingPages = useMemo(() => {
+    return landingPages.filter((page) => {
+      const statusOk = filterStatus === "TODOS" || page.status === filterStatus;
+      const templateOk = filterTemplate === "TODOS" || page.template === filterTemplate;
+      return statusOk && templateOk;
+    });
+  }, [landingPages, filterStatus, filterTemplate]);
 
   const handleImageUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
-    if (event.target.files && event.target.files[0]) {
-      const file = event.target.files[0];
+    const file = event.target.files?.[0];
+    if (file) {
       setProductImageFile(file);
-      setCreateImageError(null); // Limpa erro ao selecionar imagem
+      setCreateImageError(null);
       const reader = new FileReader();
-      reader.onloadend = () => {
-        setProductImagePreview(reader.result as string);
-      };
+      reader.onloadend = () => setProductImagePreview(reader.result as string);
       reader.readAsDataURL(file);
     } else {
       setProductImageFile(null);
@@ -330,7 +660,7 @@ export default function Landing() {
   };
 
   const validateCreateForm = () => {
-    let isValid = true;
+    let valid = true;
     setCreateTitleError(null);
     setCreateImageError(null);
     setCreatePriceError(null);
@@ -338,406 +668,462 @@ export default function Landing() {
     setCreateShippingError(null);
 
     if (!productTitle.trim()) {
-      setCreateTitleError("O título do produto é obrigatório.");
-      isValid = false;
+      setCreateTitleError("Informe um título para a landing.");
+      valid = false;
     }
     if (!productImageFile) {
-      setCreateImageError("A foto do produto é obrigatória.");
-      isValid = false;
+      setCreateImageError("Envie uma imagem do produto.");
+      valid = false;
     }
-    if (productPrice === '' || isNaN(Number(productPrice)) || Number(productPrice) <= 0) {
-      setCreatePriceError("O preço do produto é obrigatório e deve ser um número positivo.");
-      isValid = false;
+    if (productPrice === "" || Number(productPrice) <= 0 || Number.isNaN(Number(productPrice))) {
+      setCreatePriceError("Informe um preço válido e maior que zero.");
+      valid = false;
     }
     if (!productBrand.trim()) {
-      setCreateBrandError("A marca do produto é obrigatória.");
-      isValid = false;
+      setCreateBrandError("Informe a marca do produto.");
+      valid = false;
     }
-    if (!freeShipping && (shippingValue === '' || isNaN(Number(shippingValue)) || Number(shippingValue) < 0)) {
-      setCreateShippingError("O valor do frete é obrigatório e deve ser um número não negativo quando o frete grátis não está marcado.");
-      isValid = false;
+    if (!freeShipping && (shippingValue === "" || Number(shippingValue) < 0 || Number.isNaN(Number(shippingValue)))) {
+      setCreateShippingError("Informe um valor de frete válido ou marque frete grátis.");
+      valid = false;
     }
 
-    return isValid;
+    return valid;
+  };
+
+  const resetForm = () => {
+    setProductImageFile(null);
+    setProductImagePreview(null);
+    if (fileInputRef.current) {
+      fileInputRef.current.value = "";
+    }
+    setProductTitle("");
+    setProductDescription("");
+    setProductBrand("");
+    setProductPrice("");
+    setShippingValue("");
+    setFreeShipping(false);
+    setTemplate("MODELO_1");
   };
 
   const handleGenerateLandingPage = async () => {
     if (!validateCreateForm()) {
-      setError("Por favor, preencha todos os campos obrigatórios corretamente.");
+      setFormError("Revise os campos obrigatórios antes de gerar a landing.");
       return;
     }
 
     setLoading(true);
-    setError(null);
+    setFormError(null);
     setSuccessMessage(null);
+
     try {
-      const newLandingPageData = {
+      const created = await landingPageApi.createLandingPage({
         image: productImageFile || undefined,
-        template, // Envia o modelo selecionado
+        template,
         productTitle,
         productDescription,
         productBrand,
         productPrice: Number(productPrice),
         shippingValue: freeShipping ? 0 : Number(shippingValue),
         freeShipping,
-      };
-      const createdLanding = await landingPageApi.createLandingPage(newLandingPageData);
-      setSuccessMessage("Landing criada com sucesso!");
-      
-      // Limpar formulário
-      setProductImageFile(null);
-      setProductImagePreview(null);
-      setProductTitle('');
-      setProductDescription('');
-      setProductBrand('');
-      setProductPrice('');
-      setShippingValue('');
-      setFreeShipping(false);
-      
-      // Adicionar a nova landing page ao início da lista
-      setLandingPages(prev => [createdLanding, ...prev]);
+      });
 
+      setLandingPages((prev) => [created, ...prev]);
+      setSuccessMessage("Landing criada com sucesso! 🚀");
+      resetForm();
     } catch (err: any) {
-      console.error("Erro ao gerar landing page:", err);
-      setError(err.message || "Falha ao gerar landing page.");
+      setFormError(err?.message || "Não foi possível criar a landing page.");
     } finally {
       setLoading(false);
     }
   };
 
-  const handleCopyLink = (slug: string) => {
-    const fullUrl = `${window.location.origin}/l/${slug}`;
-    navigator.clipboard.writeText(fullUrl);
-    alert('Link copiado para a área de transferência!');
+  const handleCopyLink = async (slug: string) => {
+    const shareUrl = `${shareBaseUrl}${slug}`;
+    try {
+      if (navigator?.clipboard?.writeText) {
+        await navigator.clipboard.writeText(shareUrl);
+        setSuccessMessage("Link copiado para a área de transferência.");
+        return;
+      }
+      throw new Error("Clipboard indisponível");
+    } catch {
+      window.prompt("Copie o link da landing:", shareUrl);
+      setSuccessMessage("Link pronto para compartilhamento.");
+    }
   };
 
-  const handleEdit = (lp: LandingPage) => {
-    setEditingLandingPage(lp);
+  const handleEdit = (landingPage: LandingPage) => {
+    setEditingLandingPage(landingPage);
   };
 
-  const handleSaveEditedLandingPage = (updatedLandingPage: LandingPage) => {
-    setLandingPages(prev => prev.map(lp => lp.id === updatedLandingPage.id ? updatedLandingPage : lp));
-    setSuccessMessage("Landing atualizada com sucesso!");
+  const handleSaveEditedLandingPage = (updated: LandingPage) => {
+    setLandingPages((prev) => prev.map((page) => (page.id === updated.id ? updated : page)));
+    setSuccessMessage("Landing atualizada com sucesso.");
     setEditingLandingPage(null);
   };
 
   const handleDelete = async (id: string) => {
-    if (!window.confirm("Tem certeza que deseja excluir esta landing? Esta ação não pode ser desfeita.")) {
+    if (!window.confirm("Deseja excluir esta landing? Essa ação não pode ser desfeita.")) {
       return;
     }
     setLoading(true);
-    setError(null);
-    setSuccessMessage(null);
+    setFormError(null);
+
     try {
       await landingPageApi.deleteLandingPage(id);
-      setLandingPages(prev => prev.filter(lp => lp.id !== id));
-      setSuccessMessage("Landing excluída com sucesso!");
+      setLandingPages((prev) => prev.filter((page) => page.id !== id));
+      setSuccessMessage("Landing removida.");
     } catch (err: any) {
-      console.error("Erro ao deletar landing page:", err);
-      setError(err.message || "Falha ao excluir landing page. Verifique sua conexão.");
+      setFormError(err?.message || "Falha ao excluir a landing page.");
     } finally {
       setLoading(false);
     }
   };
 
-  const handleToggleStatus = async (lp: LandingPage) => {
-    const newStatus = lp.status === 'ATIVA' ? 'PAUSADA' : 'ATIVA';
-    const ok = window.confirm(`Tem certeza que deseja ${newStatus === 'PAUSADA' ? 'pausar' : 'ativar'} esta landing?`);
-    if (!ok) return;
+  const handleToggleStatus = async (landingPage: LandingPage) => {
+    const newStatus: StatusValue = landingPage.status === "ATIVA" ? "PAUSADA" : "ATIVA";
+    const confirmation =
+      newStatus === "PAUSADA"
+        ? "Deseja pausar esta landing? Ela deixará de receber tráfego."
+        : "Deseja ativar esta landing? Ela voltará a receber tráfego.";
+
+    if (!window.confirm(confirmation)) {
+      return;
+    }
     setLoading(true);
-    setError(null);
-    setSuccessMessage(null);
+    setFormError(null);
+
     try {
-      const updatedLp = await landingPageApi.updateLandingPageStatus(lp.id, newStatus);
-      setLandingPages(prev => prev.map(p => p.id === lp.id ? updatedLp : p));
-      setSuccessMessage(`Landing page ${newStatus === 'ATIVA' ? 'ativada' : 'pausada'} com sucesso!`);
+      const updated = await landingPageApi.updateLandingPageStatus(landingPage.id, newStatus);
+      setLandingPages((prev) => prev.map((page) => (page.id === landingPage.id ? updated : page)));
+      setSuccessMessage(newStatus === "ATIVA" ? "Landing ativada." : "Landing pausada.");
     } catch (err: any) {
-      console.error("Erro ao mudar status da landing page:", err);
-      setError(err.message || "Falha ao mudar status da landing page.");
+      setFormError(err?.message || "Não foi possível alterar o status da landing.");
     } finally {
       setLoading(false);
     }
   };
-
-  // Helpers de visual
-  const templateBadge = (tpl?: string) => {
-    const t = (tpl || 'MODELO_1') as 'MODELO_1' | 'MODELO_2' | 'MODELO_3' | 'MODELO_4';
-    const map: Record<any, { cls: string; label: string }> = {
-      MODELO_1: { cls: 'bg-zinc-100 text-zinc-700', label: 'Modelo 1' },
-      MODELO_2: { cls: 'bg-blue-50 text-blue-700', label: 'Modelo 2' },
-      MODELO_3: { cls: 'bg-purple-50 text-purple-700', label: 'Modelo 3' },
-      MODELO_4: { cls: 'bg-emerald-50 text-emerald-700', label: 'Modelo 4' },
-    };
-    return map[t] || map.MODELO_1;
-  };
-
-  const statusBadge = (status: 'ATIVA' | 'PAUSADA') => {
-    return status === 'ATIVA'
-      ? { cls: 'bg-emerald-50 text-emerald-700', label: 'Ativa' }
-      : { cls: 'bg-yellow-50 text-yellow-700', label: 'Pausada' };
-  };
-
-  const filteredLandingPages = landingPages.filter(lp => {
-    const okStatus = filterStatus === 'TODOS' ? true : lp.status === filterStatus;
-    const okTemplate = filterTemplate === 'TODOS' ? true : lp.template === filterTemplate;
-    return okStatus && okTemplate;
-  });
 
   return (
-    <div className="p-4 md:p-6">
-      <h1 className="text-xl md:text-2xl font-bold text-emerald-900 mb-6">Gerar Landing Page</h1>
-
-      <div className="bg-white border border-zinc-200 rounded-2xl shadow-sm p-4 md:p-5 mb-6">
-        <h2 className="text-lg font-semibold text-zinc-800 mb-4">Criar Nova Landing Page</h2>
-        {error && <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative mb-4" role="alert">{error}</div>}
-        {successMessage && <div className="bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded relative mb-4" role="alert">{successMessage}</div>}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div>
-            <label htmlFor="productImage" className="block text-sm font-medium text-zinc-700">Foto do produto</label>
-            <input
-              type="file"
-              id="productImage"
-              accept="image/*"
-              onChange={handleImageUpload}
-              className="mt-1 block w-full text-sm text-zinc-500 file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-emerald-50 file:text-emerald-700 hover:file:bg-emerald-100"
-            />
-            {createImageError && <p className="text-red-500 text-xs mt-1">{createImageError}</p>}
-            {productImagePreview && (
-              <img
-                src={productImagePreview}
-                alt="Pré-visualização do produto"
-                className="mt-2 max-h-40 object-cover rounded-md"
-              />
-            )}
-          </div>
-          <div>
-            <label htmlFor="productTitle" className="block text-sm font-medium text-zinc-700">Título do produto</label>
-            <input
-              type="text"
-              id="productTitle"
-              value={productTitle}
-              onChange={(e) => { setProductTitle(e.target.value); setCreateTitleError(null); }}
-              placeholder="Ex: Sérum Facial Anti-idade 30ml"
-              maxLength={100}
-              className={`mt-1 block w-full border ${createTitleError ? 'border-red-500' : 'border-zinc-300'} rounded-md shadow-sm p-2`}
-            />
-            {createTitleError && <p className="text-red-500 text-xs mt-1">{createTitleError}</p>}
-          </div>
-          <div className="md:col-span-2">
-            <label htmlFor="productDescription" className="block text-sm font-medium text-zinc-700">Descrição do produto</label>
-            <textarea
-              id="productDescription"
-              value={productDescription}
-              onChange={(e) => setProductDescription(e.target.value)}
-              rows={4}
-              placeholder="Ex: Fórmula com ácido hialurônico e vitaminas para hidratação intensa..."
-              className="mt-1 block w-full border border-zinc-300 rounded-md shadow-sm p-2"
-            ></textarea>
-          </div>
-          <div>
-            <label htmlFor="productBrand" className="block text-sm font-medium text-zinc-700">Marca</label>
-            <input
-              type="text"
-              id="productBrand"
-              value={productBrand}
-              onChange={(e) => { setProductBrand(e.target.value); setCreateBrandError(null); }}
-              placeholder="Ex: Vichy"
-              maxLength={40}
-              className={`mt-1 block w-full md:max-w-md border ${createBrandError ? 'border-red-500' : 'border-zinc-300'} rounded-md shadow-sm p-2`}
-            />
-            {createBrandError && <p className="text-red-500 text-xs mt-1">{createBrandError}</p>}
-          </div>
-          <div>
-            <label htmlFor="productPrice" className="block text-sm font-medium text-zinc-700">Preço (R$)</label>
-            <input
-              type="number"
-              id="productPrice"
-              value={productPrice}
-              onChange={(e) => { setProductPrice(Number(e.target.value)); setCreatePriceError(null); }}
-              inputMode="decimal"
-              step="0.01"
-              min={0}
-              max={9999.99}
-              placeholder="Ex: 59.90"
-              className={`mt-1 block w-full md:max-w-[160px] border ${createPriceError ? 'border-red-500' : 'border-zinc-300'} rounded-md shadow-sm p-2`}
-            />
-            {createPriceError && <p className="text-red-500 text-xs mt-1">{createPriceError}</p>}
-          </div>
-          <div>
-            <label htmlFor="shippingValue" className="block text-sm font-medium text-zinc-700">Frete (R$)</label>
-            <input
-              type="number"
-              id="shippingValue"
-              value={freeShipping ? '' : shippingValue} // Limpa o valor se frete grátis
-              onChange={(e) => { setShippingValue(Number(e.target.value)); setCreateShippingError(null); }}
-              disabled={freeShipping}
-              inputMode="decimal"
-              step="0.01"
-              min={0}
-              max={999.99}
-              placeholder={freeShipping ? 'Frete grátis' : 'Ex: 15.00'}
-              className={`mt-1 block w-full md:max-w-[160px] border ${createShippingError && !freeShipping ? 'border-red-500' : 'border-zinc-300'} rounded-md shadow-sm p-2 disabled:bg-zinc-100`}
-            />
-            {createShippingError && !freeShipping && <p className="text-red-500 text-xs mt-1">{createShippingError}</p>}
-            <div className="flex items-center mt-2">
-              <input
-                type="checkbox"
-                id="freeShipping"
-                checked={freeShipping}
-                onChange={(e) => { setFreeShipping(e.target.checked); setCreateShippingError(null); }}
-                className="h-4 w-4 text-emerald-600 border-zinc-300 rounded"
-              />
-              <label htmlFor="freeShipping" className="ml-2 block text-sm text-zinc-900">Frete grátis</label>
+    <div className="min-h-screen bg-gradient-to-br from-[#05080f] via-[#0b1220] to-[#04060a] pb-24">
+      <div className="mx-auto max-w-7xl px-4 pt-12">
+        <header className="rounded-4xl border border-slate-800 bg-[#071024]/80 px-6 py-8 shadow-[0_60px_160px_-90px_rgba(34,211,238,0.6)] backdrop-blur-2xl">
+          <div className="flex flex-col gap-6 md:flex-row md:items-center md:justify-between">
+            <div className="max-w-2xl space-y-3">
+              <p className="text-[11px] uppercase tracking-[0.35em] text-slate-500">Campanhas</p>
+              <h1 className="text-3xl font-semibold text-slate-50 md:text-4xl">Landing Pages Inteligentes</h1>
+              <p className="text-sm text-slate-400">
+                Gere narrativas de produto com estética high-tech, acione frete estratégico e acompanhe status em um cockpit único.
+              </p>
+            </div>
+            <div className="grid w-full gap-3 sm:grid-cols-3 md:w-auto">
+              <MetricCard label="Ativas" value={String(metrics.active)} hint="Campanhas recebendo tráfego neste momento." />
+              <MetricCard label="Pausadas" value={String(metrics.paused)} hint="Materiais prontos para reativação." />
+              <MetricCard label="Ticket médio" value={BRL(metrics.avgTicket || 0)} hint="Preço médio dos produtos cadastrados." />
             </div>
           </div>
-          {/* Seleção de Modelo */}
-          <div className="md:col-span-2 mt-4">
-            <label className="block text-sm font-medium text-zinc-700 mb-2">Modelo da Landing Page</label>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              {['MODELO_1', 'MODELO_2', 'MODELO_3', 'MODELO_4'].map((model) => (
-                <label key={model} htmlFor={`template-${model}`} className={`w-full cursor-pointer border rounded-md p-2 flex items-center gap-2 hover:bg-zinc-50 ${template === model ? 'border-emerald-500 ring-2 ring-emerald-200' : 'border-zinc-300'}`}>
-                  <input
-                    type="radio"
-                    id={`template-${model}`}
-                    name="template"
-                    value={model}
-                    checked={template === model}
-                    onChange={(e) => setTemplate(e.target.value)}
-                    className="h-4 w-4 text-emerald-600 border-zinc-300 focus:ring-emerald-500"
-                  />
-                  <span className="text-sm text-zinc-900">{model.replace('_', ' ')}</span>
-                  {/* Mini preview */}
-                  <span className="grid grid-cols-3 gap-0.5 w-16 h-7">
-                    {model === 'MODELO_1' && (<>
-                      <span className="col-span-3 bg-zinc-300" />
-                      <span className="col-span-3 bg-zinc-200" />
-                    </>)}
-                    {model === 'MODELO_2' && (<>
-                      <span className="col-span-2 bg-zinc-300" />
-                      <span className="col-span-1 bg-zinc-200" />
-                      <span className="col-span-3 bg-zinc-100" />
-                    </>)}
-                    {model === 'MODELO_3' && (<>
-                      <span className="col-span-1 bg-zinc-300" />
-                      <span className="col-span-2 bg-zinc-200" />
-                      <span className="col-span-3 bg-zinc-100" />
-                    </>)}
-                    {model === 'MODELO_4' && (<>
-                      <span className="col-span-1 bg-zinc-200" />
-                      <span className="col-span-2 bg-zinc-100" />
-                      <span className="col-span-3 bg-white" />
-                    </>)}
-                </span>
-              </label>
-            ))}
-          </div>
-        </div>
-        </div>
-        <div className="mt-6">
-          <button
-            onClick={handleGenerateLandingPage}
-            disabled={loading}
-            className="px-6 py-3 bg-emerald-600 text-white font-semibold rounded-md shadow-md hover:bg-emerald-700 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            {loading ? 'Gerando...' : 'Gerar Landing Page'}
-          </button>
-        </div>
-      </div>
+        </header>
 
-      <div className="bg-white border border-zinc-200 rounded-2xl shadow-sm p-4 md:p-5">
-        <h2 className="text-lg font-semibold text-zinc-800 mb-4">
-          Landing Pages Geradas: {landingPages.length}
-        </h2>
-        {/* Filtros */}
-        <div className="flex flex-wrap items-center gap-3 mb-4">
-          <div className="flex items-center gap-2">
-            <span className="text-sm text-zinc-600">Status</span>
-            <select
-              value={filterStatus}
-              onChange={e => setFilterStatus(e.target.value as any)}
-              className="text-sm border border-zinc-300 rounded-md px-2 py-1"
-            >
-              <option value="TODOS">Todos</option>
-              <option value="ATIVA">Ativa</option>
-              <option value="PAUSADA">Pausada</option>
-            </select>
-          </div>
-          <div className="flex items-center gap-2">
-            <span className="text-sm text-zinc-600">Modelo</span>
-            <select
-              value={filterTemplate}
-              onChange={e => setFilterTemplate(e.target.value as any)}
-              className="text-sm border border-zinc-300 rounded-md px-2 py-1"
-            >
-              <option value="TODOS">Todos</option>
-              <option value="MODELO_1">Modelo 1</option>
-              <option value="MODELO_2">Modelo 2</option>
-              <option value="MODELO_3">Modelo 3</option>
-              <option value="MODELO_4">Modelo 4</option>
-            </select>
-          </div>
-        </div>
-        {landingPages.length === 0 ? (
-          <p className="text-zinc-500">Nenhuma landing page gerada ainda.</p>
-        ) : (
-        <div className="grid grid-cols-1 gap-4">
-          {filteredLandingPages.map((lp) => (
-            <div key={lp.id} className="flex flex-col sm:flex-row items-start sm:items-center border border-zinc-200 rounded-lg shadow-sm p-3 gap-4">
-              {lp.imageUrl && (
-                <img src={resolveImageUrl(lp.imageUrl)} alt={lp.productTitle} className="w-20 h-20 object-cover rounded-md shrink-0" />
-              )}
-              <div className="flex-grow">
-                <h3 className="font-bold text-zinc-800 text-lg">{lp.productTitle}</h3>
-                <p className={`text-md font-semibold ${lp.freeShipping ? 'text-emerald-600' : 'text-zinc-800'}`}>
-                    {BRL(lp.productPrice || 0)} {lp.freeShipping && <span className="text-emerald-600 text-xs font-bold ml-1">(FRETE GRÁTIS)</span>}
-                  </p>
-                  <div className="mt-1 flex items-center gap-2">
-                    {(() => { const b = templateBadge(lp.template); return <span className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium ${b.cls}`}>{b.label}</span>; })()}
-                    {(() => { const s = statusBadge(lp.status); return <span className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium ${s.cls}`}>{s.label}</span>; })()}
+        <section className="mt-10 rounded-4xl border border-slate-800 bg-[#091225]/70 px-6 py-8 shadow-[0_50px_140px_-100px_rgba(34,211,238,0.55)] backdrop-blur-2xl">
+          <div className="grid gap-8 lg:grid-cols-[1.1fr_1fr] lg:gap-10">
+            <div className="flex flex-col justify-between gap-6 rounded-3xl border border-slate-800 bg-gradient-to-br from-[#0a1326] via-[#060b18] to-[#03060d] p-6">
+              <div className="space-y-2">
+                <p className="text-[10px] uppercase tracking-[0.35em] text-slate-500">Blueprint</p>
+                <h2 className="text-2xl font-semibold text-slate-50">Construa sua próxima landing</h2>
+                <p className="text-sm text-slate-400">
+                  Combine imagem, copy e template para lançar campanhas em minutos com a identidade Dermosul Commerce OS.
+                </p>
+              </div>
+              <div className="rounded-3xl border border-slate-800 bg-slate-900/40 p-4">
+                {productImagePreview ? (
+                  <img src={productImagePreview} alt="Pré-visualização" className="h-48 w-full rounded-2xl object-cover" />
+                ) : (
+                  <div className="flex h-48 flex-col items-center justify-center gap-3 rounded-2xl border border-dashed border-slate-700 text-xs uppercase tracking-[0.25em] text-slate-500">
+                    <span>Pré-visualização</span>
+                    <span className="text-[10px] text-slate-600">Faça upload para visualizar</span>
                   </div>
-                  <a href={`/l/${lp.slug}`} target="_blank" rel="noopener noreferrer" className="text-zinc-500 text-sm hover:underline block mt-1">
-                    {`${window.location.origin}/l/${lp.slug}`}
-                  </a>
-                  <p className="text-zinc-500 text-xs mt-1">Criado em: {ddmmhh(lp.createdAt)}</p>
-                  {lp.updatedAt && <p className="text-zinc-500 text-xs mt-1">Atualizado em: {ddmmhh(lp.updatedAt)}</p>}
+                )}
+              </div>
+            </div>
+
+            <div className="space-y-6">
+              {formError && (
+                <div className="rounded-3xl border border-rose-500/40 bg-rose-900/30 px-4 py-3 text-sm text-rose-100">
+                  {formError}
                 </div>
-                <div className="flex flex-col sm:flex-row gap-2 sm:ml-auto">
-                  <button
-                    onClick={() => handleEdit(lp)}
-                    disabled={loading}
-                    className="px-4 py-2 bg-blue-50 text-blue-700 text-sm font-medium rounded-md hover:bg-blue-100 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed"
-                  >
-                    Editar
-                  </button>
-                  <button
-                    onClick={() => handleToggleStatus(lp)}
-                    disabled={loading}
-                    className={`px-4 py-2 text-sm font-medium rounded-md focus:outline-none focus:ring-2 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed ${
-                      lp.status === 'ATIVA'
-                        ? 'bg-yellow-50 text-yellow-700 hover:bg-yellow-100 focus:ring-yellow-500'
-                        : 'bg-green-50 text-green-700 hover:bg-green-100 focus:ring-green-500'
-                    }`}
-                  >
-                    {lp.status === 'ATIVA' ? 'Pausar' : 'Ativar'}
-                  </button>
-                  <button
-                    onClick={() => handleDelete(lp.id)}
-                    disabled={loading}
-                    className="px-4 py-2 bg-red-50 text-red-700 text-sm font-medium rounded-md hover:bg-red-100 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed"
-                  >
-                    Excluir
-                  </button>
-                  <button
-                    onClick={() => handleCopyLink(lp.slug)}
-                    className="px-4 py-2 bg-emerald-50 text-emerald-700 text-sm font-medium rounded-md hover:bg-emerald-100 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:ring-offset-2"
-                  >
-                    Copiar link
-                  </button>
+              )}
+              {successMessage && (
+                <div className="rounded-3xl border border-emerald-500/40 bg-emerald-900/30 px-4 py-3 text-sm text-emerald-100">
+                  {successMessage}
+                </div>
+              )}
+
+              <label className="block text-xs uppercase tracking-[0.25em] text-slate-500">
+                Foto do produto
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept="image/*"
+                  onChange={handleImageUpload}
+                  className={cn(
+                    "mt-2 w-full cursor-pointer rounded-2xl border border-slate-700 bg-slate-900/60 px-4 py-3 text-sm text-slate-300 file:mr-4 file:rounded-full file:border-0 file:bg-sky-500/10 file:px-4 file:py-2 file:text-xs file:uppercase file:tracking-[0.2em] file:text-sky-200 hover:border-sky-500/40",
+                    createImageError && "border-rose-500/60 bg-rose-500/10"
+                  )}
+                />
+                {createImageError && <span className="mt-2 block text-xs text-rose-200">{createImageError}</span>}
+              </label>
+
+              <div className="grid gap-4 md:grid-cols-2">
+                <label className="block text-xs uppercase tracking-[0.25em] text-slate-500">
+                  Título
+                  <input
+                    type="text"
+                    value={productTitle}
+                    onChange={(event) => {
+                      setProductTitle(event.target.value);
+                      setCreateTitleError(null);
+                    }}
+                    className={cn(
+                      "mt-2 w-full rounded-2xl border px-4 py-3 text-sm text-slate-100 outline-none transition focus:border-sky-400/60 focus:ring-0",
+                      createTitleError ? "border-rose-500/60 bg-rose-500/10" : "border-slate-700 bg-slate-900/60"
+                    )}
+                  />
+                  {createTitleError && <span className="mt-2 block text-xs text-rose-200">{createTitleError}</span>}
+                </label>
+
+                <label className="block text-xs uppercase tracking-[0.25em] text-slate-500">
+                  Marca
+                  <input
+                    type="text"
+                    value={productBrand}
+                    onChange={(event) => {
+                      setProductBrand(event.target.value);
+                      setCreateBrandError(null);
+                    }}
+                    className={cn(
+                      "mt-2 w-full rounded-2xl border px-4 py-3 text-sm text-slate-100 outline-none transition focus:border-sky-400/60 focus:ring-0",
+                      createBrandError ? "border-rose-500/60 bg-rose-500/10" : "border-slate-700 bg-slate-900/60"
+                    )}
+                  />
+                  {createBrandError && <span className="mt-2 block text-xs text-rose-200">{createBrandError}</span>}
+                </label>
+              </div>
+
+              <label className="block text-xs uppercase tracking-[0.25em] text-slate-500">
+                Descrição
+                <textarea
+                  rows={4}
+                  value={productDescription}
+                  onChange={(event) => setProductDescription(event.target.value)}
+                  className="mt-2 w-full rounded-2xl border border-slate-700 bg-slate-900/60 px-4 py-3 text-sm text-slate-100 outline-none transition focus:border-sky-400/60 focus:ring-0"
+                />
+              </label>
+
+              <div className="grid gap-4 md:grid-cols-2">
+                <label className="block text-xs uppercase tracking-[0.25em] text-slate-500">
+                  Preço
+                  <input
+                    type="number"
+                    value={productPrice}
+                    onChange={(event) => {
+                      const value = event.target.value;
+                      setProductPrice(value === "" ? "" : Number(value));
+                      setCreatePriceError(null);
+                    }}
+                    className={cn(
+                      "mt-2 w-full rounded-2xl border px-4 py-3 text-sm text-slate-100 outline-none transition focus:border-sky-400/60 focus:ring-0",
+                      createPriceError ? "border-rose-500/60 bg-rose-500/10" : "border-slate-700 bg-slate-900/60"
+                    )}
+                  />
+                  {createPriceError && <span className="mt-2 block text-xs text-rose-200">{createPriceError}</span>}
+                </label>
+
+                <label className="block text-xs uppercase tracking-[0.25em] text-slate-500">
+                  Frete
+                  <div className="mt-2 flex items-center gap-3">
+                    <input
+                      type="number"
+                      value={freeShipping ? "" : shippingValue}
+                      onChange={(event) => {
+                        const value = event.target.value;
+                        setShippingValue(value === "" ? "" : Number(value));
+                        setCreateShippingError(null);
+                      }}
+                      disabled={freeShipping}
+                      className={cn(
+                        "w-full rounded-2xl border px-4 py-3 text-sm text-slate-100 outline-none transition focus:border-sky-400/60 focus:ring-0",
+                        freeShipping ? "cursor-not-allowed border-slate-700 bg-slate-800/40 text-slate-400" : "border-slate-700 bg-slate-900/60",
+                        createShippingError && !freeShipping && "border-rose-500/60 bg-rose-500/10"
+                      )}
+                    />
+                    <label className="inline-flex items-center gap-2 text-xs uppercase tracking-[0.25em] text-slate-400">
+                      <input
+                        type="checkbox"
+                        checked={freeShipping}
+                        onChange={(event) => {
+                          setFreeShipping(event.target.checked);
+                          if (event.target.checked) {
+                            setCreateShippingError(null);
+                          }
+                        }}
+                        className="h-4 w-4 rounded border-slate-600 bg-slate-900 text-sky-400 focus:ring-sky-500/30"
+                      />
+                      Frete grátis
+                    </label>
+                  </div>
+                  {createShippingError && !freeShipping && (
+                    <span className="mt-2 block text-xs text-rose-200">{createShippingError}</span>
+                  )}
+                </label>
+              </div>
+
+              <div>
+                <p className="text-xs uppercase tracking-[0.25em] text-slate-500">Template</p>
+                <div className="mt-3 grid gap-3 sm:grid-cols-2">
+                  {TEMPLATE_OPTIONS.map((option) => (
+                    <button
+                      key={option.value}
+                      type="button"
+                      onClick={() => setTemplate(option.value)}
+                      className={cn(
+                        "flex flex-col items-start gap-3 rounded-3xl border px-4 py-4 text-left transition",
+                        template === option.value
+                          ? "border-sky-400/60 bg-sky-500/10 text-slate-100 shadow-[0_30px_80px_-70px_rgba(34,211,238,0.6)]"
+                          : "border-slate-800 bg-slate-900/50 text-slate-300 hover:border-slate-700"
+                      )}
+                    >
+                      <div className={cn("h-16 w-full rounded-2xl bg-gradient-to-br", option.gradient)} />
+                      <div>
+                        <p className="text-sm font-semibold text-slate-100">{option.label}</p>
+                        <p className="text-xs text-slate-400">{option.subtitle}</p>
+                      </div>
+                    </button>
+                  ))}
                 </div>
               </div>
+
+              <div className="flex flex-col gap-3 pt-2 sm:flex-row sm:justify-end">
+                <button
+                  type="button"
+                  onClick={handleGenerateLandingPage}
+                  disabled={loading}
+                  className="inline-flex items-center justify-center rounded-full border border-sky-500/60 bg-sky-500/20 px-6 py-2.5 text-sm font-semibold text-sky-100 transition hover:bg-sky-500/30 disabled:cursor-not-allowed disabled:opacity-60"
+                >
+                  {loading ? "Gerando…" : "Gerar landing page"}
+                </button>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <section className="mt-10 rounded-4xl border border-slate-800 bg-[#091225]/70 px-6 py-8 shadow-[0_50px_140px_-110px_rgba(34,211,238,0.55)] backdrop-blur-2xl">
+          <div className="flex flex-col gap-6 md:flex-row md:items-center md:justify-between">
+            <div>
+              <p className="text-[11px] uppercase tracking-[0.35em] text-slate-500">Portfólio</p>
+              <h2 className="mt-2 text-2xl font-semibold text-slate-50">Landings em operação</h2>
+              <p className="text-sm text-slate-400">
+                Filtre por status ou template para planejar ativações rápidas com o squad de mídia.
+              </p>
+            </div>
+            <div className="flex flex-wrap gap-3">
+              {( ["TODOS", "ATIVA", "PAUSADA"] as StatusFilterValue[] ).map((status) => (
+                <button
+                  key={status}
+                  type="button"
+                  onClick={() => setFilterStatus(status)}
+                  className={cn(
+                    "inline-flex items-center gap-2 rounded-full border px-4 py-2 text-xs font-semibold uppercase tracking-[0.25em] transition",
+                    filterStatus === status
+                      ? "border-sky-500/60 bg-sky-500/15 text-sky-100"
+                      : "border-slate-800 bg-slate-900/40 text-slate-400 hover:border-slate-700 hover:text-slate-200"
+                  )}
+                >
+                  <span>{status === "TODOS" ? "Todas" : status === "ATIVA" ? "Ativas" : "Pausadas"}</span>
+                  <span className="rounded-full bg-slate-900/70 px-2 py-0.5 text-[10px] text-slate-400">
+                    {statusCount[status]}
+                  </span>
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <div className="mt-6 flex flex-wrap gap-3">
+            <button
+              type="button"
+              onClick={() => setFilterTemplate("TODOS")}
+              className={cn(
+                "inline-flex items-center gap-2 rounded-full border px-3 py-1.5 text-xs font-semibold uppercase tracking-[0.25em] transition",
+                filterTemplate === "TODOS"
+                  ? "border-sky-500/60 bg-sky-500/15 text-sky-100"
+                  : "border-slate-800 bg-slate-900/40 text-slate-400 hover:border-slate-700 hover:text-slate-200"
+              )}
+            >
+              <span>Todos os modelos</span>
+              <span className="rounded-full bg-slate-900/70 px-2 py-0.5 text-[10px] text-slate-400">{metrics.total}</span>
+            </button>
+            {TEMPLATE_OPTIONS.map((option) => (
+              <button
+                key={option.value}
+                type="button"
+                onClick={() => setFilterTemplate(option.value)}
+                className={cn(
+                  "inline-flex items-center gap-2 rounded-full border px-3 py-1.5 text-xs font-semibold uppercase tracking-[0.25em] transition",
+                  filterTemplate === option.value
+                    ? "border-sky-500/60 bg-sky-500/15 text-sky-100"
+                    : "border-slate-800 bg-slate-900/40 text-slate-400 hover:border-slate-700 hover:text-slate-200"
+                )}
+              >
+                <span>{option.label}</span>
+                <span className="rounded-full bg-slate-900/70 px-2 py-0.5 text-[10px] text-slate-400">
+                  {templateCount[option.value]}
+                </span>
+              </button>
             ))}
           </div>
-        )}
+
+          {globalError && (
+            <div className="mt-6 rounded-3xl border border-rose-500/40 bg-rose-900/30 px-4 py-3 text-sm text-rose-100">
+              {globalError}
+            </div>
+          )}
+
+          <div className="mt-8 grid gap-5">
+            {fetching && (
+              <div className="grid gap-4">
+                {Array.from({ length: 3 }).map((_, index) => (
+                  <div
+                    key={index}
+                    className="h-40 animate-pulse rounded-4xl border border-slate-800 bg-slate-900/50"
+                  />
+                ))}
+              </div>
+            )}
+
+            {!fetching && filteredLandingPages.length === 0 && (
+              <div className="flex flex-col items-center justify-center rounded-4xl border border-slate-800 bg-slate-900/40 px-6 py-12 text-center text-slate-400">
+                <span className="text-4xl">🛰️</span>
+                <p className="mt-3 text-sm text-slate-300">Nenhuma landing encontrada para os filtros atuais.</p>
+                <p className="mt-1 text-xs text-slate-500">
+                  Ajuste os filtros ou gere uma nova landing para o portfólio Dermosul.
+                </p>
+              </div>
+            )}
+
+            {!fetching &&
+              filteredLandingPages.map((landingPage) => (
+                <LandingCard
+                  key={landingPage.id}
+                  landingPage={landingPage}
+                  shareBaseUrl={shareBaseUrl}
+                  onEdit={handleEdit}
+                  onToggleStatus={handleToggleStatus}
+                  onDelete={handleDelete}
+                  onCopyLink={handleCopyLink}
+                />
+              ))}
+          </div>
+        </section>
       </div>
 
       {editingLandingPage && (

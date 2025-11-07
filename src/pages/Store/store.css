@@ -1,0 +1,183 @@
+.store-admin {
+  color: #cbd5f5;
+}
+
+.store-admin section.rounded-2xl.border.border-zinc-200.bg-white,
+.store-admin div.rounded-2xl.border.border-zinc-200.bg-white,
+.store-admin div.rounded-xl.border.border-zinc-200.bg-white,
+.store-admin div.rounded-lg.border.border-zinc-200.bg-white {
+  border-radius: 24px;
+  border: 1px solid rgba(51, 65, 85, 0.8);
+  background: rgba(9, 18, 37, 0.7);
+  padding: 1.5rem;
+  box-shadow: 0 48px 140px -110px rgba(34, 211, 238, 0.55);
+  backdrop-filter: blur(24px);
+  color: #e2e8f0;
+}
+
+.store-admin .bg-zinc-50,
+.store-admin .bg-zinc-100,
+.store-admin .bg-zinc-200,
+.store-admin .bg-violet-50 {
+  background: rgba(9, 18, 37, 0.6) !important;
+}
+
+.store-admin .border-violet-600.bg-violet-600 {
+  background: rgba(56, 189, 248, 0.2) !important;
+  border-color: rgba(56, 189, 248, 0.6) !important;
+  color: #bae6fd !important;
+}
+
+.store-admin .border-zinc-200.bg-white {
+  border-color: rgba(71, 85, 105, 0.8) !important;
+  background: rgba(9, 18, 37, 0.55) !important;
+  color: #94a3b8 !important;
+}
+
+.store-admin .hover\:border-violet-200:hover {
+  border-color: rgba(56, 189, 248, 0.45) !important;
+  color: #bae6fd !important;
+}
+
+.store-admin h2,
+.store-admin h3,
+.store-admin h4 {
+  color: #f8fafc;
+}
+
+.store-admin .text-violet-900,
+.store-admin .text-violet-800,
+.store-admin .text-violet-700 {
+  color: #f8fafc !important;
+}
+
+.store-admin .text-zinc-600,
+.store-admin .text-zinc-500,
+.store-admin .text-zinc-400 {
+  color: #94a3b8 !important;
+}
+
+.store-admin p {
+  color: #94a3b8;
+}
+
+.store-admin input[type="text"],
+.store-admin input[type="email"],
+.store-admin input[type="url"],
+.store-admin input[type="number"],
+.store-admin input[type="password"],
+.store-admin textarea,
+.store-admin select {
+  border-radius: 16px;
+  border: 1px solid rgba(71, 85, 105, 0.8);
+  background: rgba(15, 23, 42, 0.72);
+  color: #f1f5f9;
+  padding: 0.65rem 0.85rem;
+  outline: none;
+  transition: border-color 0.2s ease;
+}
+
+.store-admin input[type="text"]:focus,
+.store-admin input[type="email"]:focus,
+.store-admin input[type="url"]:focus,
+.store-admin input[type="number"]:focus,
+.store-admin input[type="password"]:focus,
+.store-admin textarea:focus,
+.store-admin select:focus {
+  border-color: rgba(56, 189, 248, 0.6);
+  box-shadow: 0 0 0 3px rgba(56, 189, 248, 0.15);
+}
+
+.store-admin input[type="checkbox"],
+.store-admin input[type="radio"] {
+  accent-color: #38bdf8;
+  border-radius: 8px;
+  border: 1px solid rgba(71, 85, 105, 0.8);
+  background: rgba(15, 23, 42, 0.72);
+}
+
+.store-admin button {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.875rem;
+  font-weight: 600;
+  padding: 0.6rem 1.2rem;
+  border-radius: 9999px;
+}
+
+.store-admin button:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.store-admin button[type="submit"],
+.store-admin button.primary-action {
+  background: rgba(56, 189, 248, 0.18) !important;
+  border: 1px solid rgba(56, 189, 248, 0.6) !important;
+  color: #bae6fd !important;
+  transition: background 0.2s ease, border-color 0.2s ease;
+}
+
+.store-admin button[type="submit"]:hover,
+.store-admin button.primary-action:hover {
+  background: rgba(56, 189, 248, 0.28) !important;
+  border-color: rgba(56, 189, 248, 0.75) !important;
+}
+
+.store-admin button.secondary-action {
+  border: 1px solid rgba(71, 85, 105, 0.8) !important;
+  background: transparent !important;
+  color: #cbd5f5 !important;
+}
+
+.store-admin button.secondary-action:hover {
+  border-color: rgba(71, 85, 105, 0.9) !important;
+  color: #e2e8f0 !important;
+}
+
+.store-admin button.danger-action {
+  background: rgba(248, 113, 113, 0.12) !important;
+  border: 1px solid rgba(248, 113, 113, 0.45) !important;
+  color: #fecaca !important;
+}
+
+.store-admin button.danger-action:hover {
+  background: rgba(248, 113, 113, 0.2) !important;
+  border-color: rgba(248, 113, 113, 0.55) !important;
+  color: #fee2e2 !important;
+}
+
+.store-admin table {
+  width: 100%;
+  border-collapse: collapse;
+  background: rgba(9, 18, 37, 0.6);
+  border-radius: 24px;
+  overflow: hidden;
+  border: 1px solid rgba(51, 65, 85, 0.7);
+}
+
+.store-admin table th {
+  background: rgba(15, 23, 42, 0.85);
+  color: #94a3b8;
+  font-weight: 600;
+  padding: 0.75rem 1rem;
+  border-bottom: 1px solid rgba(51, 65, 85, 0.7);
+}
+
+.store-admin table td {
+  padding: 0.75rem 1rem;
+  border-bottom: 1px solid rgba(51, 65, 85, 0.35);
+}
+
+.store-admin .tag,
+.store-admin .badge,
+.store-admin .chip {
+  border-radius: 9999px;
+  border: 1px solid rgba(56, 189, 248, 0.4);
+  background: rgba(56, 189, 248, 0.12);
+  color: #bae6fd;
+  padding: 0.2rem 0.75rem;
+  font-size: 0.75rem;
+  letter-spacing: 0.2em;
+}

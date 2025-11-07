@@ -1,0 +1,686 @@
+{
+  "infoBeforeClick": {
+    "buttons": [
+      {
+        "text": "Acessibilidade",
+        "testId": null,
+        "controls": null,
+        "expanded": "false"
+      },
+      {
+        "text": "Alto Contraste",
+        "testId": null,
+        "controls": null,
+        "expanded": null
+      },
+      {
+        "text": "Aumentar Fontes",
+        "testId": null,
+        "controls": null,
+        "expanded": null
+      },
+      {
+        "text": "Inverter Cores",
+        "testId": null,
+        "controls": null,
+        "expanded": null
+      },
+      {
+        "text": "Textos em Negrito",
+        "testId": null,
+        "controls": null,
+        "expanded": null
+      },
+      {
+        "text": "Leitura em Libras",
+        "testId": null,
+        "controls": null,
+        "expanded": null
+      },
+      {
+        "text": "Marcas do Grupo Boticário",
+        "testId": null,
+        "controls": null,
+        "expanded": "false"
+      },
+      {
+        "text": "",
+        "testId": null,
+        "controls": null,
+        "expanded": null
+      },
+      {
+        "text": "",
+        "testId": null,
+        "controls": null,
+        "expanded": null
+      },
+      {
+        "text": "",
+        "testId": null,
+        "controls": null,
+        "expanded": null
+      },
+      {
+        "text": "Olá! Sou sua consultora virtual e estou pronta para te ajudar com as suas compras!",
+        "testId": null,
+        "controls": null,
+        "expanded": null
+      },
+      {
+        "text": "OK",
+        "testId": null,
+        "controls": null,
+        "expanded": null
+      },
+      {
+        "text": "Continuar Comprando",
+        "testId": null,
+        "controls": null,
+        "expanded": null
+      },
+      {
+        "text": "OK",
+        "testId": null,
+        "controls": null,
+        "expanded": null
+      },
+      {
+        "text": "",
+        "testId": null,
+        "controls": null,
+        "expanded": null
+      },
+      {
+        "text": "Home",
+        "testId": null,
+        "controls": null,
+        "expanded": "false"
+      },
+      {
+        "text": "",
+        "testId": null,
+        "controls": null,
+        "expanded": "false"
+      },
+      {
+        "text": "",
+        "testId": null,
+        "controls": null,
+        "expanded": "false"
+      },
+      {
+        "text": "Promos",
+        "testId": null,
+        "controls": null,
+        "expanded": "false"
+      },
+      {
+        "text": "Truss",
+        "testId": null,
+        "controls": null,
+        "expanded": "false"
+      },
+      {
+        "text": "Cabelos",
+        "testId": null,
+        "controls": null,
+        "expanded": "false"
+      },
+      {
+        "text": "Perfumes e Perfumaria",
+        "testId": null,
+        "controls": null,
+        "expanded": "false"
+      },
+      {
+        "text": "Maquiagem",
+        "testId": null,
+        "controls": null,
+        "expanded": "false"
+      },
+      {
+        "text": "Skincare",
+        "testId": null,
+        "controls": null,
+        "expanded": "false"
+      },
+      {
+        "text": "Dermocosméticos",
+        "testId": null,
+        "controls": null,
+        "expanded": "false"
+      },
+      {
+        "text": "Cuidados Pessoais",
+        "testId": null,
+        "controls": null,
+        "expanded": "false"
+      },
+      {
+        "text": "Alto Luxo",
+        "testId": null,
+        "controls": null,
+        "expanded": "false"
+      },
+      {
+        "text": "Exclusivo BLZ",
+        "testId": null,
+        "controls": null,
+        "expanded": "false"
+      },
+      {
+        "text": "Bem-Estar",
+        "testId": null,
+        "controls": null,
+        "expanded": "false"
+      },
+      {
+        "text": "Bem-Estar e Saúde",
+        "testId": null,
+        "controls": null,
+        "expanded": "false"
+      },
+      {
+        "text": "BLZ PRO",
+        "testId": null,
+        "controls": null,
+        "expanded": "false"
+      },
+      {
+        "text": "Blog Loucas por BLZ",
+        "testId": null,
+        "controls": null,
+        "expanded": "false"
+      },
+      {
+        "text": "Marcas",
+        "testId": null,
+        "controls": null,
+        "expanded": "false"
+      },
+      {
+        "text": "Marcas",
+        "testId": null,
+        "controls": null,
+        "expanded": "false"
+      },
+      {
+        "text": "Meus Dados",
+        "testId": null,
+        "controls": null,
+        "expanded": "false"
+      },
+      {
+        "text": "Meus Pedidos",
+        "testId": null,
+        "controls": null,
+        "expanded": "false"
+      },
+      {
+        "text": "Vale-Beleza",
+        "testId": null,
+        "controls": null,
+        "expanded": "false"
+      },
+      {
+        "text": "Lista de Desejos",
+        "testId": null,
+        "controls": null,
+        "expanded": "false"
+      },
+      {
+        "text": "Meu Histórico",
+        "testId": null,
+        "controls": null,
+        "expanded": "false"
+      },
+      {
+        "text": "Escolha seu Cupom",
+        "testId": null,
+        "controls": null,
+        "expanded": "false"
+      },
+      {
+        "text": "Recomendações",
+        "testId": null,
+        "controls": null,
+        "expanded": "false"
+      },
+      {
+        "text": "Ver todas as categorias",
+        "testId": null,
+        "controls": null,
+        "expanded": null
+      },
+      {
+        "text": "Acessibilidade",
+        "testId": null,
+        "controls": null,
+        "expanded": "false"
+      },
+      {
+        "text": "Alto Contraste",
+        "testId": null,
+        "controls": null,
+        "expanded": null
+      },
+      {
+        "text": "Aumentar Fontes",
+        "testId": null,
+        "controls": null,
+        "expanded": null
+      },
+      {
+        "text": "Inverter Cores",
+        "testId": null,
+        "controls": null,
+        "expanded": null
+      },
+      {
+        "text": "Textos em Negrito",
+        "testId": null,
+        "controls": null,
+        "expanded": null
+      },
+      {
+        "text": "Leitura em Libras",
+        "testId": null,
+        "controls": null,
+        "expanded": null
+      },
+      {
+        "text": "Marcas do Grupo Boticário",
+        "testId": null,
+        "controls": null,
+        "expanded": "false"
+      },
+      {
+        "text": "",
+        "testId": null,
+        "controls": null,
+        "expanded": null
+      },
+      {
+        "text": "",
+        "testId": null,
+        "controls": null,
+        "expanded": null
+      },
+      {
+        "text": "",
+        "testId": null,
+        "controls": null,
+        "expanded": null
+      },
+      {
+        "text": "",
+        "testId": null,
+        "controls": null,
+        "expanded": null
+      },
+      {
+        "text": "",
+        "testId": null,
+        "controls": null,
+        "expanded": null
+      },
+      {
+        "text": "",
+        "testId": null,
+        "controls": null,
+        "expanded": null
+      },
+      {
+        "text": "",
+        "testId": null,
+        "controls": null,
+        "expanded": null
+      },
+      {
+        "text": "",
+        "testId": null,
+        "controls": null,
+        "expanded": null
+      },
+      {
+        "text": "",
+        "testId": null,
+        "controls": null,
+        "expanded": null
+      },
+      {
+        "text": "",
+        "testId": null,
+        "controls": null,
+        "expanded": null
+      },
+      {
+        "text": "",
+        "testId": null,
+        "controls": null,
+        "expanded": null
+      },
+      {
+        "text": "",
+        "testId": null,
+        "controls": null,
+        "expanded": null
+      },
+      {
+        "text": "",
+        "testId": null,
+        "controls": null,
+        "expanded": null
+      },
+      {
+        "text": "",
+        "testId": null,
+        "controls": null,
+        "expanded": null
+      },
+      {
+        "text": "",
+        "testId": null,
+        "controls": null,
+        "expanded": null
+      },
+      {
+        "text": "",
+        "testId": null,
+        "controls": null,
+        "expanded": null
+      },
+      {
+        "text": "Adicionar aos favoritos\n            \n                Adicionar aos favoritos",
+        "testId": null,
+        "controls": null,
+        "expanded": null
+      },
+      {
+        "text": "Remover dos favoritos.\n            \n                Remover dos favoritos",
+        "testId": null,
+        "controls": null,
+        "expanded": null
+      },
+      {
+        "text": "OK",
+        "testId": null,
+        "controls": null,
+        "expanded": null
+      },
+      {
+        "text": "Válido apenas para pedidos com todos os itens vendidos e entregues pela Beleza na Web.",
+        "testId": null,
+        "controls": null,
+        "expanded": null
+      },
+      {
+        "text": "",
+        "testId": null,
+        "controls": null,
+        "expanded": null
+      },
+      {
+        "text": "",
+        "testId": null,
+        "controls": null,
+        "expanded": null
+      },
+      {
+        "text": "",
+        "testId": null,
+        "controls": null,
+        "expanded": null
+      },
+      {
+        "text": "",
+        "testId": null,
+        "controls": null,
+        "expanded": null
+      },
+      {
+        "text": "",
+        "testId": null,
+        "controls": null,
+        "expanded": null
+      },
+      {
+        "text": "",
+        "testId": null,
+        "controls": null,
+        "expanded": null
+      },
+      {
+        "text": "",
+        "testId": null,
+        "controls": null,
+        "expanded": null
+      },
+      {
+        "text": "",
+        "testId": null,
+        "controls": null,
+        "expanded": null
+      },
+      {
+        "text": "",
+        "testId": null,
+        "controls": null,
+        "expanded": null
+      },
+      {
+        "text": "",
+        "testId": null,
+        "controls": null,
+        "expanded": null
+      },
+      {
+        "text": "",
+        "testId": null,
+        "controls": null,
+        "expanded": null
+      },
+      {
+        "text": "",
+        "testId": null,
+        "controls": null,
+        "expanded": null
+      },
+      {
+        "text": "",
+        "testId": null,
+        "controls": null,
+        "expanded": null
+      },
+      {
+        "text": "",
+        "testId": null,
+        "controls": null,
+        "expanded": null
+      },
+      {
+        "text": "",
+        "testId": null,
+        "controls": null,
+        "expanded": null
+      },
+      {
+        "text": "",
+        "testId": null,
+        "controls": null,
+        "expanded": null
+      },
+      {
+        "text": "",
+        "testId": null,
+        "controls": null,
+        "expanded": null
+      },
+      {
+        "text": "",
+        "testId": null,
+        "controls": null,
+        "expanded": null
+      },
+      {
+        "text": "",
+        "testId": null,
+        "controls": null,
+        "expanded": null
+      },
+      {
+        "text": "",
+        "testId": null,
+        "controls": null,
+        "expanded": null
+      },
+      {
+        "text": "",
+        "testId": null,
+        "controls": null,
+        "expanded": null
+      },
+      {
+        "text": "",
+        "testId": null,
+        "controls": null,
+        "expanded": null
+      },
+      {
+        "text": "Detalhes",
+        "testId": null,
+        "controls": "description-region",
+        "expanded": "true"
+      },
+      {
+        "text": "Ingredientes",
+        "testId": null,
+        "controls": "ingredients-region",
+        "expanded": "false"
+      },
+      {
+        "text": "Como Usar",
+        "testId": null,
+        "controls": "characteristics-region",
+        "expanded": "false"
+      },
+      {
+        "text": "Ação / Resultado",
+        "testId": null,
+        "controls": "action-region",
+        "expanded": "false"
+      },
+      {
+        "text": "Acessar Perguntas e Respostas",
+        "testId": null,
+        "controls": null,
+        "expanded": null
+      },
+      {
+        "text": "Mais comentários",
+        "testId": null,
+        "controls": null,
+        "expanded": null
+      },
+      {
+        "text": "Avaliar",
+        "testId": null,
+        "controls": null,
+        "expanded": null
+      },
+      {
+        "text": "Cadastrar Aviso",
+        "testId": null,
+        "controls": null,
+        "expanded": null
+      },
+      {
+        "text": "OK",
+        "testId": null,
+        "controls": null,
+        "expanded": null
+      },
+      {
+        "text": "",
+        "testId": null,
+        "controls": null,
+        "expanded": null
+      },
+      {
+        "text": "Fazer login",
+        "testId": null,
+        "controls": null,
+        "expanded": null
+      },
+      {
+        "text": "",
+        "testId": null,
+        "controls": null,
+        "expanded": null
+      },
+      {
+        "text": "Fazer login",
+        "testId": null,
+        "controls": null,
+        "expanded": null
+      },
+      {
+        "text": "Enviar",
+        "testId": null,
+        "controls": null,
+        "expanded": null
+      },
+      {
+        "text": "",
+        "testId": null,
+        "controls": null,
+        "expanded": null
+      },
+      {
+        "text": "",
+        "testId": null,
+        "controls": null,
+        "expanded": null
+      },
+      {
+        "text": "Carregar menos informações",
+        "testId": null,
+        "controls": null,
+        "expanded": null
+      },
+      {
+        "text": "Ajuda & Suporte",
+        "testId": null,
+        "controls": null,
+        "expanded": null
+      },
+      {
+        "text": "Departamentos",
+        "testId": null,
+        "controls": null,
+        "expanded": null
+      },
+      {
+        "text": "Destaques",
+        "testId": null,
+        "controls": null,
+        "expanded": null
+      },
+      {
+        "text": "Minha Conta",
+        "testId": null,
+        "controls": null,
+        "expanded": null
+      },
+      {
+        "text": "Loucas por beleza",
+        "testId": null,
+        "controls": null,
+        "expanded": null
+      }
+    ],
+    "panels": []
+  },
+  "infoAfterClick": []
+}

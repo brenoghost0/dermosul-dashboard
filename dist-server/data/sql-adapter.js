@@ -68,6 +68,95 @@ const validateCpf = (cpf) => {
     }
     return true;
 };
+const sanitizeString = (value, fallback = '') => {
+    if (typeof value === 'string') {
+        const trimmed = value.trim();
+        return trimmed.length > 0 ? trimmed : fallback;
+    }
+    return fallback;
+};
+const parseNumber = (value, fallback = 0) => {
+    const parsed = Number(value);
+    return Number.isFinite(parsed) ? parsed : fallback;
+};
+const VALID_ORDER_STATUSES = new Set(['pago', 'pendente', 'aguardando_pagamento', 'cancelado', 'enviado']);
+async function resolveProductForOrderItem(tx, rawItem) {
+    let productId = sanitizeString(rawItem?.productId) || sanitizeString(rawItem?.id);
+    const providedSku = sanitizeString(rawItem?.sku) || sanitizeString(rawItem?.productSku);
+    const name = sanitizeString(rawItem?.name) || sanitizeString(rawItem?.productTitle) || 'Produto';
+    const description = sanitizeString(rawItem?.description) || sanitizeString(rawItem?.productDescription) || name;
+    if (!productId && providedSku) {
+        productId = providedSku;
+    }
+    let product = productId ? await tx.product.findUnique({ where: { id: productId } }) : null;
+    if (!product && providedSku) {
+        product = await tx.product.findUnique({ where: { sku: providedSku } });
+        if (product) {
+            productId = product.id;
+        }
+    }
+    const priceValue = parseNumber(rawItem?.price ?? rawItem?.unitPrice ?? rawItem?.productPrice, 0);
+    const priceInCents = toCents(priceValue);
+    const stockQuantity = Math.max(0, Math.floor(parseNumber(rawItem?.stockQuantity ?? rawItem?.qty ?? 0, 0)));
+    const brand = sanitizeString(rawItem?.brand) || sanitizeString(rawItem?.productBrand) || '';
+    if (!product) {
+        const id = productId || (0, index_js_1.generateUniqueId)();
+        const sku = providedSku || id;
+        let slug = sanitizeString(rawItem?.slug) || sanitizeString(rawItem?.productSlug) || sku.toLowerCase();
+        if (!slug)
+            slug = sku.toLowerCase();
+        let candidate = slug;
+        let attempt = 1;
+        while (await tx.product.findUnique({ where: { slug: candidate } })) {
+            candidate = `${slug}-${attempt++}`;
+        }
+        product = await tx.product.create({
+            data: {
+                id,
+                name,
+                slug: candidate,
+                brand,
+                sku,
+                description,
+                descriptionHtml: null,
+                price: priceInCents,
+                compareAtPrice: null,
+                stockQuantity,
+                active: true,
+                metaTitle: null,
+                metaDescription: null,
+            },
+        });
+    }
+    else {
+        const updateData = {
+            name,
+            description,
+            brand,
+            price: priceInCents,
+        };
+        if (providedSku && product.sku !== providedSku) {
+            updateData.sku = providedSku;
+        }
+        product = await tx.product.update({
+            where: { id: product.id },
+            data: updateData,
+        });
+    }
+    return product;
+}
+async function buildOrderItemCreate(tx, rawItem) {
+    const qtyValue = parseNumber(rawItem?.qty ?? rawItem?.quantity, 1);
+    const qty = Math.max(1, Math.floor(qtyValue));
+    const priceValue = parseNumber(rawItem?.price ?? rawItem?.unitPrice ?? rawItem?.productPrice, 0);
+    const unitPrice = toCents(priceValue);
+    const product = await resolveProductForOrderItem(tx, rawItem);
+    return {
+        qty,
+        unitPrice,
+        product: { connect: { id: product.id } },
+    };
+}
 // Mapeia um pedido do DB (Prisma) para o formato do frontend
 function mapOrderFromPrisma(o) {
     const first = o?.customer?.firstName || "";
@@ -76,7 +165,7 @@ function mapOrderFromPrisma(o) {
         ? o.items.reduce((sum, item) => {
             const itemPrice = Number(item.unitPrice || 0);
             const itemQty = Number(item.qty || 0);
-            return sum + (itemQty * itemPrice);
+            return sum + itemQty * itemPrice;
         }, 0)
         : 0;
     return {
@@ -118,13 +207,22 @@ function mapOrderFromPrisma(o) {
         } : {
             postalCode: "", address1: "", address2: "", address2_complement: "", district: "", city: "", state: ""
         },
-        items: Array.isArray(o?.items) ? o.items.map((item) => ({
-            sku: item.sku || "",
-            name: item.name || "Produto",
-            qty: item.qty || 0,
-            price: fromCents(item.unitPrice || 0),
-            subtotal: fromCents(Number(item.qty || 0) * Number(item.unitPrice || 0)),
-        })) : [],
+        items: Array.isArray(o?.items)
+            ? o.items.map((item) => {
+                const product = item.product || {};
+                const sku = sanitizeString(product.sku) || sanitizeString(item.productId) || '';
+                const name = sanitizeString(product.name) || 'Produto';
+                const qty = Number(item.qty || 0);
+                const unitPrice = Number(item.unitPrice || 0);
+                return {
+                    sku,
+                    name,
+                    qty,
+                    price: fromCents(unitPrice),
+                    subtotal: fromCents(qty * unitPrice),
+                };
+            })
+            : [],
         totals: {
             itemsTotal: fromCents(itemsTotal),
             shipping: 0,
@@ -133,7 +231,10 @@ function mapOrderFromPrisma(o) {
             subTotal: fromCents(itemsTotal),
             total: fromCents(o.totalAmount),
         },
-        timeline: []
+        timeline: [],
+        paymentGateway: o.metadata && typeof o.metadata === 'object' && o.metadata?.paymentGateway
+            ? o.metadata.paymentGateway
+            : null,
     };
 }
 // --- Funções do Adaptador de Dados SQL ---
@@ -218,7 +319,7 @@ async function listOrders(params) {
                 take: ps,
                 include: {
                     customer: { include: { addresses: true } },
-                    items: true,
+                    items: { include: { product: true } },
                     payments: true,
                 },
             }),
@@ -236,7 +337,7 @@ async function listOrders(params) {
                     take: ps,
                     include: {
                         customer: { include: { addresses: true } },
-                        items: true,
+                        items: { include: { product: true } },
                         payments: true,
                     },
                 }),
@@ -264,7 +365,7 @@ async function getOrderById(id) {
                     addresses: true
                 }
             },
-            items: true,
+            items: { include: { product: true } },
             payments: true,
         },
     });
@@ -274,86 +375,87 @@ async function createOrder(orderData) {
     if (!orderData.customer?.email || !orderData.customer?.cpf) {
         throw new Error("Email e CPF do cliente são obrigatórios.");
     }
-    let customer = await prisma_js_1.prisma.customer.findUnique({
-        where: { email: orderData.customer.email },
-    });
-    if (!customer) {
-        customer = await prisma_js_1.prisma.customer.create({
-            data: {
-                firstName: orderData.customer.firstName || "",
-                lastName: orderData.customer.lastName || "",
-                email: orderData.customer.email,
-                phone: orderData.customer.phone || "",
-                cpf: orderData.customer.cpf,
-                birthDate: orderData.customer.birthDate || (0, index_js_1.toISO)(new Date()),
-                gender: orderData.customer.gender,
-            },
+    const newOrder = await prisma_js_1.prisma.$transaction(async (tx) => {
+        let customer = await tx.customer.findUnique({
+            where: { email: orderData.customer.email },
         });
-    }
-    if (orderData.shipping?.postalCode && customer) {
-        let address = await prisma_js_1.prisma.address.findFirst({
-            where: {
-                customerId: customer.id,
-                cep: orderData.shipping.postalCode,
-                street: orderData.shipping.address1,
-                number: orderData.shipping.address2,
-            }
-        });
-        if (!address) {
-            await prisma_js_1.prisma.address.create({
+        if (!customer) {
+            customer = await tx.customer.create({
                 data: {
+                    firstName: orderData.customer.firstName || '',
+                    lastName: orderData.customer.lastName || '',
+                    email: orderData.customer.email,
+                    phone: orderData.customer.phone || '',
+                    cpf: orderData.customer.cpf,
+                    birthDate: orderData.customer.birthDate || (0, index_js_1.toISO)(new Date()),
+                    gender: orderData.customer.gender,
+                },
+            });
+        }
+        if (orderData.shipping?.postalCode) {
+            const existingAddress = await tx.address.findFirst({
+                where: {
                     customerId: customer.id,
                     cep: orderData.shipping.postalCode,
                     street: orderData.shipping.address1,
                     number: orderData.shipping.address2,
-                    complement: orderData.shipping.address2_complement || "",
-                    district: orderData.shipping.district || "",
-                    city: orderData.shipping.city || "",
-                    state: orderData.shipping.state || "",
-                }
+                },
             });
+            if (!existingAddress) {
+                await tx.address.create({
+                    data: {
+                        customerId: customer.id,
+                        cep: orderData.shipping.postalCode,
+                        street: orderData.shipping.address1,
+                        number: orderData.shipping.address2,
+                        complement: orderData.shipping.address2_complement || '',
+                        district: orderData.shipping.district || '',
+                        city: orderData.shipping.city || '',
+                        state: orderData.shipping.state || '',
+                    },
+                });
+            }
         }
-    }
-    const newOrder = await prisma_js_1.prisma.order.create({
-        data: {
-            id: (0, index_js_1.generateShortId)(),
-            customer: { connect: { id: customer.id } },
-            status: orderData.status.toLowerCase(),
-            category: orderData.category || "Outros",
-            totalAmount: toCents(orderData.total_value),
-            createdAt: orderData.createdAt ? new Date(orderData.createdAt) : new Date(),
-            items: {
-                create: Array.isArray(orderData.items) ? orderData.items.map((item) => ({
-                    sku: item.sku || "",
-                    name: item.name || "Produto",
-                    qty: item.qty || 0,
-                    unitPrice: toCents(item.price || 0),
-                })) : [],
+        const itemsData = Array.isArray(orderData.items)
+            ? await Promise.all(orderData.items.map((item) => buildOrderItemCreate(tx, item)))
+            : [];
+        const paymentsData = Array.isArray(orderData.payments)
+            ? orderData.payments.map((payment) => ({
+                paymentMethod: mapPaymentMethodToPrisma(payment.method),
+                paidAmount: toCents(parseNumber(payment.value, 0)),
+                status: payment.status || 'pendente',
+            }))
+            : [];
+        const desiredStatus = sanitizeString(orderData.status || 'pendente').toLowerCase();
+        const status = VALID_ORDER_STATUSES.has(desiredStatus) ? desiredStatus : 'pendente';
+        const providedTotal = parseNumber(orderData.total_value, NaN);
+        const totalAmount = Number.isFinite(providedTotal) && providedTotal > 0
+            ? toCents(providedTotal)
+            : itemsData.reduce((sum, item) => sum + item.qty * item.unitPrice, 0);
+        return tx.order.create({
+            data: {
+                id: (0, index_js_1.generateShortId)(),
+                customer: { connect: { id: customer.id } },
+                status: status,
+                category: orderData.category || 'Outros',
+                totalAmount,
+                createdAt: orderData.createdAt ? new Date(orderData.createdAt) : new Date(),
+                items: { create: itemsData },
+                payments: { create: paymentsData },
             },
-            payments: {
-                create: Array.isArray(orderData.payments) ? orderData.payments.map((payment) => ({
-                    paymentMethod: mapPaymentMethodToPrisma(payment.method),
-                    paidAmount: toCents(payment.value || 0),
-                    status: payment.status || "pendente",
-                })) : [],
+            include: {
+                customer: { include: { addresses: true } },
+                items: { include: { product: true } },
+                payments: true,
             },
-        },
-        include: {
-            customer: {
-                include: {
-                    addresses: true
-                }
-            },
-            items: true,
-            payments: true,
-        },
+        });
     });
     return mapOrderFromPrisma(newOrder);
 }
 async function updateOrder(id, updatedFields) {
     const existingOrder = await prisma_js_1.prisma.order.findUnique({
         where: { id },
-        include: { customer: { include: { addresses: true } }, items: true, payments: true },
+        include: { customer: { include: { addresses: true } }, items: { include: { product: true } }, payments: true },
     });
     if (!existingOrder) {
         return null;
@@ -411,12 +513,15 @@ async function updateOrder(id, updatedFields) {
         }
     }
     const prevStatus = existingOrder.status;
+    const nextTotalCents = updatedFields.total != null
+        ? toCents(updatedFields.total)
+        : Number(existingOrder.totalAmount);
     await prisma_js_1.prisma.order.update({
         where: { id },
         data: {
             status: updatedFields.status ? updatedFields.status.toLowerCase() : existingOrder.status,
             category: updatedFields.category || existingOrder.category,
-            totalAmount: updatedFields.total ? toCents(updatedFields.total) : Number(existingOrder.totalAmount),
+            totalAmount: nextTotalCents,
             createdAt: updatedFields.createdAt ? new Date(updatedFields.createdAt) : existingOrder.createdAt,
         },
     });
@@ -429,7 +534,7 @@ async function updateOrder(id, updatedFields) {
     else if (updatedFields.status === 'pago') {
         await prisma_js_1.prisma.payment.updateMany({
             where: { orderId: id },
-            data: { status: 'confirmado' },
+            data: { status: 'confirmado', paidAmount: nextTotalCents },
         });
     }
     if (updatedFields.paymentMethod && existingOrder.payments.length > 0) {
@@ -449,7 +554,7 @@ async function updateOrder(id, updatedFields) {
                     addresses: true
                 }
             },
-            items: true,
+            items: { include: { product: true } },
             payments: true,
         },
     });
@@ -531,32 +636,58 @@ async function statsLast14Days() {
 async function paymentsBreakdown() {
     const fourteenDaysAgo = new Date();
     fourteenDaysAgo.setDate(fourteenDaysAgo.getDate() - 14);
-    const paymentAggregates = await prisma_js_1.prisma.payment.groupBy({
-        by: ['paymentMethod'],
-        _sum: {
-            paidAmount: true,
-        },
+    const recentPayments = await prisma_js_1.prisma.payment.findMany({
         where: {
-            status: 'confirmado', // Considera apenas pagamentos confirmados
+            createdAt: {
+                gte: fourteenDaysAgo,
+            },
+            status: {
+                in: ['confirmado', 'pendente'],
+            },
             order: {
                 createdAt: {
                     gte: fourteenDaysAgo,
                 },
-                // Considera pedidos pagos ou já enviados
                 status: {
-                    in: ['pago', 'enviado'],
+                    not: 'cancelado',
+                },
+            },
+        },
+        select: {
+            paymentMethod: true,
+            paidAmount: true,
+            status: true,
+            order: {
+                select: {
+                    totalAmount: true,
                 },
             },
         },
     });
-    if (!paymentAggregates || paymentAggregates.length === 0) {
+    if (!recentPayments || recentPayments.length === 0) {
         return [];
     }
-    const breakdown = paymentAggregates.map((group) => ({
-        method: group.paymentMethod || 'desconhecido',
-        amount: fromCents(group._sum.paidAmount || 0),
+    const map = new Map();
+    for (const payment of recentPayments) {
+        const method = payment.paymentMethod || 'desconhecido';
+        const paid = typeof payment.paidAmount === 'number' ? payment.paidAmount : 0;
+        const orderTotal = payment.order?.totalAmount ?? 0;
+        // Para pagamentos confirmados usamos o valor efetivamente pago.
+        // Para pendentes (normalmente 0 no campo paidAmount) usamos o valor total previsto do pedido.
+        const amountInCents = payment.status === 'confirmado'
+            ? paid
+            : paid > 0
+                ? paid
+                : orderTotal;
+        if (amountInCents <= 0) {
+            continue;
+        }
+        map.set(method, (map.get(method) ?? 0) + amountInCents);
+    }
+    return Array.from(map.entries()).map(([method, cents]) => ({
+        method,
+        amount: fromCents(cents),
     }));
-    return breakdown;
 }
 async function listLandingPages() {
     try {
@@ -796,7 +927,7 @@ async function getOrderByExternalReference(externalReference) {
                     addresses: true
                 }
             },
-            items: true,
+            items: { include: { product: true } },
             payments: true,
         },
     });
@@ -901,11 +1032,17 @@ async function createPublicOrder(orderData) {
             city,
             state,
         },
-        item: {
+        product: {
+            productId,
             sku: productId,
             name: productTitle,
+            price: numPrice,
+        },
+        item: {
+            productId,
+            productTitle,
+            productPrice: numPrice,
             qty: numQty,
-            unitPrice: toCents(numPrice),
         },
         totalAmount: totalAmountInCents,
         paymentMethod: orderData.paymentMethod || 'cartao',
@@ -942,16 +1079,26 @@ async function createPublicOrder(orderData) {
                 },
             });
             console.log(`4.2. Endereço ${address.id} criado.`);
-            // Criar Pedido
+            // Preparar item e criar Pedido
+            const orderItemCreate = await buildOrderItemCreate(tx, {
+                productId: normalizedPayload.item.productId,
+                productTitle: normalizedPayload.item.productTitle,
+                productPrice: normalizedPayload.item.productPrice,
+                qty: normalizedPayload.item.qty,
+                sku: normalizedPayload.product.sku,
+                name: normalizedPayload.product.name,
+            });
+            const requestedStatus = sanitizeString(orderData.status || 'aguardando_pagamento').toLowerCase();
+            const orderStatus = VALID_ORDER_STATUSES.has(requestedStatus) ? requestedStatus : 'aguardando_pagamento';
             const order = await tx.order.create({
                 data: {
                     id: (0, index_js_1.generateShortId)(),
                     externalReference: externalReference, // Salva a referência externa
                     customer: { connect: { id: customer.id } },
-                    status: orderData.status || 'aguardando_pagamento', // Usa o status do payload (novo padrão)
+                    status: orderStatus,
                     category: "Online",
                     totalAmount: normalizedPayload.totalAmount,
-                    items: { create: [normalizedPayload.item] },
+                    items: { create: [orderItemCreate] },
                     payments: {
                         create: {
                             paymentMethod: mapPaymentMethodToPrisma(normalizedPayload.paymentMethod),
@@ -962,7 +1109,7 @@ async function createPublicOrder(orderData) {
                 },
                 include: {
                     customer: { include: { addresses: true } },
-                    items: true,
+                    items: { include: { product: true } },
                     payments: true,
                 },
             });

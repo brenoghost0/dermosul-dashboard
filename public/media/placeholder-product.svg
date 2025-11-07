@@ -1,0 +1,24 @@
+<svg width="480" height="480" viewBox="0 0 480 480" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="grad" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#9F7AEA" />
+      <stop offset="50%" stop-color="#7C3AED" />
+      <stop offset="100%" stop-color="#4C1D95" />
+    </linearGradient>
+  </defs>
+  <rect width="480" height="480" rx="48" fill="url(#grad)" />
+  <g filter="url(#shadow)" transform="translate(80 120)">
+    <circle cx="160" cy="120" r="80" fill="#F7F0FF" opacity="0.35" />
+    <circle cx="240" cy="160" r="64" fill="#F7F0FF" opacity="0.25" />
+    <circle cx="96" cy="160" r="48" fill="#F7F0FF" opacity="0.4" />
+    <path d="M72 240h216c8.837 0 16-7.163 16-16v-12c0-39.764-32.236-72-72-72h-104c-39.764 0-72 32.236-72 72v12c0 8.837 7.163 16 16 16z" fill="#F9F5FF" opacity="0.65" />
+  </g>
+  <text x="50%" y="72%" text-anchor="middle" fill="#F2EBFF" font-family="'Montserrat', 'Helvetica', 'Arial', sans-serif" font-size="44" font-weight="600" opacity="0.9">
+    Imagem em breve
+  </text>
+  <defs>
+    <filter id="shadow" x="0" y="0" width="320" height="320" filterUnits="userSpaceOnUse" color-interpolation-filters="sRGB">
+      <feGaussianBlur stdDeviation="18" />
+    </filter>
+  </defs>
+</svg>

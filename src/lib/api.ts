@@ -1,21 +1,85 @@
 // src/lib/api.ts
 import axios from 'axios';
 
-// Usa a origem atual do navegador como padrão em produção (mesma origem)
-const RUNTIME_ORIGIN = typeof window !== 'undefined' && (window.location?.origin || '');
-export const API_BASE_URL = (import.meta as any)?.env?.VITE_API_BASE_URL || RUNTIME_ORIGIN || 'http://localhost:3007';
+const RUNTIME_ORIGIN = typeof window !== 'undefined' ? window.location?.origin || '' : '';
+
+const normalizeBaseUrl = (value: unknown): string => {
+  if (typeof value !== 'string') return '';
+  const trimmed = value.trim();
+  if (!trimmed) return '';
+  return trimmed.replace(/\/+$/, '');
+};
+
+const rawEnvBase = (import.meta as any)?.env?.VITE_API_BASE_URL;
+const normalizedEnvBase = normalizeBaseUrl(rawEnvBase);
+const normalizedRuntimeBase = normalizeBaseUrl(RUNTIME_ORIGIN);
+export const API_BASE_URL = normalizedEnvBase || normalizedRuntimeBase || 'http://localhost:3007';
+const resolveApiUrl = (rawPath: string): string => {
+  if (/^https?:\/\//i.test(rawPath)) return rawPath;
+  const trimmed = (rawPath || "").trim();
+  let normalizedPath = trimmed.startsWith("/") ? trimmed : `/${trimmed}`;
+  const baseEndsWithApi = typeof API_BASE_URL === "string" && API_BASE_URL.toLowerCase().endsWith("/api");
+
+  if (!normalizedPath.startsWith("/api")) {
+    normalizedPath = `/api${normalizedPath}`;
+  }
+
+  if (!API_BASE_URL) {
+    return normalizedPath || "/api";
+  }
+
+  if (baseEndsWithApi) {
+    const trimmedBase = API_BASE_URL;
+    const suffix = normalizedPath.slice(4) || "/";
+    return `${trimmedBase}${suffix}`;
+  }
+
+  return `${API_BASE_URL}${normalizedPath}`;
+};
 
 export const apiClient = axios.create({
-  baseURL: `${API_BASE_URL}/api`,
+  baseURL: API_BASE_URL || undefined,
   headers: {
     'Content-Type': 'application/json',
   },
 });
 
+type HeadersLike = Record<string, unknown> & {
+  set?: (key: string, value: string) => void;
+  get?: (key: string) => string | null;
+  delete?: (key: string) => void;
+};
+
+const setHeader = (headers: HeadersLike, key: string, value: string | null | undefined) => {
+  if (!headers) return;
+  if (headers.set && headers.delete) {
+    if (value == null) {
+      headers.delete(key);
+    } else {
+      headers.set(key, value);
+    }
+  } else {
+    if (value == null) {
+      delete (headers as Record<string, unknown>)[key];
+    } else {
+      (headers as Record<string, unknown>)[key] = value;
+    }
+  }
+};
+
 apiClient.interceptors.request.use((config) => {
-  const token = localStorage.getItem("auth");
-  if (token) {
-    config.headers.Authorization = `Bearer ${token}`;
+  const headers = (config.headers as HeadersLike) || {};
+  const token = typeof window !== 'undefined' ? localStorage.getItem("auth") : null;
+  setHeader(headers, 'Authorization', token ? `Bearer ${token}` : null);
+  if (config.data instanceof FormData) {
+    setHeader(headers, 'Content-Type', null);
+    setHeader(headers, 'content-type', null);
+  }
+  config.headers = headers;
+  if (config.url) {
+    config.url = resolveApiUrl(config.url);
+  } else {
+    config.url = resolveApiUrl('');
   }
   return config;
 });
@@ -62,11 +126,17 @@ export async function http<T>(path: string, config?: RequestInit): Promise<T> {
   }
 
   // Só define Content-Type se não for FormData, pois o browser fará isso
-  if (!isFormData) {
+  if (!isFormData && !headers.has('Content-Type')) {
     headers.set('Content-Type', 'application/json');
   }
 
-  const r = await fetch(`${API_BASE_URL}${path}`, {
+  const requestUrl = resolveApiUrl(path);
+
+  if ((import.meta as any)?.env?.DEV) {
+    console.debug('[http] request', path, '->', requestUrl);
+  }
+
+  const r = await fetch(requestUrl, {
     ...config,
     headers,
   });
@@ -75,20 +145,47 @@ export async function http<T>(path: string, config?: RequestInit): Promise<T> {
     // Tenta JSON; se falhar, captura texto para mensagem mais útil
     let message = '';
     try {
-      const errorData = await r.json();
-      message = errorData?.message || '';
+      const raw = await r.text();
+      if (raw) {
+        try {
+          const errorData = JSON.parse(raw);
+          message = errorData?.message || errorData?.error || '';
+        } catch {
+          message = `${r.status} ${r.statusText}: ${raw.slice(0, 200)}`;
+        }
+      }
     } catch {
-      try {
-        const t = await r.text();
-        message = t ? `${r.status} ${r.statusText}: ${t.slice(0, 200)}` : '';
-      } catch {}
+      // Ignora a falha ao ler o corpo e deixa cair no fallback genérico.
+    }
+    if ((import.meta as any)?.env?.DEV) {
+      console.debug('[http] non-json response', path, '->', requestUrl, raw.slice(0, 200));
     }
     if (r.status === 401) {
       localStorage.removeItem("auth");
     }
     throw new Error(message || `Falha na requisição para ${path}`);
   }
-  return r.json();
+  if (r.status === 204 || r.status === 205) {
+    return undefined as T;
+  }
+
+  const contentType = r.headers.get('content-type') || '';
+  const isJson = contentType.includes('application/json') || contentType.includes('+json');
+  const rawBody = await r.text();
+
+  if (!rawBody) {
+    return undefined as T;
+  }
+
+  if (!isJson) {
+    throw new Error(`Resposta inesperada do servidor. Esperado JSON, recebeu: ${rawBody.slice(0, 120)}`);
+  }
+
+  try {
+    return JSON.parse(rawBody) as T;
+  } catch {
+    throw new Error(`Falha ao interpretar resposta JSON do servidor: ${rawBody.slice(0, 120)}`);
+  }
 }
 
 export interface CustomerInfo {
@@ -109,6 +206,7 @@ export interface ShippingInfo {
   district: string; // Bairro
   city: string;
   state: string;
+  country?: string;
 }
 
 export interface OrderDetail extends OrderRow {
@@ -255,14 +353,11 @@ export const landingPageApi = {
     formData.append('shippingValue', String(data.shippingValue));
     formData.append('freeShipping', String(data.freeShipping));
 
-    return http<LandingPage>('/api/landings', {
-      method: 'POST',
-      body: formData,
-      headers: {}, // Deixa o browser setar o Content-Type para multipart/form-data
-    });
+    const response = await apiClient.post<LandingPage>('/landings', formData);
+    return response.data;
   },
   listLandingPages: async () => {
-    const data = await http<LandingPage[]>('/api/landings');
+    const { data } = await apiClient.get<LandingPage[]>('/landings');
     return data;
   },
   getLandingPageBySlug: async (slug: string) => {
@@ -291,22 +386,14 @@ export const landingPageApi = {
     formData.append('shippingValue', String(data.shippingValue));
     formData.append('freeShipping', String(data.freeShipping));
 
-    return http<LandingPage>(`/api/landings/${id}`, {
-      method: 'PUT',
-      body: formData,
-      headers: {}, // Deixa o browser setar o Content-Type para multipart/form-data
-    });
+    const response = await apiClient.put<LandingPage>(`/landings/${id}`, formData);
+    return response.data;
   },
   deleteLandingPage: (id: string) => {
-    return http<{ success: boolean }>(`/api/landings/${id}`, {
-      method: 'DELETE',
-    });
+    return apiClient.delete<{ success: boolean }>(`/landings/${id}`).then((res) => res.data);
   },
   updateLandingPageStatus: (id: string, status: 'ATIVA' | 'PAUSADA') => {
-    return http<LandingPage>(`/api/landings/${id}/status`, {
-      method: 'PATCH',
-      body: JSON.stringify({ status }),
-    });
+    return apiClient.patch<LandingPage>(`/landings/${id}/status`, { status }).then((res) => res.data);
   },
 };
 

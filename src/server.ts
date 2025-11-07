@@ -4,13 +4,18 @@ import * as path from 'path';
 // Carrega as variáveis de ambiente do arquivo .env na raiz do projeto
 dotenv.config();
 
+import { createServer } from 'http';
 import express, { Request, Response } from 'express';
 import cors from 'cors';
 import fs from 'fs';
 import multer from 'multer';
 import session from 'express-session';
+import { Server as SocketIOServer } from 'socket.io';
 // Import sem extensão para funcionar bem após transpilar para dist/ (CJS)
 import apiRouter from './api'; // Importa o router centralizado
+import storeApiRouter from './store-api'; // Importa o router da loja
+import { scrapeQueueEvents } from './lib/scraping/queue';
+import type { ScrapeRealtimeEvent } from './lib/scraping/types';
 
 // Declarar o módulo 'express' para estender a interface Request
 declare global {
@@ -25,6 +30,42 @@ declare global {
 declare module 'express-session' {
   interface SessionData {
     userId?: string;
+    chatSessions?: Record<string, Array<{ role: "user" | "assistant"; content: string }>>;
+    chatProductMemory?: Record<string, {
+      lastBatch: Array<{
+        id?: string | null;
+        slug?: string | null;
+        name: string;
+        description?: string | null;
+        price?: string | null;
+        rank: number;
+      }>;
+      recent: Array<{
+        id?: string | null;
+        slug?: string | null;
+        name: string;
+        description?: string | null;
+        price?: string | null;
+      }>;
+      awaitingLinkConfirmation?: boolean;
+    }>;
+    luckyWheel?: {
+      lastResult?: {
+        prizeId: string;
+        couponCode?: string | null;
+        message: string;
+        rotationDegrees: number;
+        timestamp: string;
+        freeShipping?: boolean;
+        freeOrder?: boolean;
+        autoApplyCoupon?: boolean;
+        couponType?: "PERCENT" | "AMOUNT" | null;
+        couponValue?: number | null;
+      } | null;
+      lastShownAt?: string | null;
+      dismissed?: boolean;
+      blockedReason?: string | null;
+    };
   }
 }
 
@@ -40,7 +81,8 @@ import {
   updateLandingPage,
   deleteLandingPage,
   getLandingBySlug,
-  lastNDays
+  lastNDays,
+  generateSitemapXml
 } from './data/index';
 import { prisma } from './db/prisma';
 import { faker } from '@faker-js/faker/locale/pt_BR';
@@ -60,6 +102,77 @@ app.use(session({
     maxAge: 24 * 60 * 60 * 1000 // 24 horas
   }
 }));
+
+const httpServer = createServer(app);
+
+const io = new SocketIOServer(httpServer, {
+  cors: {
+    origin: true,
+    credentials: true,
+  },
+  path: '/socket.io',
+});
+
+io.on('connection', (socket) => {
+  socket.join('scrape:all');
+  socket.on('scrape:subscribe', (jobId: string) => {
+    if (typeof jobId === 'string' && jobId.length > 0) {
+      socket.join(`scrape:${jobId}`);
+    }
+  });
+  socket.on('scrape:unsubscribe', (jobId: string) => {
+    if (typeof jobId === 'string' && jobId.length > 0) {
+      socket.leave(`scrape:${jobId}`);
+    }
+  });
+});
+
+function emitScrapeEvent(jobId: string, event: Partial<ScrapeRealtimeEvent>) {
+  const payload: ScrapeRealtimeEvent & Record<string, unknown> = {
+    jobId,
+    ...event,
+  } as ScrapeRealtimeEvent & Record<string, unknown>;
+  io.to('scrape:all').emit('scrape:event', payload);
+  io.to(`scrape:${jobId}`).emit('scrape:event', payload);
+}
+
+scrapeQueueEvents.on('progress', ({ jobId, data }) => {
+  const event = typeof data === 'object' && data !== null
+    ? { ...data, jobId }
+    : { type: 'progress', jobId, processed: Number(data) || 0 };
+  emitScrapeEvent(jobId, event as ScrapeRealtimeEvent);
+});
+
+scrapeQueueEvents.on('completed', ({ jobId, returnvalue }) => {
+  let data: any = returnvalue;
+  if (typeof data === 'string') {
+    try {
+      data = JSON.parse(data);
+    } catch {
+      data = { status: 'done' };
+    }
+  }
+  emitScrapeEvent(jobId, {
+    type: 'status',
+    jobId,
+    status: data?.status || 'done',
+    processed: data?.processed,
+    total: data?.total,
+  });
+});
+
+scrapeQueueEvents.on('failed', ({ jobId, failedReason }) => {
+  emitScrapeEvent(jobId, {
+    type: 'status',
+    jobId,
+    status: 'failed',
+    errorMessage: failedReason,
+  });
+});
+
+scrapeQueueEvents.on('error', (error) => {
+  console.error('[scrapeQueueEvents] erro', error);
+});
 
 // Configuração do Multer para upload de imagens
 const UPLOADS_DIR = path.join(process.cwd(), "backend", "public", "uploads");
@@ -103,10 +216,28 @@ app.use('/uploads', express.static(UPLOADS_DIR));
 // --------- ENDPOINTS ---------
 
 // USA O ROUTER CENTRALIZADO PARA TODAS AS ROTAS DA API
+app.use("/api/store", storeApiRouter);
 app.use("/api", apiRouter);
 
 // Healthcheck simples
 app.get("/api/health", (_req: Request, res: Response) => res.json({ ok: true }));
+
+app.get('/robots.txt', (req: Request, res: Response) => {
+  const baseUrl = `${req.protocol}://${req.get('host')}`;
+  const content = `User-agent: *\nAllow: /\nSitemap: ${baseUrl}/sitemap.xml`;
+  res.type('text/plain').send(content);
+});
+
+app.get('/sitemap.xml', async (req: Request, res: Response) => {
+  try {
+    const baseUrl = `${req.protocol}://${req.get('host')}`;
+    const xml = await generateSitemapXml(baseUrl);
+    res.type('application/xml').send(xml);
+  } catch (error: any) {
+    console.error('[sitemap]', error);
+    res.status(500).type('text/plain').send('Erro ao gerar sitemap');
+  }
+});
 
 // --- Fallback das rotas de notas (garante funcionamento mesmo que apiRouter não tenha recarregado) ---
 const NOTES_FILE = path.join(process.cwd(), 'backend', 'notes.json');
@@ -267,6 +398,33 @@ async function runSeedIfNeeded() {
       const qty = faker.number.int({ min: 1, max: 2 });
       const totalAmount = itemPrice * qty;
 
+      const productName = faker.commerce.productName();
+      const productSku = faker.string.alphanumeric(10).toUpperCase();
+
+      const productSlugBase = faker.helpers.slugify(productName.toLowerCase());
+      let slugCandidate = productSlugBase;
+      let slugCounter = 1;
+      while (await prisma.product.findUnique({ where: { slug: slugCandidate } })) {
+        slugCandidate = `${productSlugBase}-${slugCounter++}`;
+      }
+
+      const product = await prisma.product.create({
+        data: {
+          name: productName,
+          slug: slugCandidate,
+          brand: faker.company.name(),
+          sku: productSku,
+          description: faker.commerce.productDescription(),
+          descriptionHtml: null,
+          price: itemPrice,
+          compareAtPrice: null,
+          stockQuantity: faker.number.int({ min: 10, max: 200 }),
+          active: true,
+          metaTitle: null,
+          metaDescription: null,
+        },
+      });
+
       await prisma.order.create({
         data: {
           id: generateShortId(),
@@ -277,10 +435,11 @@ async function runSeedIfNeeded() {
           createdAt: faker.date.recent({ days: 14 }),
           items: {
             create: {
-              sku: faker.string.alphanumeric(10).toUpperCase(),
-              name: faker.commerce.productName(),
-              qty: qty,
+              qty,
               unitPrice: itemPrice,
+              product: {
+                connect: { id: product.id },
+              },
             },
           },
           payments: {
@@ -308,9 +467,16 @@ async function runSeedIfNeeded() {
 
 // Start
 const PORT = parseInt(process.env.PORT || '3003', 10);
-app.listen(PORT, '0.0.0.0', () => {
+const ENABLE_AUTO_SEED = process.env.ENABLE_AUTO_SEED === 'true';
+
+httpServer.listen(PORT, '0.0.0.0', () => {
   console.log(`Backend listening on http://0.0.0.0:${PORT}`);
-  runSeedIfNeeded().catch(e => {
+
+  if (ENABLE_AUTO_SEED) {
+    runSeedIfNeeded().catch(e => {
       console.error("Falha ao executar o seed no boot:", e);
-  });
+    });
+  } else {
+    console.log('Seed automático desativado. Defina ENABLE_AUTO_SEED=true para popular dados fictícios somente quando desejar.');
+  }
 });

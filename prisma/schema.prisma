@@ -3,7 +3,6 @@
 
 generator client {
   provider = "prisma-client-js"
-  output   = "../node_modules/.prisma/client"
 }
 
 datasource db {
@@ -31,63 +30,260 @@ enum LandingPageStatus {
   PAUSADA
 }
 
+enum BannerKind {
+  HERO
+  CAROUSEL
+  STRIP
+}
+
+enum MenuKey {
+  HEADER
+  FOOTER
+}
+
+enum AddressKind {
+  BILLING
+  SHIPPING
+}
+
+enum CouponType {
+  PERCENT
+  AMOUNT
+}
+
+enum StorefrontEventType {
+  VIEW_PRODUCT
+  VIEW_CATEGORY
+  ADD_TO_CART
+  PURCHASE
+}
+
+enum ChatMessageRole {
+  USER
+  ASSISTANT
+}
+
+enum ScrapeJobStatus {
+  queued
+  running
+  done
+  failed
+  cancelled
+}
+
 model Customer {
-  id         String    @id @default(cuid())
-  firstName  String    @map("first_name")
-  lastName   String?   @map("last_name")
-  email      String    @unique
-  phone      String
-  cpf        String    @unique
-  birthDate  String    @map("birth_date") // YYYY-MM-DD
-  gender     String?
-  createdAt  DateTime  @default(now()) @map("created_at")
-  orders     Order[]
-  addresses  Address[]
+  id        String    @id @default(cuid())
+  firstName String    @map("first_name")
+  lastName  String?   @map("last_name")
+  email     String    @unique
+  phone     String
+  cpf       String    @unique
+  birthDate String    @map("birth_date")
+  gender    String?
+  createdAt DateTime  @default(now()) @map("created_at")
+  orders    Order[]
+  addresses Address[]
+  cart      Cart?
+  events    StorefrontEvent[]
+  luckyWheelSpins LuckyWheelSpin[]
 
   @@map("customers")
 }
 
 model Address {
-  id          String    @id @default(cuid())
-  customerId  String    @map("customer_id")
-  customer    Customer  @relation(fields: [customerId], references: [id], onDelete: Cascade)
-  cep         String
-  street      String
-  number      String
-  complement  String?
-  district    String
-  city        String
-  state       String
-  createdAt   DateTime  @default(now()) @map("created_at")
+  id         String       @id @default(cuid())
+  customerId String?      @map("customer_id")
+  customer   Customer?    @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  orderId    String?      @map("order_id")
+  order      Order?       @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  kind       AddressKind  @default(SHIPPING)
+  name       String?
+  cpfCnpj    String?      @map("cpf_cnpj")
+  phone      String?
+  cep        String
+  zip        String?      @map("zip")
+  street     String
+  number     String
+  complement String?
+  district   String
+  city       String
+  state      String
+  createdAt  DateTime     @default(now()) @map("created_at")
 
   @@map("addresses")
 }
 
 model Order {
-  id                 String        @id
-  externalReference  String?       @unique @map("external_reference")
-  customerId         String        @map("customer_id")
-  customer           Customer      @relation(fields: [customerId], references: [id])
-  status             OrderStatus
-  category           String
-  totalAmount        Int        @map("total_amount") // Em centavos
-  createdAt          DateTime      @default(now()) @map("created_at")
-  items              OrderItem[]
-  payments           Payment[]
+  id                String      @id
+  number            String?     @unique
+  externalReference String?     @unique @map("external_reference")
+  customerId        String      @map("customer_id")
+  customer          Customer    @relation(fields: [customerId], references: [id])
+  status            OrderStatus
+  category          String
+  currency          String      @default("BRL")
+  subtotalAmount    Int         @default(0) @map("subtotal_amount")
+  discountAmount    Int         @default(0) @map("discount_amount")
+  shippingAmount    Int         @default(0) @map("shipping_amount")
+  totalAmount       Int         @map("total_amount")
+  notes             String?
+  metadata          Json?
+  createdAt         DateTime    @default(now()) @map("created_at")
+  items             OrderItem[]
+  payments          Payment[]
+  addresses         Address[]
 
   @@index([createdAt])
   @@index([status])
   @@map("orders")
 }
 
-model OrderItem {
-  id        String   @id @default(cuid())
-  orderId   String   @map("order_id")
-  order     Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
-  sku       String
+model Category {
+  id            String     @id @default(cuid())
+  name          String     @unique
+  slug          String     @unique
+  description   String?
+  position      Int        @default(0)
+  parentId      String?    @map("parent_id")
+  parent        Category?  @relation("SubCategories", fields: [parentId], references: [id])
+  subcategories Category[] @relation("SubCategories")
+  products      Product[]
+  productLinks  ProductCategory[]
+
+  @@map("categories")
+}
+
+model Product {
+  id              String              @id @default(cuid())
+  name            String
+  slug            String              @unique
+  brand           String              @default("")
+  sku             String              @unique
+  description     String
+  descriptionHtml String?             @map("description_html")
+  price           Int                 @map("price_cents")
+  compareAtPrice  Int?                @map("compare_at_price_cents")
+  stockQuantity   Int                 @map("stock_quantity")
+  active          Boolean             @default(true)
+  metaTitle       String?             @map("meta_title")
+  metaDescription String?             @map("meta_description")
+  createdAt       DateTime            @default(now()) @map("created_at")
+  updatedAt       DateTime            @updatedAt @map("updated_at")
+  categoryId      String?
+  category        Category?           @relation(fields: [categoryId], references: [id])
+  images          ProductImage[]
+  attributes      ProductAttribute[]
+  variants        ProductVariant[]
+  orderItems      OrderItem[]
+  cartItems       CartItem[]
+  productLinks    ProductCategory[]
+  collectionLinks ProductCollection[]
+  events          StorefrontEvent[]
+  scrapeResults   ScrapeResult[]
+
+  @@map("products")
+}
+
+model ProductImage {
+  id        String  @id @default(cuid())
+  url       String
+  alt       String?
+  position  Int     @default(0)
+  productId String  @map("product_id")
+  product   Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  @@map("product_images")
+}
+
+model ProductAttribute {
+  id        String  @id @default(cuid())
   name      String
-  qty       Int
-  unitPrice Int   @map("unit_price") // Em centavos
+  value     String
+  productId String  @map("product_id")
+  product   Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  @@map("product_attributes")
+}
+
+model ProductVariant {
+  id         String   @id @default(cuid())
+  productId  String   @map("product_id")
+  product    Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  name       String
+  sku        String   @unique
+  price      Int?     @map("price_cents")
+  stock      Int      @default(0)
+  attributes Json?
+  createdAt  DateTime @default(now()) @map("created_at")
+  updatedAt  DateTime @updatedAt @map("updated_at")
+  orderItems OrderItem[]
+  cartItems  CartItem[]
+
+  @@map("product_variants")
+}
+
+model ChatMessageLog {
+  id        String           @id @default(cuid())
+  sessionId String           @map("session_id")
+  role      ChatMessageRole
+  content   String
+  origin    String?
+  metadata  Json?
+  createdAt DateTime         @default(now()) @map("created_at")
+
+  @@index([sessionId, createdAt])
+  @@map("chat_message_logs")
+}
+
+model ProductCategory {
+  productId String  @map("product_id")
+  categoryId String @map("category_id")
+  position  Int     @default(0)
+  product   Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+  category  Category @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+
+  @@id([productId, categoryId])
+  @@map("product_categories")
+}
+
+model Collection {
+  id          String              @id @default(cuid())
+  slug        String              @unique
+  name        String
+  description String?
+  position    Int                 @default(0)
+  createdAt   DateTime            @default(now()) @map("created_at")
+  updatedAt   DateTime            @updatedAt @map("updated_at")
+  products    ProductCollection[]
+  events      StorefrontEvent[]
+
+  @@map("collections")
+}
+
+model ProductCollection {
+  productId   String   @map("product_id")
+  collectionId String  @map("collection_id")
+  position    Int      @default(0)
+  product     Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  collection  Collection @relation(fields: [collectionId], references: [id], onDelete: Cascade)
+
+  @@id([productId, collectionId])
+  @@map("product_collections")
+}
+
+model OrderItem {
+  id         String         @id @default(cuid())
+  orderId    String         @map("order_id")
+  order      Order          @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  productId  String         @map("product_id")
+  product    Product        @relation(fields: [productId], references: [id])
+  variantId  String?        @map("variant_id")
+  variant    ProductVariant? @relation(fields: [variantId], references: [id])
+  title      String?
+  sku        String?
+  qty        Int
+  unitPrice  Int            @map("unit_price_cents")
+  totalPrice Int            @default(0) @map("total_price_cents")
 
   @@map("order_items")
 }
@@ -97,12 +293,227 @@ model Payment {
   orderId       String        @map("order_id")
   order         Order         @relation(fields: [orderId], references: [id], onDelete: Cascade)
   paymentMethod PaymentMethod @map("payment_method")
-  paidAmount    Int        @map("paid_amount") // Em centavos
-  status        String // Status do pagamento, pode ser mais detalhado que o status do pedido
+  paidAmount    Int           @map("paid_amount")
+  status        String
   createdAt     DateTime      @default(now()) @map("created_at")
 
   @@index([paymentMethod])
   @@map("payments")
+}
+
+model Cart {
+  id         String   @id @default(cuid())
+  sessionToken   String?  @unique @map("session_token")
+  customerId     String?  @unique @map("customer_id")
+  customer       Customer? @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  couponId       String?  @map("coupon_id")
+  coupon         Coupon?  @relation(fields: [couponId], references: [id])
+  shippingMethodId String? @map("shipping_method_id")
+  shippingMethod   ShippingMethod? @relation(fields: [shippingMethodId], references: [id])
+  subtotalCents  Int      @default(0) @map("subtotal_cents")
+  discountCents  Int      @default(0) @map("discount_cents")
+  shippingCents  Int      @default(0) @map("shipping_cents")
+  totalCents     Int      @default(0) @map("total_cents")
+  currency       String   @default("BRL")
+  shippingAddress Json?   @map("shipping_address")
+  billingAddress  Json?   @map("billing_address")
+  items          CartItem[]
+  events         StorefrontEvent[]
+  createdAt      DateTime @default(now()) @map("created_at")
+  updatedAt      DateTime @updatedAt @map("updated_at")
+
+  @@map("carts")
+}
+
+model CartItem {
+  id        String  @id @default(cuid())
+  cartId    String  @map("cart_id")
+  cart      Cart    @relation(fields: [cartId], references: [id], onDelete: Cascade)
+  productId String  @map("product_id")
+  product   Product @relation(fields: [productId], references: [id])
+  variantId String? @map("variant_id")
+  variant   ProductVariant? @relation(fields: [variantId], references: [id])
+  quantity  Int
+  unitPriceCents  Int  @default(0) @map("unit_price_cents")
+  totalPriceCents Int  @default(0) @map("total_price_cents")
+  productSnapshot Json? @map("product_snapshot")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@map("cart_items")
+}
+
+model Banner {
+  id             String     @id @default(cuid())
+  kind           BannerKind
+  title          String?
+  subtitle       String?
+  ctaLabel       String?    @map("cta_label")
+  ctaHref        String?    @map("cta_href")
+  imageUrl       String     @map("image_url")
+  mobileImageUrl String?    @map("mobile_image_url")
+  position       Int        @default(0)
+  active         Boolean    @default(true)
+  createdAt      DateTime   @default(now()) @map("created_at")
+  updatedAt      DateTime   @updatedAt @map("updated_at")
+
+  @@map("banners")
+}
+
+model StorefrontEvent {
+  id           String               @id @default(cuid())
+  sessionId    String               @map("session_id")
+  customerId   String?              @map("customer_id")
+  cartId       String?              @map("cart_id")
+  eventType    StorefrontEventType  @map("event_type")
+  productId    String?              @map("product_id")
+  collectionId String?              @map("collection_id")
+  metadata     Json?
+  occurredAt   DateTime             @default(now()) @map("occurred_at")
+
+  customer   Customer?   @relation(fields: [customerId], references: [id], onDelete: SetNull)
+  cart       Cart?       @relation(fields: [cartId], references: [id], onDelete: SetNull)
+  product    Product?    @relation(fields: [productId], references: [id], onDelete: SetNull)
+  collection Collection? @relation(fields: [collectionId], references: [id], onDelete: SetNull)
+
+  @@index([sessionId])
+  @@index([eventType, occurredAt])
+  @@index([productId, occurredAt])
+  @@index([collectionId, occurredAt])
+  @@map("storefront_events")
+}
+
+model Page {
+  id           String   @id @default(cuid())
+  slug         String   @unique
+  title        String
+  contentHtml  String   @map("content_html")
+  published    Boolean  @default(false)
+  metaTitle    String?  @map("meta_title")
+  metaDescription String? @map("meta_description")
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @updatedAt @map("updated_at")
+
+  @@map("pages")
+}
+
+model Menu {
+  id        String    @id @default(cuid())
+  key       MenuKey   @unique
+  createdAt DateTime  @default(now()) @map("created_at")
+  updatedAt DateTime  @updatedAt @map("updated_at")
+  items     MenuItem[]
+
+  @@map("menus")
+}
+
+model MenuItem {
+  id        String    @id @default(cuid())
+  menuId    String    @map("menu_id")
+  menu      Menu      @relation(fields: [menuId], references: [id], onDelete: Cascade)
+  label     String
+  href      String
+  position  Int       @default(0)
+  parentId  String?   @map("parent_id")
+  parent    MenuItem? @relation("MenuItemChildren", fields: [parentId], references: [id])
+  children  MenuItem[] @relation("MenuItemChildren")
+  createdAt DateTime   @default(now()) @map("created_at")
+  updatedAt DateTime   @updatedAt @map("updated_at")
+
+  @@map("menu_items")
+}
+
+model StoreSettings {
+  id                 String  @id @default("store")
+  currency           String  @default("BRL")
+  defaultTitle       String?
+  defaultDescription String?
+  logoUrl            String? @map("logo_url")
+  faviconUrl         String? @map("favicon_url")
+  appleTouchIconUrl  String? @map("apple_touch_icon_url")
+  primaryColor       String? @map("primary_color")
+  secondaryColor     String? @map("secondary_color")
+  accentColor        String? @map("accent_color")
+  metaImageUrl       String? @map("meta_image_url")
+  typography         Json?   @map("typography")
+  textBlocks         Json?   @map("text_blocks")
+  homeLayout         Json?   @map("home_layout")
+  seoSettings        Json?   @map("seo_settings")
+  domainSettings     Json?   @map("domain_settings")
+  integrations       Json?   @map("integration_settings")
+  checkoutSettings   Json?   @map("checkout_settings")
+  luckyWheelSettings Json?   @map("lucky_wheel_settings")
+  createdAt          DateTime @default(now()) @map("created_at")
+  updatedAt          DateTime @updatedAt @map("updated_at")
+
+  @@map("store_settings")
+}
+
+model LuckyWheelSpin {
+  id           String   @id @default(cuid())
+  customerId   String?  @map("customer_id")
+  customer     Customer? @relation(fields: [customerId], references: [id], onDelete: SetNull)
+  sessionId    String?  @map("session_id")
+  cartId       String?  @map("cart_id")
+  prizeId      String   @map("prize_id")
+  prizeLabel   String   @map("prize_label")
+  prizeType    String   @map("prize_type")
+  prizePayload Json?    @map("prize_payload")
+  couponCode   String?  @map("coupon_code")
+  freeShipping Boolean  @default(false) @map("free_shipping")
+  freeOrder    Boolean  @default(false) @map("free_order")
+  ipAddress    String?  @map("ip_address")
+  metadata     Json?
+  createdAt    DateTime @default(now()) @map("created_at")
+
+  @@index([createdAt])
+  @@index([prizeId, createdAt])
+  @@index([sessionId])
+  @@index([cartId])
+  @@map("lucky_wheel_spins")
+}
+
+model ShippingMethod {
+  id              String   @id @default(cuid())
+  name            String
+  carrier         String?
+  flatPriceCents  Int      @map("flat_price_cents")
+  freeOverCents   Int?     @map("free_over_cents")
+  deliveryEtaText String?  @map("delivery_eta_text")
+  active          Boolean  @default(true)
+  zipRange        Json?    @map("zip_range")
+  createdAt       DateTime @default(now()) @map("created_at")
+  updatedAt       DateTime @updatedAt @map("updated_at")
+  carts           Cart[]
+
+  @@map("shipping_methods")
+}
+
+model PaymentProvider {
+  id        String   @id @default(cuid())
+  name      String
+  key       String   @unique
+  enabled   Boolean  @default(false)
+  config    Json?
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@map("payment_providers")
+}
+
+model Coupon {
+  id        String     @id @default(cuid())
+  code      String     @unique
+  type      CouponType
+  value     Int
+  startsAt  DateTime?  @map("starts_at")
+  endsAt    DateTime?  @map("ends_at")
+  active    Boolean    @default(true)
+  createdAt DateTime   @default(now()) @map("created_at")
+  updatedAt DateTime   @updatedAt @map("updated_at")
+  carts     Cart[]
+
+  @@map("coupons")
 }
 
 model LandingPage {
@@ -112,10 +523,10 @@ model LandingPage {
   title         String
   brand         String
   description   String?
-  price         Int            // Em centavos
+  price         Int
   freeShipping  Boolean           @map("free_shipping")
   imageUrl      String?           @map("image_url")
-  shippingPrice Int            @map("shipping_price") // Em centavos
+  shippingPrice Int               @map("shipping_price")
   status        LandingPageStatus @default(ATIVA)
   createdAt     DateTime          @default(now()) @map("created_at")
   updatedAt     DateTime?         @updatedAt
@@ -126,11 +537,12 @@ model LandingPage {
 
 model User {
   id           String   @id @default(cuid())
-  name         String? 
+  name         String?
   email        String?  @unique
   username     String   @unique
   passwordHash String   @map("password_hash")
   createdAt    DateTime @default(now()) @map("created_at")
+  scrapeJobs   ScrapeJob[]
 
   @@map("users")
 }
@@ -147,4 +559,56 @@ model Operator {
   createdAt           DateTime @default(now()) @map("created_at")
 
   @@map("operators")
+}
+
+model AIIntegrationSetting {
+  id              String   @id
+  provider        String   @default("openai")
+  encryptedApiKey String   @map("encrypted_api_key")
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@map("ai_integration_settings")
+}
+
+model ScrapeJob {
+  id              String          @id @default(cuid())
+  userId          String?         @map("user_id")
+  user            User?           @relation(fields: [userId], references: [id], onDelete: SetNull)
+  sourceUrl       String          @map("source_url")
+  mode            String          @default("full")
+  totalFound      Int?            @map("total_found")
+  processed       Int             @default(0)
+  status          ScrapeJobStatus @default(queued)
+  cancelRequested Boolean         @default(false) @map("cancel_requested")
+  logs            Json?
+  createdAt       DateTime        @default(now()) @map("created_at")
+  finishedAt      DateTime?       @map("finished_at")
+  updatedAt       DateTime        @updatedAt @map("updated_at")
+  results         ScrapeResult[]
+
+  @@index([status, createdAt])
+  @@map("scrape_jobs")
+}
+
+model ScrapeResult {
+  id                  String      @id @default(cuid())
+  jobId               String      @map("job_id")
+  job                 ScrapeJob   @relation(fields: [jobId], references: [id], onDelete: Cascade)
+  productId           String?     @map("product_id")
+  product             Product?    @relation(fields: [productId], references: [id], onDelete: SetNull)
+  title               String
+  brand               String?
+  price               Int?        @map("price_cents")
+  sku                 String?
+  shortDescription    String?     @map("short_description")
+  longDescriptionHtml String?     @map("long_description_html")
+  images              Json?
+  categories          Json?
+  attributes          Json?
+  raw                 Json?
+  createdAt           DateTime    @default(now()) @map("created_at")
+
+  @@index([jobId])
+  @@map("scrape_results")
 }

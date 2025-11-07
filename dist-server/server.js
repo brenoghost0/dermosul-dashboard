@@ -40,13 +40,19 @@ const dotenv = __importStar(require("dotenv"));
 const path = __importStar(require("path"));
 // Carrega as variáveis de ambiente do arquivo .env na raiz do projeto
 dotenv.config();
+const http_1 = require("http");
 const express_1 = __importDefault(require("express"));
 const cors_1 = __importDefault(require("cors"));
 const fs_1 = __importDefault(require("fs"));
 const multer_1 = __importDefault(require("multer"));
 const express_session_1 = __importDefault(require("express-session"));
+const socket_io_1 = require("socket.io");
 // Import sem extensão para funcionar bem após transpilar para dist/ (CJS)
 const api_1 = __importDefault(require("./api")); // Importa o router centralizado
+const store_api_1 = __importDefault(require("./store-api")); // Importa o router da loja
+const queue_1 = require("./lib/scraping/queue");
+// Importar as funções do adaptador de dados
+const index_1 = require("./data/index");
 const prisma_1 = require("./db/prisma");
 const pt_BR_1 = require("@faker-js/faker/locale/pt_BR");
 const utils_1 = require("./utils");
@@ -63,6 +69,70 @@ app.use((0, express_session_1.default)({
         maxAge: 24 * 60 * 60 * 1000 // 24 horas
     }
 }));
+const httpServer = (0, http_1.createServer)(app);
+const io = new socket_io_1.Server(httpServer, {
+    cors: {
+        origin: true,
+        credentials: true,
+    },
+    path: '/socket.io',
+});
+io.on('connection', (socket) => {
+    socket.join('scrape:all');
+    socket.on('scrape:subscribe', (jobId) => {
+        if (typeof jobId === 'string' && jobId.length > 0) {
+            socket.join(`scrape:${jobId}`);
+        }
+    });
+    socket.on('scrape:unsubscribe', (jobId) => {
+        if (typeof jobId === 'string' && jobId.length > 0) {
+            socket.leave(`scrape:${jobId}`);
+        }
+    });
+});
+function emitScrapeEvent(jobId, event) {
+    const payload = {
+        jobId,
+        ...event,
+    };
+    io.to('scrape:all').emit('scrape:event', payload);
+    io.to(`scrape:${jobId}`).emit('scrape:event', payload);
+}
+queue_1.scrapeQueueEvents.on('progress', ({ jobId, data }) => {
+    const event = typeof data === 'object' && data !== null
+        ? { ...data, jobId }
+        : { type: 'progress', jobId, processed: Number(data) || 0 };
+    emitScrapeEvent(jobId, event);
+});
+queue_1.scrapeQueueEvents.on('completed', ({ jobId, returnvalue }) => {
+    let data = returnvalue;
+    if (typeof data === 'string') {
+        try {
+            data = JSON.parse(data);
+        }
+        catch {
+            data = { status: 'done' };
+        }
+    }
+    emitScrapeEvent(jobId, {
+        type: 'status',
+        jobId,
+        status: data?.status || 'done',
+        processed: data?.processed,
+        total: data?.total,
+    });
+});
+queue_1.scrapeQueueEvents.on('failed', ({ jobId, failedReason }) => {
+    emitScrapeEvent(jobId, {
+        type: 'status',
+        jobId,
+        status: 'failed',
+        errorMessage: failedReason,
+    });
+});
+queue_1.scrapeQueueEvents.on('error', (error) => {
+    console.error('[scrapeQueueEvents] erro', error);
+});
 // Configuração do Multer para upload de imagens
 const UPLOADS_DIR = path.join(process.cwd(), "backend", "public", "uploads");
 if (!fs_1.default.existsSync(UPLOADS_DIR)) {
@@ -98,9 +168,26 @@ app.use(express_1.default.static(frontendPath));
 app.use('/uploads', express_1.default.static(UPLOADS_DIR));
 // --------- ENDPOINTS ---------
 // USA O ROUTER CENTRALIZADO PARA TODAS AS ROTAS DA API
+app.use("/api/store", store_api_1.default);
 app.use("/api", api_1.default);
 // Healthcheck simples
 app.get("/api/health", (_req, res) => res.json({ ok: true }));
+app.get('/robots.txt', (req, res) => {
+    const baseUrl = `${req.protocol}://${req.get('host')}`;
+    const content = `User-agent: *\nAllow: /\nSitemap: ${baseUrl}/sitemap.xml`;
+    res.type('text/plain').send(content);
+});
+app.get('/sitemap.xml', async (req, res) => {
+    try {
+        const baseUrl = `${req.protocol}://${req.get('host')}`;
+        const xml = await (0, index_1.generateSitemapXml)(baseUrl);
+        res.type('application/xml').send(xml);
+    }
+    catch (error) {
+        console.error('[sitemap]', error);
+        res.status(500).type('text/plain').send('Erro ao gerar sitemap');
+    }
+});
 // --- Fallback das rotas de notas (garante funcionamento mesmo que apiRouter não tenha recarregado) ---
 const NOTES_FILE = path.join(process.cwd(), 'backend', 'notes.json');
 function loadNotesFile() {
@@ -251,6 +338,30 @@ async function runSeedIfNeeded() {
             const itemPrice = pt_BR_1.faker.number.int({ min: 8000, max: 25000 });
             const qty = pt_BR_1.faker.number.int({ min: 1, max: 2 });
             const totalAmount = itemPrice * qty;
+            const productName = pt_BR_1.faker.commerce.productName();
+            const productSku = pt_BR_1.faker.string.alphanumeric(10).toUpperCase();
+            const productSlugBase = pt_BR_1.faker.helpers.slugify(productName.toLowerCase());
+            let slugCandidate = productSlugBase;
+            let slugCounter = 1;
+            while (await prisma_1.prisma.product.findUnique({ where: { slug: slugCandidate } })) {
+                slugCandidate = `${productSlugBase}-${slugCounter++}`;
+            }
+            const product = await prisma_1.prisma.product.create({
+                data: {
+                    name: productName,
+                    slug: slugCandidate,
+                    brand: pt_BR_1.faker.company.name(),
+                    sku: productSku,
+                    description: pt_BR_1.faker.commerce.productDescription(),
+                    descriptionHtml: null,
+                    price: itemPrice,
+                    compareAtPrice: null,
+                    stockQuantity: pt_BR_1.faker.number.int({ min: 10, max: 200 }),
+                    active: true,
+                    metaTitle: null,
+                    metaDescription: null,
+                },
+            });
             await prisma_1.prisma.order.create({
                 data: {
                     id: (0, utils_1.generateShortId)(),
@@ -261,10 +372,11 @@ async function runSeedIfNeeded() {
                     createdAt: pt_BR_1.faker.date.recent({ days: 14 }),
                     items: {
                         create: {
-                            sku: pt_BR_1.faker.string.alphanumeric(10).toUpperCase(),
-                            name: pt_BR_1.faker.commerce.productName(),
-                            qty: qty,
+                            qty,
                             unitPrice: itemPrice,
+                            product: {
+                                connect: { id: product.id },
+                            },
                         },
                     },
                     payments: {
@@ -291,9 +403,15 @@ async function runSeedIfNeeded() {
 }
 // Start
 const PORT = parseInt(process.env.PORT || '3003', 10);
-app.listen(PORT, '0.0.0.0', () => {
+const ENABLE_AUTO_SEED = process.env.ENABLE_AUTO_SEED === 'true';
+httpServer.listen(PORT, '0.0.0.0', () => {
     console.log(`Backend listening on http://0.0.0.0:${PORT}`);
-    runSeedIfNeeded().catch(e => {
-        console.error("Falha ao executar o seed no boot:", e);
-    });
+    if (ENABLE_AUTO_SEED) {
+        runSeedIfNeeded().catch(e => {
+            console.error("Falha ao executar o seed no boot:", e);
+        });
+    }
+    else {
+        console.log('Seed automático desativado. Defina ENABLE_AUTO_SEED=true para popular dados fictícios somente quando desejar.');
+    }
 });

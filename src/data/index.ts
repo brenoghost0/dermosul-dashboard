@@ -33,5 +33,8 @@ export const {
   getOrderByExternalReference,
 } = sqlAdapter;
 
+export * from "./store-adapter.js";
+export * from "./scrape";
+
 // Exportar utilitários de data que são usados pelo server.ts
 export { toISO, lastNDays };

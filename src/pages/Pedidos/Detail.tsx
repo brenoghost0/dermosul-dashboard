@@ -1,21 +1,20 @@
 import React, { useEffect, useState } from "react";
-import { useParams, Link } from "react-router-dom";
-import { api, type OrderDetail, type CustomerInfo, type ShippingInfo } from "../../lib/api";
+import { Link, useParams } from "react-router-dom";
+import { api, type CustomerInfo, type OrderDetail, type ShippingInfo } from "../../lib/api";
 
 // --- Helpers de formatação e máscaras ---
-const currency = (v?: number) =>
-  (v ?? 0).toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
+const currency = (v?: number) => (v ?? 0).toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 
 const brDate = (iso?: string) => {
   if (!iso) return "";
-  const d = new Date(iso + "T12:00:00Z"); // Trata como UTC para evitar problemas de fuso horário
-  if (isNaN(d.getTime())) return iso;
+  const d = new Date(`${iso}T12:00:00Z`);
+  if (Number.isNaN(d.getTime())) return iso;
   return d.toLocaleDateString("pt-BR", { timeZone: "UTC" });
 };
 
-const isoDate = (day?: string, month?: string, year?: string) => {
+const isoDateFromParts = (day?: string, month?: string, year?: string) => {
   if (!day || !month || !year) return "";
-  return `${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`;
+  return `${year}-${month.padStart(2, "0")}-${day.padStart(2, "0")}`;
 };
 
 const splitDate = (iso?: string) => {
@@ -27,7 +26,10 @@ const splitDate = (iso?: string) => {
 const maskCpf = (v?: string) => {
   if (!v) return "";
   const s = v.replace(/\D/g, "");
-  return s.replace(/(\d{3})(\d)/, "$1.$2").replace(/(\d{3})(\d)/, "$1.$2").replace(/(\d{3})(\d{1,2})$/, "$1-$2");
+  return s
+    .replace(/(\d{3})(\d)/, "$1.$2")
+    .replace(/(\d{3})(\d)/, "$1.$2")
+    .replace(/(\d{3})(\d{1,2})$/, "$1-$2");
 };
 const unmaskCpf = (v?: string) => (v || "").replace(/\D/g, "");
 
@@ -46,15 +48,29 @@ const maskPhone = (v?: string) => {
 };
 const unmaskPhone = (v?: string) => (v || "").replace(/\D/g, "");
 
-// --- Constantes ---
-const STATUS_COLORS: { [key: string]: string } = {
-  pago: "bg-emerald-100 text-emerald-700",
-  pendente: "bg-amber-100 text-amber-700",
-  aguardando_pagamento: "bg-amber-100 text-amber-700",
-  cancelado: "bg-rose-100 text-rose-700",
-  enviado: "bg-sky-100 text-sky-700",
+// --- Constantes visuais ---
+const STATUS_BADGES: Record<string, { label: string; className: string }> = {
+  pago: { label: "Pago", className: "border border-emerald-400/50 bg-emerald-500/10 text-emerald-200" },
+  aguardar_pagamento: { label: "Aguardando", className: "border border-amber-400/50 bg-amber-500/10 text-amber-200" },
+  aguardando_pagamento: { label: "Aguardando", className: "border border-amber-400/50 bg-amber-500/10 text-amber-200" },
+  pendente: { label: "Pendente", className: "border border-slate-500/50 bg-slate-500/10 text-slate-200" },
+  cancelado: { label: "Cancelado", className: "border border-rose-400/50 bg-rose-500/10 text-rose-200" },
+  enviado: { label: "Enviado", className: "border border-sky-400/50 bg-sky-500/10 text-sky-200" },
 };
-const ALL_STATUSES = ["pago", "aguardando_pagamento", "pendente", "cancelado", "enviado"];
+
+const ALL_STATUSES = ["pago", "aguardando_pagamento", "pendente", "cancelado", "enviado"] as const;
+
+const PANEL_CLASS = "rounded-4xl border border-slate-800 bg-[#091225]/70 px-6 py-6 shadow-[0_50px_160px_-110px_rgba(34,211,238,0.55)] backdrop-blur-2xl";
+const SIDE_PANEL_CLASS = "rounded-3xl border border-slate-800 bg-slate-900/50 px-5 py-5 shadow-[0_40px_120px_-110px_rgba(34,211,238,0.45)]";
+const PRIMARY_BUTTON = "inline-flex items-center justify-center rounded-full border border-sky-500/60 bg-sky-500/20 px-6 py-2.5 text-sm font-semibold text-sky-100 transition hover:bg-sky-500/30 disabled:cursor-not-allowed disabled:opacity-60";
+const SECONDARY_BUTTON = "inline-flex items-center justify-center rounded-full border border-slate-700 px-6 py-2.5 text-sm font-semibold text-slate-300 transition hover:border-slate-500 hover:text-slate-100 disabled:cursor-not-allowed disabled:opacity-60";
+const DANGER_BUTTON = "inline-flex items-center justify-center rounded-full border border-rose-500/60 bg-rose-500/10 px-5 py-2 text-sm font-semibold text-rose-100 transition hover:bg-rose-500/20 disabled:cursor-not-allowed disabled:opacity-60";
+
+const inputClass = (hasError?: boolean) =>
+  [
+    "w-full rounded-2xl border px-4 py-3 text-sm text-slate-100 placeholder-slate-500 outline-none transition focus:border-sky-400/60 focus:ring-0",
+    hasError ? "border-rose-500/60 bg-rose-500/10" : "border-slate-700 bg-slate-900/60",
+  ].join(" ");
 
 // --- Componente principal ---
 export default function OrderDetail() {
@@ -78,25 +94,24 @@ export default function OrderDetail() {
       return;
     }
 
+    const orderId = id;
     let alive = true;
     async function load() {
       setLoading(true);
       setError(null);
       try {
-        const data = await api.getOrderById(id!);
+        const data = await api.getOrderById(orderId);
         if (alive) {
           setOrderData(data);
-          const initialFormState = {
+          setFormState({
             status: data.status,
             customer: data.customer,
             shipping: data.shipping,
-          };
-          setFormState(initialFormState);
+          });
         }
       } catch (e: any) {
         if (alive) {
-          const errorMessage = e.message || "Falha ao carregar pedido";
-          setError(errorMessage);
+          setError(e.message || "Falha ao carregar pedido");
           console.error("Erro ao carregar pedido:", e);
         }
       } finally {
@@ -104,63 +119,69 @@ export default function OrderDetail() {
       }
     }
     load();
-    return () => { alive = false; };
+    return () => {
+      alive = false;
+    };
   }, [id]);
 
-  // Carrega notas do pedido
+  // Carrega notas
   useEffect(() => {
+    if (!id) return;
+
+    const orderId = id;
     let mounted = true;
     async function loadNotes() {
-      if (!id) return;
       try {
-        const r = await api.getOrderNotes(id);
-        if (mounted) setNotes(r.notes || "");
-      } catch (e) {
-        // silencioso
+        const response = await api.getOrderNotes(orderId);
+        if (mounted) setNotes(response.notes || "");
+      } catch {
+        // ignora erros de notas
       }
     }
     loadNotes();
-    return () => { mounted = false; };
+    return () => {
+      mounted = false;
+    };
   }, [id]);
 
-  // Handlers de mudança de input
-  const handleCustomerChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const { id, value } = e.target;
-    const field = id.replace("customer-", "");
+  // Handlers de formulário
+  const handleCustomerChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const { id: inputId, value } = event.target;
+    const field = inputId.replace("customer-", "");
     setFormState((prev) => ({
       ...prev,
-      customer: { ...(prev.customer || {} as CustomerInfo), [field]: value },
+      customer: { ...(prev.customer || ({} as CustomerInfo)), [field]: value },
     }));
     setValidationErrors((prev) => ({ ...prev, [`customer_${field}`]: undefined }));
   };
 
-  const handleBirthdateChange = (field: 'day' | 'month' | 'year', value: string) => {
+  const handleBirthdateChange = (field: "day" | "month" | "year", value: string) => {
     setFormState((prev) => {
-      const currentBirthdate = prev.customer?.birthdate ? splitDate(prev.customer.birthdate) : { day: "", month: "", year: "" };
-      const newBirthdate = { ...currentBirthdate, [field]: value };
+      const current = splitDate(prev.customer?.birthdate);
+      const next = { ...current, [field]: value };
       return {
         ...prev,
         customer: {
-          ...(prev.customer || {} as CustomerInfo),
-          birthdate: isoDate(newBirthdate.day, newBirthdate.month, newBirthdate.year),
+          ...(prev.customer || ({} as CustomerInfo)),
+          birthdate: isoDateFromParts(next.day, next.month, next.year),
         },
       };
     });
     setValidationErrors((prev) => ({ ...prev, customer_birthdate: undefined }));
   };
 
-  const handleShippingChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const { id, value } = e.target;
-    const field = id.replace("shipping-", "");
+  const handleShippingChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const { id: inputId, value } = event.target;
+    const field = inputId.replace("shipping-", "");
     setFormState((prev) => ({
       ...prev,
-      shipping: { ...(prev.shipping || {} as ShippingInfo), [field]: value },
+      shipping: { ...(prev.shipping || ({} as ShippingInfo)), [field]: value },
     }));
     setValidationErrors((prev) => ({ ...prev, [`shipping_${field}`]: undefined }));
   };
 
-  const handleStatusChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
-    setFormState((prev) => ({ ...prev, status: e.target.value as OrderDetail['status'] }));
+  const handleStatusChange = (event: React.ChangeEvent<HTMLSelectElement>) => {
+    setFormState((prev) => ({ ...prev, status: event.target.value as OrderDetail["status"] }));
     setValidationErrors((prev) => ({ ...prev, status: undefined }));
   };
 
@@ -179,7 +200,6 @@ export default function OrderDetail() {
     }
   };
 
-  // Salvar alterações
   const handleSave = async () => {
     if (!id || isSaving) return;
 
@@ -194,7 +214,11 @@ export default function OrderDetail() {
         customer: {
           ...formState.customer,
           cpf: unmaskCpf(formState.customer?.cpf),
-          birthdate: isoDate(formState.customer?.birthdate),
+          birthdate: isoDateFromParts(
+            splitDate(formState.customer?.birthdate).day,
+            splitDate(formState.customer?.birthdate).month,
+            splitDate(formState.customer?.birthdate).year
+          ),
           phone: unmaskPhone(formState.customer?.phone),
         } as CustomerInfo,
         shipping: {
@@ -207,17 +231,17 @@ export default function OrderDetail() {
       setOrderData(updatedOrder);
       setFormState({
         status: updatedOrder.status,
-        customer: updatedOrder.customer || {} as CustomerInfo, // Garante que customer seja um objeto
-        shipping: updatedOrder.shipping || {} as ShippingInfo, // Garante que shipping seja um objeto
+        customer: updatedOrder.customer || ({} as CustomerInfo),
+        shipping: updatedOrder.shipping || ({} as ShippingInfo),
       });
       setSaveMessage("Pedido atualizado com sucesso!");
     } catch (e: any) {
       console.error("Erro ao salvar pedido:", e);
       try {
-        const errorObj = JSON.parse(e.message);
-        if (errorObj.errors) {
-          setValidationErrors(errorObj.errors);
-          setError("Por favor, corrija os erros no formulário.");
+        const parsed = JSON.parse(e.message);
+        if (parsed.errors) {
+          setValidationErrors(parsed.errors);
+          setError("Revise os campos sinalizados e tente novamente.");
         } else {
           setError(e.message || "Falha ao salvar pedido.");
         }
@@ -230,381 +254,409 @@ export default function OrderDetail() {
   };
 
   if (loading) {
-    return <div className="p-6">Carregando pedido...</div>;
-  }
-  if (error) {
     return (
-      <div className="p-6 text-red-600">
-        Falha ao carregar pedido: {error}{" "}
-        <Link to="/dashboard/pedidos" className="underline ml-2">Voltar</Link>
+      <div className="flex min-h-screen items-center justify-center bg-[#05080f] text-slate-200">
+        Carregando pedido…
       </div>
     );
   }
+
+  if (error && !orderData) {
+    return (
+      <div className="flex min-h-screen flex-col items-center justify-center gap-3 bg-[#05080f] text-slate-200">
+        <p>Falha ao carregar pedido: {error}</p>
+        <Link to="/dashboard/pedidos" className={SECONDARY_BUTTON}>
+          Voltar aos pedidos
+        </Link>
+      </div>
+    );
+  }
+
   if (!orderData) {
     return (
-      <div className="p-6">
-        Pedido não encontrado. <Link to="/dashboard/pedidos" className="underline">Voltar</Link>
+      <div className="flex min-h-screen flex-col items-center justify-center gap-3 bg-[#05080f] text-slate-200">
+        <p>Pedido não encontrado.</p>
+        <Link to="/dashboard/pedidos" className={SECONDARY_BUTTON}>
+          Voltar aos pedidos
+        </Link>
       </div>
     );
   }
 
-  const statusColor = STATUS_COLORS[orderData.status] || "bg-gray-100 text-gray-700";
+  const statusBadge = STATUS_BADGES[orderData.status] || {
+    label: orderData.status,
+    className: "border border-slate-600 bg-slate-800/60 text-slate-300",
+  };
 
   return (
-    <div className="p-4 md:p-6 space-y-6">
-      {/* Cabeçalho */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-bold text-zinc-800">Pedido #{orderData.id}</h1>
-          <div className="flex items-center gap-2 mt-1">
-            <span className={`px-2.5 py-1 text-xs font-semibold rounded-full ${statusColor}`}>
-              {orderData.status}
-            </span>
-            <span className="text-sm text-zinc-500">
-              em {brDate(orderData.createdAt)}
-            </span>
-          </div>
-        </div>
-        <div className="flex items-center gap-2">
-          <Link to="/dashboard/pedidos" className="px-4 py-2 rounded-md border bg-white hover:bg-zinc-50">
-            Voltar
-          </Link>
-          <button onClick={() => window.print()} className="px-4 py-2 rounded-md bg-emerald-700 text-white hover:bg-emerald-800">
-            Imprimir
-          </button>
-        </div>
-      </div>
-
-      {/* Mensagens de feedback */}
-      {saveMessage && <div className="bg-green-100 text-green-700 p-3 rounded-md mb-4">{saveMessage}</div>}
-      {error && <div className="bg-red-100 text-red-700 p-3 rounded-md mb-4">{error}</div>}
-
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Coluna principal */}
-        <div className="lg:col-span-2 space-y-6">
-          {/* Status e Salvar */}
-          <div className="rounded-xl border p-4 bg-white">
-            <h2 className="font-semibold mb-4">Status do Pedido</h2>
-            <div className="flex items-center space-x-4">
-              <select
-                id="order-status"
-                data-testid="order-status"
-                value={formState.status ?? orderData.status}
-                onChange={handleStatusChange}
-                className={`border rounded-md px-3 py-2 ${validationErrors.status ? 'border-red-500' : 'border-gray-300'}`}
-                disabled={isSaving}
-              >
-                {ALL_STATUSES.map((s) => (
-                  <option key={s} value={s}>
-                    {s.charAt(0).toUpperCase() + s.slice(1)}
-                  </option>
-                ))}
-              </select>
-              <button
-                id="order-save"
-                data-testid="order-save"
-                onClick={handleSave}
-                className="px-4 py-2 rounded-md bg-emerald-700 text-white hover:bg-emerald-800 disabled:opacity-50"
-                disabled={isSaving}
-              >
-                {isSaving ? "Salvando..." : "Salvar"}
+    <div className="min-h-screen bg-gradient-to-br from-[#05080f] via-[#0b1220] to-[#04060a] pb-24">
+      <div className="mx-auto max-w-7xl px-4 pt-12 space-y-8">
+        <header className="rounded-4xl border border-slate-800 bg-[#071024]/80 px-6 py-8 shadow-[0_60px_160px_-90px_rgba(34,211,238,0.6)] backdrop-blur-2xl">
+          <div className="flex flex-col gap-6 md:flex-row md:items-center md:justify-between">
+            <div className="space-y-2">
+              <p className="text-[11px] uppercase tracking-[0.35em] text-slate-500">Pedido #{orderData.id}</p>
+              <div className="flex flex-wrap items-center gap-3">
+                <span className={`inline-flex items-center rounded-full px-4 py-1 text-xs font-semibold uppercase tracking-[0.25em] ${statusBadge.className}`}>
+                  {statusBadge.label}
+                </span>
+                <span className="text-sm text-slate-400">Recebido em {brDate(orderData.createdAt)}</span>
+              </div>
+              <p className="max-w-xl text-sm text-slate-400">
+                Gerencie status, dados de cliente e logística sem sair do cockpit. Todas as alterações são registradas em tempo real na
+                Dermosul Commerce OS.
+              </p>
+            </div>
+            <div className="flex flex-wrap gap-3">
+              <Link to="/dashboard/pedidos" className={SECONDARY_BUTTON}>
+                Voltar
+              </Link>
+              <button type="button" onClick={() => window.print()} className={PRIMARY_BUTTON}>
+                Imprimir
               </button>
             </div>
-            {validationErrors.status && <p className="text-red-500 text-sm mt-1">{validationErrors.status}</p>}
           </div>
+        </header>
 
-          {/* Informações do Cliente */}
-          <div className="rounded-xl border p-4 bg-white">
-            <h2 className="font-semibold mb-4">Informações do Cliente</h2>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              <div>
-                <label htmlFor="customer-firstName" className="block text-sm text-gray-600">Nome</label>
-                <input
+        {saveMessage && <Alert tone="success" message={saveMessage} />}
+        {error && <Alert tone="error" message={error} />}
+
+        <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
+          <div className="lg:col-span-2 space-y-6">
+            <section className={PANEL_CLASS}>
+              <SectionHeader
+                eyebrow="Fluxo operacional"
+                title="Status do pedido"
+                description="Mantenha clientes e outros squads sincronizados com o estágio atual da compra."
+              />
+              <div className="flex flex-wrap items-center gap-4 text-sm">
+                <select
+                  id="order-status"
+                  data-testid="order-status"
+                  value={formState.status ?? orderData.status}
+                  onChange={handleStatusChange}
+                  className={`${inputClass(!!validationErrors.status)} w-full max-w-xs`}
+                  disabled={isSaving}
+                >
+                  {ALL_STATUSES.map((statusKey) => (
+                    <option key={statusKey} value={statusKey}>
+                      {statusKey.replace(/_/g, " ").replace(/(^|\s)\S/g, (letter) => letter.toUpperCase())}
+                    </option>
+                  ))}
+                </select>
+                <button id="order-save" data-testid="order-save" onClick={handleSave} className={PRIMARY_BUTTON} disabled={isSaving}>
+                  {isSaving ? "Salvando…" : "Salvar"}
+                </button>
+              </div>
+              {validationErrors.status && <InlineError message={validationErrors.status} />}
+            </section>
+
+            <section className={PANEL_CLASS}>
+              <SectionHeader
+                eyebrow="Cliente"
+                title="Informações do comprador"
+                description="Atualize dados pessoais e de contato para garantir comunicação assertiva."
+              />
+              <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
+                <Field
                   id="customer-firstName"
-                  data-testid="customer-firstName"
-                  type="text"
+                  label="Nome"
                   value={formState.customer?.firstName ?? ""}
                   onChange={handleCustomerChange}
-                  className={`w-full rounded-md border px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 ${validationErrors.customer_firstName ? 'border-red-500' : 'border-gray-300'}`}
+                  error={validationErrors.customer_firstName}
                 />
-                {validationErrors.customer_firstName && <p className="text-red-500 text-sm mt-1">{validationErrors.customer_firstName}</p>}
-              </div>
-              <div>
-                <label htmlFor="customer-lastName" className="block text-sm text-gray-600">Sobrenome</label>
-                <input
+                <Field
                   id="customer-lastName"
-                  data-testid="customer-lastName"
-                  type="text"
+                  label="Sobrenome"
                   value={formState.customer?.lastName ?? ""}
                   onChange={handleCustomerChange}
-                  className={`w-full rounded-md border px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 ${validationErrors.customer_lastName ? 'border-red-500' : 'border-gray-300'}`}
+                  error={validationErrors.customer_lastName}
                 />
-                {validationErrors.customer_lastName && <p className="text-red-500 text-sm mt-1">{validationErrors.customer_lastName}</p>}
-              </div>
-              <div>
-                <label htmlFor="customer-cpf" className="block text-sm text-gray-600">CPF</label>
-                <input
+                <Field
                   id="customer-cpf"
-                  data-testid="customer-cpf"
-                  type="text"
+                  label="CPF"
                   value={maskCpf(formState.customer?.cpf)}
                   onChange={handleCustomerChange}
-                  className={`w-full rounded-md border px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 ${validationErrors.customer_cpf ? 'border-red-500' : 'border-gray-300'}`}
+                  error={validationErrors.customer_cpf}
                 />
-                {validationErrors.customer_cpf && <p className="text-red-500 text-sm mt-1">{validationErrors.customer_cpf}</p>}
-              </div>
-              <div>
-                <label className="block text-sm text-gray-600">Nascimento</label>
-                <div className="flex gap-2">
-                  <input
-                    id="customer-birthdate-day"
-                    data-testid="customer-birthdate-day"
-                    type="text"
-                    placeholder="DD"
-                    value={splitDate(formState.customer?.birthdate).day}
-                    onChange={(e) => handleBirthdateChange('day', e.target.value)}
-                    maxLength={2}
-                    className={`w-1/3 rounded-md border px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 ${validationErrors.customer_birthdate ? 'border-red-500' : 'border-gray-300'}`}
-                  />
-                  <input
-                    id="customer-birthdate-month"
-                    data-testid="customer-birthdate-month"
-                    type="text"
-                    placeholder="MM"
-                    value={splitDate(formState.customer?.birthdate).month}
-                    onChange={(e) => handleBirthdateChange('month', e.target.value)}
-                    maxLength={2}
-                    className={`w-1/3 rounded-md border px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 ${validationErrors.customer_birthdate ? 'border-red-500' : 'border-gray-300'}`}
-                  />
-                  <input
-                    id="customer-birthdate-year"
-                    data-testid="customer-birthdate-year"
-                    type="text"
-                    placeholder="YYYY"
-                    value={splitDate(formState.customer?.birthdate).year}
-                    onChange={(e) => handleBirthdateChange('year', e.target.value)}
-                    maxLength={4}
-                    className={`w-1/3 rounded-md border px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 ${validationErrors.customer_birthdate ? 'border-red-500' : 'border-gray-300'}`}
-                  />
-                </div>
-                {validationErrors.customer_birthdate && <p className="text-red-500 text-sm mt-1">{validationErrors.customer_birthdate}</p>}
-              </div>
-              <div>
-                <label htmlFor="customer-gender" className="block text-sm text-gray-600">Gênero</label>
-                <input
+                <BirthdateField
+                  birthdate={formState.customer?.birthdate}
+                  onChange={handleBirthdateChange}
+                  error={validationErrors.customer_birthdate}
+                />
+                <Field
                   id="customer-gender"
-                  data-testid="customer-gender"
-                  type="text"
+                  label="Gênero"
                   value={formState.customer?.gender ?? ""}
                   onChange={handleCustomerChange}
-                  className={`w-full rounded-md border px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 ${validationErrors.customer_gender ? 'border-red-500' : 'border-gray-300'}`}
+                  error={validationErrors.customer_gender}
                 />
-                {validationErrors.customer_gender && <p className="text-red-500 text-sm mt-1">{validationErrors.customer_gender}</p>}
-              </div>
-              <div>
-                <label htmlFor="customer-email" className="block text-sm text-gray-600">Email</label>
-                <input
+                <Field
                   id="customer-email"
-                  data-testid="customer-email"
+                  label="Email"
                   type="email"
                   value={formState.customer?.email ?? ""}
                   onChange={handleCustomerChange}
-                  className={`w-full rounded-md border px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 ${validationErrors.customer_email ? 'border-red-500' : 'border-gray-300'}`}
+                  error={validationErrors.customer_email}
                 />
-                {validationErrors.customer_email && <p className="text-red-500 text-sm mt-1">{validationErrors.customer_email}</p>}
-              </div>
-              <div>
-                <label htmlFor="customer-phone" className="block text-sm text-gray-600">Telefone</label>
-                <input
+                <Field
                   id="customer-phone"
-                  data-testid="customer-phone"
-                  type="text"
+                  label="Telefone"
                   value={maskPhone(formState.customer?.phone)}
                   onChange={handleCustomerChange}
-                  className={`w-full rounded-md border px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 ${validationErrors.customer_phone ? 'border-red-500' : 'border-gray-300'}`}
+                  error={validationErrors.customer_phone}
                 />
-                {validationErrors.customer_phone && <p className="text-red-500 text-sm mt-1">{validationErrors.customer_phone}</p>}
               </div>
-            </div>
-          </div>
+            </section>
 
-          {/* Endereço de Entrega */}
-          <div className="rounded-xl border p-4 bg-white">
-            <h2 className="font-semibold mb-4">Endereço de Entrega</h2>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              <div>
-                <label htmlFor="shipping-postalCode" className="block text-sm text-gray-600">CEP</label>
-                <input
+            <section className={PANEL_CLASS}>
+              <SectionHeader
+                eyebrow="Logística"
+                title="Endereço de entrega"
+                description="Confirme os dados para garantir SLA de entrega e geração de etiquetas."
+              />
+              <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
+                <Field
                   id="shipping-postalCode"
-                  data-testid="shipping-postalCode"
-                  type="text"
+                  label="CEP"
                   value={maskCep(formState.shipping?.postalCode)}
                   onChange={handleShippingChange}
-                  className={`w-full rounded-md border px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 ${validationErrors.shipping_postalCode ? 'border-red-500' : 'border-gray-300'}`}
+                  error={validationErrors.shipping_postalCode}
                 />
-                {validationErrors.shipping_postalCode && <p className="text-red-500 text-sm mt-1">{validationErrors.shipping_postalCode}</p>}
-              </div>
-              <div>
-                <label htmlFor="shipping-address1" className="block text-sm text-gray-600">Rua</label>
-                <input
+                <Field
                   id="shipping-address1"
-                  data-testid="shipping-address1"
-                  type="text"
+                  label="Rua"
                   value={formState.shipping?.address1 ?? ""}
                   onChange={handleShippingChange}
-                  className={`w-full rounded-md border px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 ${validationErrors.shipping_address1 ? 'border-red-500' : 'border-gray-300'}`}
+                  error={validationErrors.shipping_address1}
                 />
-                {validationErrors.shipping_address1 && <p className="text-red-500 text-sm mt-1">{validationErrors.shipping_address1}</p>}
-              </div>
-              <div>
-                <label htmlFor="shipping-address2" className="block text-sm text-gray-600">Número</label>
-                <input
+                <Field
                   id="shipping-address2"
-                  data-testid="shipping-address2"
-                  type="text"
+                  label="Número"
                   value={formState.shipping?.address2 ?? ""}
                   onChange={handleShippingChange}
-                  className={`w-full rounded-md border px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 ${validationErrors.shipping_address2 ? 'border-red-500' : 'border-gray-300'}`}
+                  error={validationErrors.shipping_address2}
                 />
-                {validationErrors.shipping_address2 && <p className="text-red-500 text-sm mt-1">{validationErrors.shipping_address2}</p>}
-              </div>
-              <div>
-                <label htmlFor="shipping-address2_complement" className="block text-sm text-gray-600">Complemento (Opcional)</label>
-                <input
+                <Field
                   id="shipping-address2_complement"
-                  data-testid="shipping-address2_complement"
-                  type="text"
+                  label="Complemento (opcional)"
                   value={formState.shipping?.address2_complement ?? ""}
                   onChange={handleShippingChange}
-                  className={`w-full rounded-md border px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 ${validationErrors.shipping_address2_complement ? 'border-red-500' : 'border-gray-300'}`}
+                  error={validationErrors.shipping_address2_complement}
                 />
-                {validationErrors.shipping_address2_complement && <p className="text-red-500 text-sm mt-1">{validationErrors.shipping_address2_complement}</p>}
-              </div>
-              <div>
-                <label htmlFor="shipping-district" className="block text-sm text-gray-600">Bairro</label>
-                <input
+                <Field
                   id="shipping-district"
-                  data-testid="shipping-district"
-                  type="text"
+                  label="Bairro"
                   value={formState.shipping?.district ?? ""}
                   onChange={handleShippingChange}
-                  className={`w-full rounded-md border px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 ${validationErrors.shipping_district ? 'border-red-500' : 'border-gray-300'}`}
+                  error={validationErrors.shipping_district}
                 />
-                {validationErrors.shipping_district && <p className="text-red-500 text-sm mt-1">{validationErrors.shipping_district}</p>}
-              </div>
-              <div>
-                <label htmlFor="shipping-city" className="block text-sm text-gray-600">Cidade</label>
-                <input
+                <Field
                   id="shipping-city"
-                  data-testid="shipping-city"
-                  type="text"
+                  label="Cidade"
                   value={formState.shipping?.city ?? ""}
                   onChange={handleShippingChange}
-                  className={`w-full rounded-md border px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 ${validationErrors.shipping_city ? 'border-red-500' : 'border-gray-300'}`}
+                  error={validationErrors.shipping_city}
                 />
-                {validationErrors.shipping_city && <p className="text-red-500 text-sm mt-1">{validationErrors.shipping_city}</p>}
-              </div>
-              <div>
-                <label htmlFor="shipping-state" className="block text-sm text-gray-600">Estado (UF)</label>
-                <input
+                <Field
                   id="shipping-state"
-                  data-testid="shipping-state"
-                  type="text"
+                  label="Estado (UF)"
                   value={formState.shipping?.state ?? ""}
                   onChange={handleShippingChange}
-                  className={`w-full rounded-md border px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 ${validationErrors.shipping_state ? 'border-red-500' : 'border-gray-300'}`}
+                  error={validationErrors.shipping_state}
                 />
-                {validationErrors.shipping_state && <p className="text-red-500 text-sm mt-1">{validationErrors.shipping_state}</p>}
+                <Field
+                  id="shipping-country"
+                  label="País"
+                  value={formState.shipping?.country ?? ""}
+                  onChange={handleShippingChange}
+                  error={validationErrors.shipping_country}
+                />
               </div>
-            </div>
-          </div>
+            </section>
 
-          {/* Items Table */}
-          <div className="rounded-xl border bg-white p-4">
-            <h2 className="font-semibold mb-4 text-zinc-800">Itens do Pedido</h2>
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm">
-                <thead className="text-left text-zinc-500">
-                  <tr>
-                    <th className="py-2 font-medium">Produto</th>
-                    <th className="py-2 font-medium text-center">Qtd.</th>
-                    <th className="py-2 font-medium text-right">Preço Unit.</th>
-                    <th className="py-2 font-medium text-right">Subtotal</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {orderData.items.map((item, i) => (
-                    <tr key={i} className="border-t">
-                      <td className="py-3">{item.name} <span className="text-zinc-400 font-mono text-xs">({item.sku})</span></td>
-                      <td className="py-3 text-center">{item.qty}</td>
-                      <td className="py-3 text-right">{currency(item.price)}</td>
-                      <td className="py-3 text-right">{currency(item.subtotal)}</td>
+            <section className={PANEL_CLASS}>
+              <SectionHeader
+                eyebrow="Itens"
+                title="Resumo do carrinho"
+                description="Visualize o que foi comprado e monitore valores unitários e totais."
+              />
+              <div className="overflow-hidden rounded-3xl border border-slate-800">
+                <table className="min-w-full divide-y divide-slate-800 text-sm text-slate-200">
+                  <thead className="bg-slate-900/70 text-xs uppercase tracking-[0.25em] text-slate-500">
+                    <tr>
+                      <th className="px-4 py-3 text-left">Produto</th>
+                      <th className="px-4 py-3 text-center">Qtd.</th>
+                      <th className="px-4 py-3 text-right">Preço unit.</th>
+                      <th className="px-4 py-3 text-right">Subtotal</th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </div>
-        </div>
-        {/* Coluna lateral */}
-        <div className="space-y-6">
-          {/* Resumo Financeiro */}
-          <div className="rounded-xl border bg-white p-4">
-            <h2 className="font-semibold mb-4 text-zinc-800">Resumo Financeiro</h2>
-            <div className="space-y-2 text-sm">
-              <div className="flex justify-between">
-                <span className="text-zinc-600">Subtotal dos itens</span>
-                <span>{currency(orderData.totals.itemsTotal)}</span>
+                  </thead>
+                  <tbody>
+                    {orderData.items.map((item, index) => (
+                      <tr key={`${item.sku}-${index}`} className="divide-y divide-slate-800/70">
+                        <td className="px-4 py-3">
+                          <div className="font-semibold text-slate-100">{item.name}</div>
+                          <div className="text-xs text-slate-500 font-mono">SKU: {item.sku}</div>
+                        </td>
+                        <td className="px-4 py-3 text-center text-slate-300">{item.qty}</td>
+                        <td className="px-4 py-3 text-right text-slate-300">{currency(item.price)}</td>
+                        <td className="px-4 py-3 text-right text-slate-100">{currency(item.subtotal)}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
               </div>
-              <div className="flex justify-between">
-                <span className="text-zinc-600">Frete</span>
-                <span>{currency(orderData.totals.shipping)}</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-zinc-600">Desconto</span>
-                <span className="text-rose-600">- {currency(orderData.totals.discount)}</span>
-              </div>
-              <div className="flex justify-between font-bold text-base border-t pt-2 mt-2">
-                <span>Total</span>
-                <span>{currency(orderData.totals.grandTotal)}</span>
-              </div>
-            </div>
-          </div>
-          {/* Pagamento */}
-          <div className="rounded-xl border bg-white p-4">
-            <h2 className="font-semibold mb-4 text-zinc-800">Pagamento</h2>
-            <div className="space-y-1 text-sm">
-              <p>
-                <span className="font-medium">{orderData.payment.method}</span>
-                {orderData.payment.installments > 1 && ` em ${orderData.payment.installments}x`}
-              </p>
-              <p className="text-sm text-zinc-500">Status: <span className="font-medium text-emerald-700">{orderData.payment.status}</span></p>
-              <p className="text-zinc-500">Valor Pago: <span className="font-medium">{currency(orderData.payment.paidAmount)}</span></p>
-            </div>
+            </section>
           </div>
 
-          {/* Anotações */}
-          <div className="rounded-xl border bg-white p-4">
-            <h2 className="font-semibold mb-4 text-zinc-800">Anotações</h2>
-            <textarea
-              value={notes}
-              onChange={(e) => setNotes(e.target.value)}
-              placeholder="Escreva observações sobre o pedido..."
-              className="w-full min-h-[120px] border rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
-            />
-            <div className="mt-3 flex items-center gap-3">
-              <button
-                onClick={handleSaveNotes}
-                disabled={notesSaving}
-                className="px-4 py-2 rounded-md bg-emerald-700 text-white hover:bg-emerald-800 disabled:opacity-50"
-              >
-                {notesSaving ? 'Salvando...' : 'Salvar Anotações'}
-              </button>
-              {notesMessage && <span className="text-sm text-zinc-600">{notesMessage}</span>}
-            </div>
+          <div className="space-y-6">
+            <aside className={SIDE_PANEL_CLASS}>
+              <h2 className="text-lg font-semibold text-slate-100">Resumo financeiro</h2>
+              <div className="mt-4 space-y-2 text-sm text-slate-300">
+                <div className="flex justify-between">
+                  <span className="text-slate-400">Subtotal dos itens</span>
+                  <span>{currency(orderData.totals.itemsTotal)}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-slate-400">Frete</span>
+                  <span>{currency(orderData.totals.shipping)}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-slate-400">Desconto</span>
+                  <span className="text-rose-300">- {currency(orderData.totals.discount)}</span>
+                </div>
+                <div className="flex justify-between border-t border-slate-800 pt-3 text-base font-semibold text-slate-100">
+                  <span>Total</span>
+                  <span>{currency(orderData.totals.grandTotal)}</span>
+                </div>
+              </div>
+            </aside>
+
+            <aside className={SIDE_PANEL_CLASS}>
+              <h2 className="text-lg font-semibold text-slate-100">Pagamento</h2>
+              <div className="mt-4 space-y-2 text-sm text-slate-300">
+                <p>
+                  <span className="font-semibold text-slate-100">{orderData.payment.method}</span>
+                  {orderData.payment.installments > 1 && <span className="text-slate-400"> em {orderData.payment.installments}x</span>}
+                </p>
+                <p className="text-slate-400">
+                  Status: <span className="font-semibold text-sky-200">{orderData.payment.status}</span>
+                </p>
+                <p>
+                  Valor pago: <span className="font-semibold text-slate-100">{currency(orderData.payment.paidAmount)}</span>
+                </p>
+              </div>
+            </aside>
+
+            <aside className={SIDE_PANEL_CLASS}>
+              <h2 className="text-lg font-semibold text-slate-100">Anotações</h2>
+              <textarea
+                value={notes}
+                onChange={(event) => setNotes(event.target.value)}
+                placeholder="Compartilhe contexto com o squad de experiência ou logística…"
+                className="mt-4 min-h-[140px] w-full rounded-2xl border border-slate-700 bg-slate-900/60 px-4 py-3 text-sm text-slate-100 placeholder-slate-500 outline-none transition focus:border-sky-400/60 focus:ring-0"
+              />
+              <div className="mt-4 flex flex-wrap items-center gap-3">
+                <button onClick={handleSaveNotes} disabled={notesSaving} className={PRIMARY_BUTTON}>
+                  {notesSaving ? "Salvando…" : "Salvar anotações"}
+                </button>
+                {notesMessage && <span className="text-sm text-slate-400">{notesMessage}</span>}
+              </div>
+            </aside>
           </div>
         </div>
       </div>
     </div>
   );
+}
+
+// --- Componentes auxiliares ---
+function SectionHeader({ eyebrow, title, description }: { eyebrow: string; title: string; description: string }) {
+  return (
+    <header className="mb-6 space-y-2">
+      <p className="text-[11px] uppercase tracking-[0.35em] text-slate-500">{eyebrow}</p>
+      <h2 className="text-2xl font-semibold text-slate-100">{title}</h2>
+      <p className="text-sm text-slate-400">{description}</p>
+    </header>
+  );
+}
+
+function Field({ id, label, value, onChange, type = "text", error }: {
+  id: string;
+  label: string;
+  value: string;
+  onChange: (event: React.ChangeEvent<HTMLInputElement>) => void;
+  type?: string;
+  error?: string;
+}) {
+  return (
+    <label htmlFor={id} className="space-y-2 text-sm">
+      <span className="text-xs uppercase tracking-[0.25em] text-slate-500">{label}</span>
+      <input
+        id={id}
+        data-testid={id}
+        type={type}
+        value={value}
+        onChange={onChange}
+        className={inputClass(!!error)}
+      />
+      {error && <InlineError message={error} />}
+    </label>
+  );
+}
+
+function BirthdateField({ birthdate, onChange, error }: {
+  birthdate?: string;
+  onChange: (field: "day" | "month" | "year", value: string) => void;
+  error?: string;
+}) {
+  const parts = splitDate(birthdate);
+  return (
+    <div className="space-y-2 text-sm">
+      <span className="text-xs uppercase tracking-[0.25em] text-slate-500">Nascimento</span>
+      <div className="flex gap-3">
+        <input
+          id="customer-birthdate-day"
+          data-testid="customer-birthdate-day"
+          type="text"
+          placeholder="DD"
+          value={parts.day}
+          onChange={(event) => onChange("day", event.target.value)}
+          maxLength={2}
+          className={`${inputClass(!!error)} w-1/3`}
+        />
+        <input
+          id="customer-birthdate-month"
+          data-testid="customer-birthdate-month"
+          type="text"
+          placeholder="MM"
+          value={parts.month}
+          onChange={(event) => onChange("month", event.target.value)}
+          maxLength={2}
+          className={`${inputClass(!!error)} w-1/3`}
+        />
+        <input
+          id="customer-birthdate-year"
+          data-testid="customer-birthdate-year"
+          type="text"
+          placeholder="AAAA"
+          value={parts.year}
+          onChange={(event) => onChange("year", event.target.value)}
+          maxLength={4}
+          className={`${inputClass(!!error)} w-1/3`}
+        />
+      </div>
+      {error && <InlineError message={error} />}
+    </div>
+  );
+}
+
+function InlineError({ message }: { message: string }) {
+  return <p className="text-xs text-rose-200">{message}</p>;
+}
+
+function Alert({ tone, message }: { tone: "success" | "error"; message: string }) {
+  const palette = tone === "success"
+    ? "border-emerald-500/40 bg-emerald-900/30 text-emerald-100"
+    : "border-rose-500/40 bg-rose-900/30 text-rose-100";
+  return <div className={`rounded-3xl border px-4 py-3 text-sm ${palette}`}>{message}</div>;
 }

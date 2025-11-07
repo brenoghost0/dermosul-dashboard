@@ -1,69 +1,46 @@
-# React + TypeScript + Vite
+# Dermosul Dashboard
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+Front-end da assistente Dermosul (Vite + React + TypeScript) e middleware Express usado nos ambientes local/staging/prod.
 
-Currently, two official plugins are available:
+## URL dinâmica do storefront
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+A assistente precisa gerar links de produto que funcionem em qualquer ambiente — por isso a base (origin) é resolvida dinamicamente, seguindo a ordem:
 
-## Expanding the ESLint configuration
+1. `window.location.origin` quando renderizado no navegador.
+2. Variáveis de ambiente (primeira encontrada):
+   - `BASE_URL`
+   - `STAGING_BASE_URL`
+   - `DEV_BASE_URL`
+3. Fallback para caminho relativo (o front monta a URL completa).
 
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
+Configure os envs no `.env` ou na plataforma de deploy:
 
-```js
-export default tseslint.config([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
+```bash
+# Produção
+BASE_URL=https://www.minhaloja.com
 
-      // Remove tseslint.configs.recommended and replace with this
-      ...tseslint.configs.recommendedTypeChecked,
-      // Alternatively, use this for stricter rules
-      ...tseslint.configs.strictTypeChecked,
-      // Optionally, add this for stylistic rules
-      ...tseslint.configs.stylisticTypeChecked,
+# Homologação
+STAGING_BASE_URL=https://staging.minhaloja.com
 
-      // Other configs...
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+# Desenvolvimento (quando o backend está isolado do frontend)
+DEV_BASE_URL=http://127.0.0.1:5174
 ```
 
-You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
+> ⚠️ Se nenhum valor estiver definido em ambiente sem `window`, o assistente mantém o caminho relativo `/p/{slug}` e registra um aviso no log. Configure as variáveis acima para evitar isso em produção.
 
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
+Todos os links do chat trazem UTMs padrão (`utm_source=chat&utm_medium=assistente&utm_campaign=recomendacao`) e são montados pela função `buildProductUrl`, garantindo URLs limpas e encode seguro.
 
-export default tseslint.config([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-      // Enable lint rules for React
-      reactX.configs['recommended-typescript'],
-      // Enable lint rules for React DOM
-      reactDom.configs.recommended,
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+## Executando localmente
+
+```bash
+npm install
+npm run dev
+# backend em paralelo
+npm run dev:server
+```
+
+### Testes
+
+```bash
+npm test
 ```

@@ -1,0 +1,21 @@
+{
+  "name": "Store Dermosul",
+  "short_name": "Dermosul",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#F4EEFF",
+  "theme_color": "#6C4AB6",
+  "description": "Loja Dermosul com protocolos dermatológicos, coleções e checkout integrado.",
+  "icons": [
+    {
+      "src": "/icons/dermosul-192.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "/icons/dermosul-512.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}

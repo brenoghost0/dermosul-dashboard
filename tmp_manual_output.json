@@ -1,0 +1,29 @@
+Abrindo Chromium headless...
+Visitando home...
+Tentando aceitar cookies...
+Indo para a página de dermocosméticos...
+Produtos via JSON-LD: 0
+Produtos via __NEXT_DATA__: 0
+Produtos via DOM: 36
+Primeiro produto identificado no catálogo: {
+  title: 'Dermocosmético , Eucerin , Anti-Pigment Dual - Sérum Facial Uniformizador e Antissinais 30ml , de R$309,90 , por R$265,90 , em até 3 vezes de R$88,63 , com desconto de 14% , com frete grátis , avaliado com nota 4.7 de 5 , Sérum facial para todos os tipos de pele. Reduz as marcas hiperpigmentadas do rosto, mantendo o tom uniforme.',
+  brand: null,
+  price: null,
+  url: 'https://www.belezanaweb.com.br/eucerin-antipigment-dual-serum-facial-uniformizador-e-antissinais-30ml/',
+  sku: null
+}
+Abrindo página de detalhes: https://www.belezanaweb.com.br/eucerin-antipigment-dual-serum-facial-uniformizador-e-antissinais-30ml/
+
+=== Primeiro produto detalhado ===
+{
+  "title": "Eucerin Anti-Pigment Dual - Sérum Facial Uniformizador e Antissinais 30ml",
+  "brand": "Eucerin",
+  "price": 265.9,
+  "sku": "90681",
+  "shortDescription": "Sérum facial para todos os tipos de pele. Eucerin Anti-Pigment Dual Serum reduz as marcas hiperpigmentadas do rosto, mantendo o tom uniforme.",
+  "longDescriptionHtml": "<p>Sérum facial para todos os tipos de pele. <strong>Eucerin Anti-Pigment Dual Serum</strong> reduz as marcas hiperpigmentadas do rosto, mantendo o tom uniforme.</p><br><p>O<strong> Sérum Facial Eucerin Anti-Pigment Dual</strong> foi formulado para reduzir e prevenir marcas enquanto garante efeito preenchedor. Desenvolvido com Thiamidol, ativo dermatologicamente reconhecido por agir na causa raiz das manchas, e ácido hialurônico, que preenche rugas e linhas finas, oferece uma solução completa para o rosto. Com resultados visíveis em apenas 2 semanas, sua textura em sérum garante aplicação fácil e rápida absorção, adequada para todos os tipos e tons de pele, inclusive no verão. Dermatologicamente testado.</p><br><p>*Nova embalagem, mais sustentável, com mesma fórmula. Você poderá receber o produto com a embalagem antiga enquanto durarem os estoques.</p>",
+  "images": [
+    "https://res.cloudinary.com/beleza-na-web/image/upload/w_1200,f_auto,fl_progressive,q_auto:best/v1/imagens/product/90681/88346fca-4807-4592-b7d7-b010f3f50a42-e68042c1-6f1f-4d66-adc3-57bee0c32bd0-20071051-eucerin-anti-pigment-dual-serum-30ml.jpeg"
+  ],
+  "detailUrl": "https://www.belezanaweb.com.br/eucerin-antipigment-dual-serum-facial-uniformizador-e-antissinais-30ml/"
+}

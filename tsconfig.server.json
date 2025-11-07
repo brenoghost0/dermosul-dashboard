@@ -12,7 +12,13 @@
     "src/api.ts",
     "src/data",
     "src/db",
+    "src/lib",
+    "src/workers",
     "src/utils",
     "node_modules/@types"
+  ],
+  "exclude": [
+    "src/lib/api.ts",
+    "src/lib/media.ts"
   ]
 }

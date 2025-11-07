@@ -21,7 +21,7 @@ export const lastNDays = (n: number) => {
   return dates.reverse();
 };
 
-import { prisma } from '../db/prisma.js';
+import { prisma } from '../db/prisma';
 
 export const generateUniqueId = () => {
   return Math.random().toString(36).substr(2, 9);

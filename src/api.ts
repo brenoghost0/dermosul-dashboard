@@ -2,6 +2,7 @@ import express, { Router, Request, Response } from 'express';
 import multer from 'multer';
 import path from 'path';
 import fs from 'fs';
+import type { Prisma } from '@prisma/client';
 
 import {
   listOrders,
@@ -19,12 +20,34 @@ import {
   lastNDays,
   updateLandingPageStatus,
   updateOrderStatusByExternalReference,
-  getOrderByExternalReference
+  getOrderByExternalReference,
+  getStoreSettings,
+  updateStoreSettings,
+  listProducts,
+  getProductById,
+  upsertProduct,
+  deleteProduct,
+  listCategories,
+  listCollections,
+  listBanners,
+  createBanner,
+  updateBanner,
+  deleteBanner,
+  getLuckyWheelSettings,
+  updateLuckyWheelSettings,
 } from './data/index.js';
 import { getPaymentProvider, PaymentRequest } from './lib/payment/index.js';
 import { prisma } from './db/prisma.js';
 import bcrypt from 'bcrypt';
 import jwt from 'jsonwebtoken';
+import { buildProductUrl } from './lib/url-builder.js';
+import { buildStoreContext } from './lib/ai/context.js';
+import { resolveOrderContext } from './lib/ai/order-context.js';
+import { getOpenAIClient } from './lib/ai/openai.js';
+import { getCachedValue, setCachedValue } from './lib/cache.js';
+import { formatCurrencyBRL } from './utils/format.js';
+import { encrypt } from './utils/crypto.js';
+import scrapeRouter from './api/scrape-router.js';
 
 const router = Router();
 
@@ -135,6 +158,970 @@ router.put("/landings/:id", requireAuth, upload.single('image'), async (req: Req
 
 // --- APLICA O PARSER DE JSON PARA TODAS AS ROTAS ABAIXO ---
 router.use(express.json());
+
+router.use('/scrape', requireAuth, scrapeRouter);
+
+
+router.get("/admin/store/settings", requireAuth, async (req, res) => {
+  try {
+    const settings = await getStoreSettings();
+    res.json(settings);
+  } catch (error: any) {
+    console.error("[admin] Falha ao carregar configurações da loja", error);
+    res.status(500).json({ error: "server_error", message: error?.message || "Não foi possível carregar as configurações da loja." });
+  }
+});
+
+router.put("/admin/store/settings", requireAuth, async (req, res) => {
+  try {
+    const payload = req.body ?? {};
+    const updateData: Prisma.StoreSettingsUpdateInput = {};
+
+    const stringFields: Array<keyof typeof payload> = [
+      "defaultTitle",
+      "defaultDescription",
+      "metaImageUrl",
+      "primaryColor",
+      "secondaryColor",
+      "accentColor",
+      "logoUrl",
+      "faviconUrl",
+      "appleTouchIconUrl"
+    ];
+
+    for (const field of stringFields) {
+      if (Object.prototype.hasOwnProperty.call(payload, field)) {
+        (updateData as any)[field] = payload[field] ?? null;
+      }
+    }
+
+    const jsonFields: Array<keyof typeof payload> = [
+      "typography",
+      "textBlocks",
+      "homeLayout",
+      "seoSettings",
+      "domainSettings",
+      "integrations",
+      "checkoutSettings"
+    ];
+
+    for (const field of jsonFields) {
+      if (Object.prototype.hasOwnProperty.call(payload, field) && payload[field] !== undefined) {
+        (updateData as any)[field] = payload[field] as Prisma.InputJsonValue;
+      }
+    }
+
+    const updated = await updateStoreSettings(updateData);
+    res.json(updated);
+  } catch (error: any) {
+    console.error("[admin] Falha ao atualizar configurações da loja", error);
+    res.status(500).json({ error: "server_error", message: error?.message || "Não foi possível salvar as configurações da loja." });
+  }
+});
+
+router.get("/admin/lucky-wheel", requireAuth, async (_req, res) => {
+  try {
+    const settings = await getLuckyWheelSettings();
+    res.json(settings);
+  } catch (error: any) {
+    console.error("[admin] Falha ao carregar roleta da sorte", error);
+    res.status(500).json({ error: "server_error", message: error?.message || "Não foi possível carregar a roleta da sorte." });
+  }
+});
+
+router.put("/admin/lucky-wheel", requireAuth, async (req, res) => {
+  try {
+    const payload = req.body ?? {};
+    const updated = await updateLuckyWheelSettings(payload);
+    res.json(updated);
+  } catch (error: any) {
+    console.error("[admin] Falha ao salvar a roleta da sorte", error);
+    const code = error?.code === "invalid_configuration" ? 422 : 400;
+    res.status(code).json({ error: "lucky_wheel_update_failed", message: error?.message || "Não foi possível salvar a roleta da sorte." });
+  }
+});
+
+// --- HELPERS ADMIN PRODUTOS ---
+
+const toAbsoluteAdminUrl = (req: Request, url?: string | null) => {
+  if (!url) return url ?? null;
+  if (/^https?:\/\//i.test(url)) return url;
+  const normalized = url.startsWith("/") ? url : `/${url.replace(/^\/+/, "")}`;
+  return `${req.protocol}://${req.get("host")}${normalized}`;
+};
+
+const mapProductAssets = <T extends { images?: Array<{ url: string | null }>; imageUrl?: string | null }>(req: Request, product: T): T => {
+  const images = (product.images ?? []).map((image, index) => ({
+    ...image,
+    url: toAbsoluteAdminUrl(req, image?.url ?? null),
+    position: (image as any)?.position ?? index,
+  }));
+  const imageUrl = toAbsoluteAdminUrl(req, product.imageUrl ?? images[0]?.url ?? null);
+  return {
+    ...product,
+    images,
+    imageUrl,
+  };
+};
+
+const parseBooleanParam = (value: unknown): boolean | undefined => {
+  if (value === undefined || value === null) return undefined;
+  if (typeof value === "boolean") return value;
+  if (typeof value !== "string") return undefined;
+  const normalized = value.trim().toLowerCase();
+  if (["1", "true", "on", "yes"].includes(normalized)) return true;
+  if (["0", "false", "off", "no"].includes(normalized)) return false;
+  return undefined;
+};
+
+const parseNumberParam = (value: unknown): number | undefined => {
+  if (value === undefined || value === null) return undefined;
+  const parsed = Number(value);
+  return Number.isFinite(parsed) ? parsed : undefined;
+};
+
+function slugify(text: string) {
+  return text
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/(^-|-$)+/g, "")
+    .slice(0, 80);
+}
+
+function normalizeProductPayload(body: any, id?: string) {
+  if (!body || typeof body !== "object") {
+    throw new Error("Payload inválido para produto.");
+  }
+
+  const name = typeof body.name === "string" ? body.name.trim() : "";
+  if (!name) throw new Error("Informe o nome do produto.");
+
+  const rawSlug = typeof body.slug === "string" ? body.slug.trim() : "";
+  const slug = rawSlug || slugify(name);
+  if (!slug) throw new Error("Informe o slug do produto.");
+
+  const sku = typeof body.sku === "string" ? body.sku.trim() : "";
+  if (!sku) throw new Error("Informe o SKU do produto.");
+
+  const price = Number(body.price);
+  if (!Number.isFinite(price)) throw new Error("Informe o preço em centavos do produto.");
+
+  const compareAtPriceRaw = body.compareAtPrice;
+  const compareAtPrice =
+    compareAtPriceRaw === undefined || compareAtPriceRaw === null || compareAtPriceRaw === ""
+      ? null
+      : Number(compareAtPriceRaw);
+  if (compareAtPrice !== null && !Number.isFinite(compareAtPrice)) {
+    throw new Error("Informe um preço cheio válido.");
+  }
+
+  const stockQuantity = Number(body.stockQuantity ?? 0);
+  if (!Number.isFinite(stockQuantity)) {
+    throw new Error("Informe um estoque válido.");
+  }
+
+  const images = Array.isArray(body.images)
+    ? body.images
+        .map((image: any, index: number) => {
+          const url = typeof image?.url === "string" ? image.url.trim() : "";
+          if (!url) return null;
+          return {
+            url,
+            alt: typeof image?.alt === "string" ? image.alt : null,
+            position: Number.isFinite(Number(image?.position)) ? Number(image.position) : index,
+          };
+        })
+        .filter(Boolean)
+    : [];
+
+  const categoryIds = Array.isArray(body.categoryIds) ? body.categoryIds.map((value: any) => String(value)) : [];
+  const collectionIds = Array.isArray(body.collectionIds) ? body.collectionIds.map((value: any) => String(value)) : [];
+
+  return {
+    id,
+    name,
+    slug,
+    brand: typeof body.brand === "string" ? body.brand : "",
+    sku,
+    description: typeof body.description === "string" ? body.description : "",
+    descriptionHtml:
+      typeof body.descriptionHtml === "string" && body.descriptionHtml.trim() ? body.descriptionHtml : null,
+    price: Math.max(Math.round(price), 0),
+    compareAtPrice: compareAtPrice === null ? null : Math.max(Math.round(compareAtPrice), 0),
+    stockQuantity: Math.max(Math.round(stockQuantity), 0),
+    active: body.active === undefined ? true : Boolean(body.active),
+    images,
+    categoryIds,
+    collectionIds,
+  };
+}
+
+function normalizeBannerPayload(body: any) {
+  if (!body || typeof body !== "object") {
+    throw new Error("Payload inválido para banner.");
+  }
+
+  const kindRaw = typeof body.kind === "string" && body.kind.trim() ? body.kind.trim().toUpperCase() : "HERO";
+  const title = typeof body.title === "string" ? body.title.trim() : "";
+  const subtitle = typeof body.subtitle === "string" ? body.subtitle.trim() : "";
+  const ctaLabel = typeof body.ctaLabel === "string" ? body.ctaLabel.trim() : "";
+  const ctaLink = typeof body.ctaLink === "string" ? body.ctaLink.trim() : "";
+  const imageUrl = typeof body.imageUrl === "string" ? body.imageUrl.trim() : "";
+  const mobileImageUrl = typeof body.mobileImageUrl === "string" ? body.mobileImageUrl.trim() : "";
+  const positionRaw = Number(body.position);
+  const activeRaw = body.active;
+
+  if (!imageUrl) {
+    throw new Error("Informe a URL da imagem desktop.");
+  }
+
+  return {
+    kind: kindRaw,
+    title,
+    subtitle: subtitle || null,
+    ctaLabel: ctaLabel || null,
+    ctaLink: ctaLink || null,
+    imageUrl,
+    mobileImageUrl: mobileImageUrl || null,
+    position: Number.isFinite(positionRaw) ? Math.max(Math.round(positionRaw), 0) : 0,
+    active: activeRaw === undefined ? true : Boolean(activeRaw),
+  } as const;
+}
+
+// --- ROTAS ADMIN PRODUTOS ---
+
+router.get("/admin/store/products", async (req, res) => {
+  try {
+    const data = await listProducts({
+      q: typeof req.query.q === "string" ? req.query.q : undefined,
+      categoryId: typeof req.query.categoryId === "string" ? req.query.categoryId : undefined,
+      collectionId: typeof req.query.collectionId === "string" ? req.query.collectionId : undefined,
+      active: parseBooleanParam(req.query.active),
+      page: parseNumberParam(req.query.page),
+      pageSize: parseNumberParam(req.query.pageSize),
+      sort: typeof req.query.sort === "string" ? (req.query.sort as any) : undefined,
+    });
+
+    const items = data.items.map((item) => mapProductAssets(req, item));
+    res.json({ ...data, items });
+  } catch (error: any) {
+    console.error("[admin] Falha ao listar produtos", error);
+    res.status(500).json({ error: "server_error", message: error?.message || "Não foi possível carregar os produtos." });
+  }
+});
+
+router.get("/admin/store/products/:id", async (req, res) => {
+  try {
+    const product = await getProductById(req.params.id);
+    if (!product) {
+      return res.status(404).json({ error: "not_found", message: "Produto não encontrado." });
+    }
+    res.json(mapProductAssets(req, product));
+  } catch (error: any) {
+    console.error("[admin] Falha ao carregar produto", error);
+    res.status(500).json({ error: "server_error", message: error?.message || "Não foi possível carregar o produto." });
+  }
+});
+
+router.post("/admin/store/products", async (req, res) => {
+  try {
+    const payload = normalizeProductPayload(req.body ?? {});
+    const created = await upsertProduct(payload);
+    if (!created) {
+      throw new Error("Falha ao criar produto.");
+    }
+    res.status(201).json(mapProductAssets(req, created));
+  } catch (error: any) {
+    console.error("[admin] Falha ao criar produto", error);
+    const message = error?.message || "Não foi possível criar o produto.";
+    res.status(400).json({ error: "validation_failed", message });
+  }
+});
+
+router.put("/admin/store/products/:id", async (req, res) => {
+  try {
+    const payload = normalizeProductPayload(req.body ?? {}, req.params.id);
+    const updated = await upsertProduct(payload);
+    if (!updated) {
+      return res.status(404).json({ error: "not_found", message: "Produto não encontrado." });
+    }
+    res.json(mapProductAssets(req, updated));
+  } catch (error: any) {
+    console.error("[admin] Falha ao atualizar produto", error);
+    const status = error?.message?.includes("não encontrado") ? 404 : 400;
+    const message = error?.message || "Não foi possível atualizar o produto.";
+    res.status(status).json({ error: status === 404 ? "not_found" : "validation_failed", message });
+  }
+});
+
+router.delete("/admin/store/products/:id", async (req, res) => {
+  try {
+    await deleteProduct(req.params.id);
+    res.json({ success: true });
+  } catch (error: any) {
+    console.error("[admin] Falha ao remover produto", error);
+    res.status(500).json({ error: "server_error", message: error?.message || "Não foi possível remover o produto." });
+  }
+});
+
+router.get("/admin/store/banners", async (req, res) => {
+  try {
+    const kind = typeof req.query.kind === "string" && req.query.kind.trim() ? req.query.kind.trim().toUpperCase() : undefined;
+    const active = parseBooleanParam(req.query.active);
+    const banners = await listBanners({ kind, activeOnly: active });
+    res.json(banners);
+  } catch (error: any) {
+    console.error("[admin] Falha ao listar banners", error);
+    res.status(500).json({ error: "server_error", message: error?.message || "Não foi possível carregar os banners." });
+  }
+});
+
+router.post("/admin/store/banners", async (req, res) => {
+  try {
+    const payload = normalizeBannerPayload(req.body ?? {});
+    const created = await createBanner(payload);
+    res.status(201).json(created);
+  } catch (error: any) {
+    console.error("[admin] Falha ao criar banner", error);
+    res.status(400).json({ error: "validation_failed", message: error?.message || "Não foi possível criar o banner." });
+  }
+});
+
+router.put("/admin/store/banners/:id", async (req, res) => {
+  try {
+    const payload = normalizeBannerPayload(req.body ?? {});
+    const updated = await updateBanner(req.params.id, payload);
+    res.json(updated);
+  } catch (error: any) {
+    console.error("[admin] Falha ao atualizar banner", error);
+    const message = error?.message || "Não foi possível atualizar o banner.";
+    const status = message.toLowerCase().includes("não encontrado") ? 404 : 400;
+    res.status(status).json({ error: status === 404 ? "not_found" : "validation_failed", message });
+  }
+});
+
+router.delete("/admin/store/banners/:id", async (req, res) => {
+  try {
+    await deleteBanner(req.params.id);
+    res.json({ success: true });
+  } catch (error: any) {
+    console.error("[admin] Falha ao remover banner", error);
+    res.status(500).json({ error: "server_error", message: error?.message || "Não foi possível remover o banner." });
+  }
+});
+
+router.post("/admin/store/products/adjust-prices", async (req, res) => {
+  try {
+    const percentageRaw = req.body?.percentage;
+    const parsed = Number(percentageRaw);
+    if (!Number.isFinite(parsed) || parsed === 0) {
+      return res
+        .status(400)
+        .json({ error: "validation_failed", message: "Informe um percentual numérico diferente de zero." });
+    }
+    const multiplier = 1 + parsed / 100;
+    if (multiplier <= 0) {
+      return res
+        .status(400)
+        .json({ error: "validation_failed", message: "O ajuste informado deixaria os preços negativos." });
+    }
+
+    const products = await prisma.product.findMany({
+      select: { id: true, price: true, compareAtPrice: true },
+    });
+
+    let updatedCount = 0;
+    for (const product of products) {
+      const nextPrice = Math.max(Math.round(product.price * multiplier), 0);
+      const nextCompare =
+        product.compareAtPrice !== null
+          ? Math.max(Math.round(product.compareAtPrice * multiplier), nextPrice)
+          : null;
+      if (nextPrice === product.price && nextCompare === product.compareAtPrice) continue;
+      await prisma.product.update({
+        where: { id: product.id },
+        data: {
+          price: nextPrice,
+          compareAtPrice: nextCompare,
+        },
+      });
+      updatedCount++;
+    }
+
+    res.json({ success: true, updated: updatedCount });
+  } catch (error: any) {
+    console.error("[admin] Falha ao ajustar preços em massa", error);
+    res.status(500).json({ error: "server_error", message: error?.message || "Não foi possível ajustar os preços." });
+  }
+});
+
+router.get("/admin/store/categories", async (_req, res) => {
+  try {
+    const categories = await listCategories();
+    res.json(categories);
+  } catch (error: any) {
+    console.error("[admin] Falha ao listar categorias", error);
+    res.status(500).json({ error: "server_error", message: error?.message || "Não foi possível carregar as categorias." });
+  }
+});
+
+router.get("/admin/store/collections", async (_req, res) => {
+  try {
+    const collections = await listCollections();
+    res.json(collections);
+  } catch (error: any) {
+    console.error("[admin] Falha ao listar coleções", error);
+    res.status(500).json({ error: "server_error", message: error?.message || "Não foi possível carregar as coleções." });
+  }
+});
+
+// --- CHAT ASSISTENTE VIRTUAL ---
+
+type ChatMessage = { role: "user" | "assistant"; content: string };
+type SuggestedProduct = {
+  name: string;
+  price?: string | null;
+  url: string;
+  image?: string | null;
+  slug?: string | null;
+  id?: string | null;
+};
+
+type ProductMemoryEntry = {
+  id?: string | null;
+  slug?: string | null;
+  name: string;
+  description?: string | null;
+  price?: string | null;
+  rank?: number;
+};
+
+type ProductMemory = {
+  lastBatch: ProductMemoryEntry[];
+  recent: ProductMemoryEntry[];
+  awaitingLinkConfirmation?: boolean;
+};
+
+const STORE_CONTEXT_CACHE_KEY = "store_ai_context_v1";
+const DIACRITICS_REGEX = /[\u0300-\u036f]/g;
+const LINK_SIGNAL_WORDS = ["link", "manda", "envia", "me passa", "pode mandar", "pode enviar"];
+
+const GREETING_CANDIDATES = [
+  "oi",
+  "olá",
+  "ola",
+  "oii",
+  "oie",
+  "bom dia",
+  "boa tarde",
+  "boa noite",
+  "hey",
+  "e ai",
+  "e aí",
+];
+
+const ORDINAL_KEYWORDS: Record<string, number> = {
+  primeiro: 0,
+  "1": 0,
+  "1º": 0,
+  segundo: 1,
+  "2": 1,
+  "2º": 1,
+  terceiro: 2,
+  terceira: 2,
+  "3": 2,
+  "3º": 2,
+  ultimo: -1,
+  última: -1,
+  ultima: -1,
+};
+
+const SKIN_KEYWORDS: Record<string, string[]> = {
+  oleosa: ["oleosa", "oleo", "oleosidade", "brilho"],
+  seca: ["seca", "ressecada", "ressecamento"],
+  mista: ["mista", "zona t", "zona-t"],
+  sensivel: ["sensivel", "sensível", "irritada", "vermelhidão", "vermelhidao"],
+  acneica: ["acne", "espinha", "acneica", "poros"],
+};
+
+const CONCERN_KEYWORDS: Record<string, string[]> = {
+  manchas: ["mancha", "melasma", "uniformizar", "hiperpigmentacao", "hiperpigmentação"],
+  antiidade: ["ruga", "linhas", "anti-idade", "antissinais", "expressao"],
+  hidratacao: ["hidratar", "hidratação", "hidratacao", "barreira", "ressecada"],
+  firmeza: ["flacidez", "firmeza", "elasticidade"],
+  brilho: ["luminosidade", "glow", "iluminar"],
+};
+
+function normalizeText(input: string): string {
+  return input
+    .normalize("NFD")
+    .replace(DIACRITICS_REGEX, "")
+    .toLowerCase()
+    .trim();
+}
+
+function extractBaseOverride(req: Request): string | undefined {
+  const origin = req.get("origin");
+  if (origin) return origin;
+  const referer = req.get("referer");
+  if (!referer) return undefined;
+  try {
+    const url = new URL(referer);
+    return url.origin;
+  } catch {
+    return undefined;
+  }
+}
+
+function isSimpleGreeting(message: string): boolean {
+  const normalized = normalizeText(message);
+  if (!normalized) return false;
+  if (normalized.length > 40) return false;
+  const stripped = normalized.replace(/[!?.]+$/, "");
+  if (GREETING_CANDIDATES.includes(stripped)) return true;
+  if (stripped.startsWith("bom dia") || stripped.startsWith("boa tarde") || stripped.startsWith("boa noite")) {
+    return stripped.split(/\s+/).length <= 4;
+  }
+  if (stripped.startsWith("oi") && stripped.split(/\s+/).length <= 3) {
+    return true;
+  }
+  return false;
+}
+
+function detectsLinkRequest(message: string): boolean {
+  const normalized = normalizeText(message);
+  if (!normalized.includes("link")) return false;
+  return LINK_SIGNAL_WORDS.some((word) => normalized.includes(word));
+}
+
+function resolveOrdinalFromText(message: string): number | null {
+  const normalized = normalizeText(message);
+  for (const [key, value] of Object.entries(ORDINAL_KEYWORDS)) {
+    if (normalized.includes(key)) return value;
+  }
+  return null;
+}
+
+async function loadStoreContext() {
+  try {
+    const cached = await getCachedValue<Awaited<ReturnType<typeof buildStoreContext>>>(STORE_CONTEXT_CACHE_KEY);
+    if (cached) return cached;
+  } catch (error) {
+    console.warn("[chat] falha ao ler cache de contexto", error);
+  }
+
+  const context = await buildStoreContext();
+  try {
+    await setCachedValue(STORE_CONTEXT_CACHE_KEY, context, 60 * 5);
+  } catch (error) {
+    console.warn("[chat] falha ao salvar cache de contexto", error);
+  }
+  return context;
+}
+
+async function logChatMessage(
+  sessionId: string,
+  role: "USER" | "ASSISTANT",
+  content: string,
+  origin?: string | null,
+  metadata?: Prisma.InputJsonValue
+) {
+  try {
+    await prisma.chatMessageLog.create({
+      data: {
+        sessionId,
+        role,
+        content,
+        origin: origin ?? null,
+        metadata: metadata ? metadata : undefined,
+      },
+    });
+  } catch (error) {
+    console.warn("[chat] falha ao salvar log", error);
+  }
+}
+
+async function recommendProducts(message: string, baseOverride?: string | null): Promise<SuggestedProduct[]> {
+  const normalized = normalizeText(message);
+  const where: Prisma.ProductWhereInput = { active: true };
+  const or: Prisma.ProductWhereInput[] = [];
+
+  Object.values(SKIN_KEYWORDS).forEach((variants) => {
+    if (variants.some((token) => normalized.includes(token))) {
+      variants.forEach((token) => {
+        or.push({ description: { contains: token, mode: "insensitive" } });
+        or.push({ name: { contains: token, mode: "insensitive" } });
+      });
+    }
+  });
+
+  Object.values(CONCERN_KEYWORDS).forEach((variants) => {
+    if (variants.some((token) => normalized.includes(token))) {
+      variants.forEach((token) => {
+        or.push({ description: { contains: token, mode: "insensitive" } });
+        or.push({ name: { contains: token, mode: "insensitive" } });
+      });
+    }
+  });
+
+  const genericTokens = ["serum", "sérum", "limpador", "cleanser", "creme", "mascara", "máscara", "tonico", "tônico", "protetor", "hidratante"];
+  genericTokens.forEach((token) => {
+    if (normalized.includes(token)) {
+      or.push({ name: { contains: token, mode: "insensitive" } });
+      or.push({ description: { contains: token, mode: "insensitive" } });
+    }
+  });
+
+  if (or.length) where.OR = or;
+
+  let products = await prisma.product.findMany({
+    where,
+    include: { images: { orderBy: { position: 'asc' }, take: 1 } },
+    orderBy: [{ updatedAt: 'desc' }],
+    take: 3,
+  });
+
+  if (!products.length) {
+    products = await prisma.product.findMany({
+      where: { active: true },
+      include: { images: { orderBy: { position: 'asc' }, take: 1 } },
+      orderBy: [{ createdAt: 'desc' }],
+      take: 3,
+    });
+  }
+
+  return products.map((product) => ({
+    name: product.name,
+    price: formatCurrencyBRL(product.price),
+    url: buildProductUrl({ slug: product.slug }, { baseOverride }),
+    image: product.images[0]?.url ?? null,
+    slug: product.slug,
+    id: product.id,
+  }));
+}
+
+function updateProductMemory(session: Request["session"], key: string, suggestions: SuggestedProduct[]) {
+  if (!session.chatProductMemory) {
+    session.chatProductMemory = {};
+  }
+  const store = session.chatProductMemory as Record<string, ProductMemory>;
+  const memory: ProductMemory = store[key] ?? { lastBatch: [], recent: [] };
+
+  memory.lastBatch = suggestions.map((product, index) => ({
+    id: product.id ?? null,
+    slug: product.slug ?? null,
+    name: product.name,
+    price: product.price ?? null,
+    rank: index + 1,
+  }));
+
+  const newRecent: ProductMemoryEntry[] = [...memory.recent];
+  suggestions.forEach((product) => {
+    const existing = newRecent.find((item) => item.name === product.name);
+    if (!existing) {
+      newRecent.push({
+        name: product.name,
+        price: product.price ?? null,
+        id: product.id ?? null,
+        slug: product.slug ?? null,
+      });
+    }
+  });
+
+  memory.recent = newRecent.slice(-10);
+  memory.awaitingLinkConfirmation = true;
+  store[key] = memory;
+}
+
+function resolveProductFromMemory(message: string, session: Request["session"], key: string, baseOverride?: string | null): SuggestedProduct | null {
+  const memStore = session.chatProductMemory;
+  if (!memStore) return null;
+  const memory = memStore[key];
+  if (!memory) return null;
+
+  const normalized = normalizeText(message);
+  if (!normalized.includes("link")) return null;
+
+  let chosen: ProductMemoryEntry | undefined;
+  const ordinal = resolveOrdinalFromText(message);
+  if (typeof ordinal === "number" && memory.lastBatch.length) {
+    if (ordinal === -1) {
+      chosen = memory.lastBatch[memory.lastBatch.length - 1];
+    } else {
+      chosen = memory.lastBatch[ordinal];
+    }
+  }
+
+  if (!chosen) {
+    chosen = [...memory.lastBatch, ...memory.recent].find((item) => {
+      const nameNorm = normalizeText(item.name);
+      return nameNorm && normalized.includes(nameNorm.slice(0, Math.min(nameNorm.length, 12)));
+    });
+  }
+
+  if (!chosen && memory.awaitingLinkConfirmation && memory.lastBatch.length) {
+    chosen = memory.lastBatch[0];
+  }
+
+  if (!chosen && memory.recent.length) {
+    chosen = memory.recent[memory.recent.length - 1];
+  }
+
+  if (!chosen) return null;
+
+  memory.awaitingLinkConfirmation = false;
+  memStore[key] = memory;
+
+  return {
+    name: chosen.name,
+    price: chosen.price ?? null,
+    url: buildProductUrl({ slug: chosen.slug ?? undefined, id: chosen.id ?? undefined }, { baseOverride }),
+  };
+}
+
+function summarizeOrders(orders: Awaited<ReturnType<typeof resolveOrderContext>>): string {
+  if (!orders.orders.length) return "";
+  return orders.orders
+    .map((order) => {
+      const items = order.items.map((item) => `• ${item.qty}× ${item.name}`).join("\n");
+      const destination = order.destination ? `${order.destination}\n` : "";
+      return [
+        `Pedido #${order.code}`,
+        `Status: ${order.statusLabel}`,
+        `Atualizado: ${order.updatedAt}`,
+        `Total: ${order.total}`,
+        order.paymentInfo,
+        destination,
+        items,
+      ]
+        .filter(Boolean)
+        .join("\n");
+    })
+    .join("\n\n");
+}
+
+function resolveInfoRequest(message: string, storeContext: Awaited<ReturnType<typeof buildStoreContext>>): string | null {
+  const normalized = normalizeText(message);
+  const contact = storeContext.settings?.contact ?? {};
+  if (normalized.includes("horario") || normalized.includes("horário")) {
+    if (contact.serviceHours) {
+      return `Estamos disponíveis ${contact.serviceHours}. Me conta como posso te ajudar agora 💜`;
+    }
+  }
+  if (normalized.includes("telefone") || normalized.includes("whats")) {
+    if (contact.phone) {
+      return `Se preferir, temos WhatsApp ${contact.phone}. Posso resolver algo por aqui para você?`;
+    }
+  }
+  if (normalized.includes("email") || normalized.includes("e-mail")) {
+    if (contact.email) {
+      return `Você pode nos escrever em ${contact.email}. Enquanto isso, posso adiantar algo pra você por aqui?`;
+    }
+  }
+  if (normalized.includes("endereco") || normalized.includes("endereço")) {
+    if (contact.address) {
+      return `Nosso endereço é ${contact.address}. Conta comigo também aqui no chat para o que precisar 💜`;
+    }
+  }
+  return null;
+}
+
+async function generateLLMReply(
+  conversation: ChatMessage[],
+  storeContext: Awaited<ReturnType<typeof buildStoreContext>>
+): Promise<string | null> {
+  try {
+    const client = await getOpenAIClient();
+    const history = conversation.slice(-12).map(({ role, content }) => ({ role, content }));
+
+    const contact = storeContext.settings?.contact ?? {};
+    const storeSummary = [
+      `Nome: ${storeContext.settings?.title || "Dermosul"}`,
+      contact.email ? `E-mail: ${contact.email}` : null,
+      contact.phone ? `Telefone: ${contact.phone}` : null,
+      contact.serviceHours ? `Horário: ${contact.serviceHours}` : null,
+    ]
+      .filter(Boolean)
+      .join("\n");
+
+    const productsSummary = storeContext.products
+      .map((product) => `• ${product.name} (${product.price}) — ${product.categories.slice(0, 2).join(", ")}`)
+      .join("\n");
+
+    const systemPrompt = `Você é uma dermatologista virtual altamente qualificada e empática da Dermosul, conversando como uma médica real em consultório. Foque em entender profundamente o cliente antes de sugerir qualquer produto. Siga estas diretrizes:
+1. Fale em português brasileiro, com linguagem humana, calma e acessível; adapte o tom ao nível de conhecimento do cliente.
+2. Investigue antes de recomendar: idade, tipo de pele, condições (acne, manchas, melasma, rosácea, rugas, sensibilidade etc.), objetivos (hidratar, clarear, prevenir envelhecimento, tratar espinhas etc.), rotina atual e preferências/restrições (sem fragrância, vegano, dermatológico).
+3. Nunca inicie oferecendo produtos; só recomende quando o cliente pedir ou após confirmar que deseja sugestões.
+4. Ao indicar algo, explique por que serve, quais benefícios entrega e como usar, sempre de modo educacional e nada comercial.
+5. Foque em orientação dermatológica, esclareça dúvidas e mantenha postura médica consultiva.
+6. Use até dois emojis quando fizer sentido (💜✨🌿) e nunca mencione que é uma IA.`;
+
+    const messages: Array<{ role: "system" | "user" | "assistant"; content: string }> = [
+      { role: "system", content: systemPrompt },
+      { role: "system", content: `Dados da loja:\n${storeSummary}\n\nProdutos em destaque:\n${productsSummary}` },
+      ...history,
+    ];
+
+    const completion = await client.chat.completions.create({
+      model: "gpt-4.1-mini",
+      temperature: 0.6,
+      messages,
+    });
+
+    const choiceMessage = completion.choices?.[0]?.message as { content?: unknown } | undefined;
+    const messageContent = choiceMessage?.content;
+    if (!messageContent) return null;
+    if (typeof messageContent === "string") {
+      return messageContent.trim() || null;
+    }
+    if (Array.isArray(messageContent)) {
+      const text = (messageContent as Array<{ text?: string }>)
+        .map((chunk) => chunk.text ?? "")
+        .join("")
+        .trim();
+      return text || null;
+    }
+    return null;
+  } catch (error) {
+    console.warn("[chat] falha ao chamar OpenAI", error);
+    return null;
+  }
+}
+
+router.post("/chat", async (req: Request, res: Response) => {
+  try {
+    const { message, sessionId } = req.body || {};
+    if (!message || typeof message !== "string" || !message.trim()) {
+      return res.status(400).json({ error: "validation_failed", message: "Informe a mensagem do cliente." });
+    }
+
+    const sanitizedMessage = message.trim();
+    const baseOverride = extractBaseOverride(req);
+    const originHeader = req.get("origin") || req.get("referer") || null;
+    const effectiveSessionId = typeof sessionId === "string" && sessionId.trim() ? sessionId.trim() : req.sessionID;
+
+    if (!effectiveSessionId) {
+      return res.status(500).json({ error: "server_error", message: "Não foi possível criar a sessão do chat." });
+    }
+
+    if (!req.session.chatSessions) {
+      req.session.chatSessions = {};
+    }
+    const chatSessions = req.session.chatSessions;
+    const conversation: ChatMessage[] = chatSessions[effectiveSessionId] ? [...chatSessions[effectiveSessionId]] : [];
+
+    conversation.push({ role: "user", content: sanitizedMessage });
+    chatSessions[effectiveSessionId] = conversation.slice(-40);
+
+    await logChatMessage(effectiveSessionId, "USER", sanitizedMessage, originHeader);
+
+    const storeContext = await loadStoreContext();
+
+    if (isSimpleGreeting(sanitizedMessage)) {
+      const greeting =
+        "Olá! 💜 Que bom ter você por aqui. Como posso cuidar de você hoje? Posso consultar pedidos, recomendar produtos ou tirar dúvidas.";
+      conversation.push({ role: "assistant", content: greeting });
+      chatSessions[effectiveSessionId] = conversation.slice(-40);
+      await logChatMessage(effectiveSessionId, "ASSISTANT", greeting, originHeader);
+      return res.json({ reply: greeting });
+    }
+
+    const memoryLink = resolveProductFromMemory(sanitizedMessage, req.session, effectiveSessionId, baseOverride);
+    if (detectsLinkRequest(sanitizedMessage) && memoryLink) {
+      const reply = `Aqui está 💜 clique aqui: ${memoryLink.url}`;
+      conversation.push({ role: "assistant", content: reply });
+      chatSessions[effectiveSessionId] = conversation.slice(-40);
+      await logChatMessage(
+        effectiveSessionId,
+        "ASSISTANT",
+        reply,
+        originHeader,
+        { product: memoryLink } as Prisma.InputJsonValue
+      );
+      return res.json({ reply });
+    }
+
+    const infoReply = resolveInfoRequest(sanitizedMessage, storeContext);
+    if (infoReply) {
+      conversation.push({ role: "assistant", content: infoReply });
+      chatSessions[effectiveSessionId] = conversation.slice(-40);
+      await logChatMessage(effectiveSessionId, "ASSISTANT", infoReply, originHeader);
+      return res.json({ reply: infoReply });
+    }
+
+    const orderResolution = await resolveOrderContext(sanitizedMessage);
+    if (orderResolution.needsIdentifier) {
+      const reply =
+        "Claro 💜 me envia o número do pedido (pode ser com #) para eu conferir o status certinho pra você.";
+      conversation.push({ role: "assistant", content: reply });
+      chatSessions[effectiveSessionId] = conversation.slice(-40);
+      await logChatMessage(effectiveSessionId, "ASSISTANT", reply, originHeader);
+      return res.json({ reply });
+    }
+    if (orderResolution.orders.length) {
+      const summary = summarizeOrders(orderResolution);
+      const reply = `${orderResolution.orders.length > 1 ? "Encontrei estes pedidos" : "Encontrei seu pedido"}:\n\n${summary}\n\nPosso acompanhar mais alguma etapa para você?`;
+      conversation.push({ role: "assistant", content: reply });
+      chatSessions[effectiveSessionId] = conversation.slice(-40);
+      await logChatMessage(
+        effectiveSessionId,
+        "ASSISTANT",
+        reply,
+        originHeader,
+        { orders: orderResolution.orders } as Prisma.InputJsonValue
+      );
+      return res.json({ reply });
+    }
+    if (orderResolution.requestedCodes.length) {
+      const reply =
+        "Não encontrei esse pedido 😕 Pode conferir se o código está correto ou se foi feito com outro e-mail? Se tiver outro número, me manda que eu consulto rapidinho.";
+      conversation.push({ role: "assistant", content: reply });
+      chatSessions[effectiveSessionId] = conversation.slice(-40);
+      await logChatMessage(
+        effectiveSessionId,
+        "ASSISTANT",
+        reply,
+        originHeader,
+        { requestedCodes: orderResolution.requestedCodes } as Prisma.InputJsonValue
+      );
+      return res.json({ reply });
+    }
+
+    const suggestions: SuggestedProduct[] = [];
+
+    const llmReply = await generateLLMReply(conversation, storeContext);
+    let reply = llmReply;
+
+    if (!reply) {
+      reply =
+        "Estou aqui pra cuidar de tudo com você 💜 Posso acompanhar pedidos, sugerir produtos e explicar qualquer política. Me conta como posso ajudar.";
+    }
+
+    conversation.push({ role: "assistant", content: reply });
+    chatSessions[effectiveSessionId] = conversation.slice(-40);
+
+    await logChatMessage(
+      effectiveSessionId,
+      "ASSISTANT",
+      reply,
+      originHeader,
+      undefined
+    );
+
+    return res.json({
+      reply,
+      suggestedProducts: undefined,
+    });
+  } catch (error) {
+    console.error("[chat] erro inesperado", error);
+    return res.status(500).json({
+      error: "server_error",
+      message: "Não consegui responder agora, mas já estou ajustando aqui. Pode tentar novamente em instantes?",
+    });
+  }
+});
 
 
 // --- ROTAS PÚBLICAS (CONSUMIDAS PELA LANDING PAGE) ---
@@ -429,6 +1416,43 @@ router.post('/settings/email/test', requireAuth, async (req: Request, res: Respo
   } catch (e:any) { res.status(500).json({ message: e.message || 'Falha ao enviar e-mail de teste.' }); }
 });
 
+// --- Integração com OpenAI ---
+router.get('/admin/ai-integration', requireAuth, async (_req: Request, res: Response) => {
+  try {
+    const record = await prisma.aIIntegrationSetting.findUnique({ where: { id: 'openai' } });
+    res.json({ configured: !!record });
+  } catch (error: any) {
+    console.error('[AI Integration] Falha ao consultar status:', error);
+    res.status(500).json({ error: 'server_error', message: 'Não foi possível verificar a integração de IA.' });
+  }
+});
+
+router.post('/admin/ai-integration', requireAuth, async (req: Request, res: Response) => {
+  try {
+    const { apiKey } = req.body || {};
+    if (!apiKey || typeof apiKey !== 'string' || !apiKey.trim()) {
+      return res.status(400).json({ error: 'validation_failed', message: 'Informe uma chave OpenAI válida.' });
+    }
+
+    const trimmed = apiKey.trim();
+    const encryptedApiKey = encrypt(trimmed);
+
+    await prisma.aIIntegrationSetting.upsert({
+      where: { id: 'openai' },
+      update: { encryptedApiKey, provider: 'openai' },
+      create: { id: 'openai', provider: 'openai', encryptedApiKey },
+    });
+
+    res.json({ success: true });
+  } catch (error: any) {
+    console.error('[AI Integration] Falha ao salvar chave:', error);
+    res.status(500).json({
+      error: 'server_error',
+      message: error?.message || 'Não foi possível salvar a chave. Tente novamente.',
+    });
+  }
+});
+
 router.put('/settings/profile', requireAuth, async (req: Request, res: Response) => {
   try {
     const { name, email, username, password } = req.body || {};
@@ -461,11 +1485,39 @@ router.get('/settings/operators', requireAuth, async (_req: Request, res: Respon
 router.post('/settings/operators', requireAuth, async (req: Request, res: Response) => {
   try {
     const { name, email, username, password, canGenerateLandings, canViewOrders, canManageAll } = req.body || {};
-    if (!name || !email || !username || !password) return res.status(400).json({ message: 'Preencha nome, email, usuário e senha' });
-    const passwordHash = await bcrypt.hash(String(password), 10);
-    const created = await prisma.operator.create({ data: { name, email, username, passwordHash, canGenerateLandings: !!canGenerateLandings, canViewOrders: !!canViewOrders, canManageAll: !!canManageAll } });
+    const trimmedName = typeof name === 'string' ? name.trim() : '';
+    const trimmedEmail = typeof email === 'string' ? email.trim() : '';
+    const trimmedUsername = typeof username === 'string' ? username.trim() : '';
+    const rawPassword = typeof password === 'string' ? password : String(password ?? '');
+
+    if (!trimmedName || !trimmedEmail || !trimmedUsername || !rawPassword) {
+      return res.status(400).json({ message: 'Preencha nome, email, usuário e senha' });
+    }
+
+    const existing = await prisma.operator.findUnique({ where: { username: trimmedUsername } });
+    if (existing) {
+      return res.status(409).json({ message: 'Já existe um operador com esse usuário.' });
+    }
+
+    const passwordHash = await bcrypt.hash(rawPassword, 10);
+    const created = await prisma.operator.create({
+      data: {
+        name: trimmedName,
+        email: trimmedEmail,
+        username: trimmedUsername,
+        passwordHash,
+        canGenerateLandings: !!canGenerateLandings,
+        canViewOrders: !!canViewOrders,
+        canManageAll: !!canManageAll,
+      },
+    });
     res.json({ id: created.id });
-  } catch (e:any) { res.status(500).json({ message: e.message || 'Erro' }); }
+  } catch (e:any) {
+    if (e?.code === 'P2002') {
+      return res.status(409).json({ message: 'Já existe um operador com esse usuário.' });
+    }
+    res.status(500).json({ message: e?.message || 'Erro' });
+  }
 });
 
 router.delete('/settings/operators/:id', requireAuth, async (req: Request, res: Response) => {

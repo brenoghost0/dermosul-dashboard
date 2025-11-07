@@ -113,7 +113,7 @@ export default function OrderDrawer({
               Copiar ID
             </button>
             <button
-              className="px-3 py-2 bg-emerald-700 text-white rounded"
+              className="px-3 py-2 bg-violet-700 text-white rounded"
               onClick={() => window.print()}
             >
               Imprimir
@@ -266,7 +266,7 @@ export default function OrderDrawer({
                   <ol className="relative border-l pl-5">
                     {(data?.timeline ?? []).map((t, i) => (
                       <li key={i} className="mb-3">
-                        <div className="absolute -left-1.5 w-3 h-3 bg-emerald-600 rounded-full mt-1.5" />
+                        <div className="absolute -left-1.5 w-3 h-3 bg-violet-600 rounded-full mt-1.5" />
                         <div className="font-medium">{t.label}</div>
                         <div className="text-xs text-gray-600">{pt(t.date)}</div>
                       </li>

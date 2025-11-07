@@ -34,6 +34,9 @@ var __importStar = (this && this.__importStar) || (function () {
         return result;
     };
 })();
+var __exportStar = (this && this.__exportStar) || function(m, exports) {
+    for (var p in m) if (p !== "default" && !Object.prototype.hasOwnProperty.call(exports, p)) __createBinding(exports, m, p);
+};
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.lastNDays = exports.toISO = exports.getOrderByExternalReference = exports.updateOrderStatusByExternalReference = exports.updateLandingPageStatus = exports.createPublicOrder = exports.getLandingBySlug = exports.deleteLandingPage = exports.updateLandingPage = exports.createLandingPage = exports.listLandingPages = exports.paymentsBreakdown = exports.statsLast14Days = exports.deleteOrder = exports.updateOrder = exports.createOrder = exports.getOrderById = exports.listOrders = void 0;
 const sqlAdapter = __importStar(require("./sql-adapter.js"));
@@ -48,3 +51,5 @@ if (DATA_SOURCE !== 'sql') {
 console.log("Using SQL adapter");
 // Exporta todas as funções do sql-adapter diretamente.
 exports.listOrders = sqlAdapter.listOrders, exports.getOrderById = sqlAdapter.getOrderById, exports.createOrder = sqlAdapter.createOrder, exports.updateOrder = sqlAdapter.updateOrder, exports.deleteOrder = sqlAdapter.deleteOrder, exports.statsLast14Days = sqlAdapter.statsLast14Days, exports.paymentsBreakdown = sqlAdapter.paymentsBreakdown, exports.listLandingPages = sqlAdapter.listLandingPages, exports.createLandingPage = sqlAdapter.createLandingPage, exports.updateLandingPage = sqlAdapter.updateLandingPage, exports.deleteLandingPage = sqlAdapter.deleteLandingPage, exports.getLandingBySlug = sqlAdapter.getLandingBySlug, exports.createPublicOrder = sqlAdapter.createPublicOrder, exports.updateLandingPageStatus = sqlAdapter.updateLandingPageStatus, exports.updateOrderStatusByExternalReference = sqlAdapter.updateOrderStatusByExternalReference, exports.getOrderByExternalReference = sqlAdapter.getOrderByExternalReference;
+__exportStar(require("./store-adapter.js"), exports);
+__exportStar(require("./scrape"), exports);

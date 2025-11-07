@@ -1,0 +1,253 @@
+ cuidado Dermosul do seu jeitinho."
+              >
+                <div className="grid gap-4 md:grid-cols-2">
+                  <TextInput
+                    label="Nome"
+                    value={customer.firstName}
+                    onChange={(value) => setCustomer((prev) => ({ ...prev, firstName: value }))}
+                    required
+                    error={formErrors.firstName}
+                  />
+                  <TextInput
+                    label="Sobrenome"
+                    value={customer.lastName}
+                    onChange={(value) => setCustomer((prev) => ({ ...prev, lastName: value }))}
+                    required
+                    error={formErrors.lastName}
+                  />
+                  <TextInput
+                    label="E-mail"
+                    type="email"
+                    placeholder="seuemail@dominio.com"
+                    value={customer.email}
+                    onChange={(value) => setCustomer((prev) => ({ ...prev, email: value }))}
+                    required
+                    autoComplete="email"
+                    error={formErrors.email}
+                  />
+                  <TextInput
+                    label="Telefone"
+                    value={maskedCustomer.phone}
+                    onChange={(value) => setCustomer((prev) => ({ ...prev, phone: value }))}
+                    required
+                    placeholder="(99) 99999-9999"
+                    autoComplete="tel"
+                    error={formErrors.phone}
+                  />
+                  <TextInput
+                    label="CPF"
+                    value={maskedCustomer.document}
+                    onChange={(value) => setCustomer((prev) => ({ ...prev, document: value }))}
+                    required
+                    placeholder="000.000.000-00"
+                    autoComplete="off"
+                    error={formErrors.document}
+                  />
+                  <TextInput
+                    label="Data de nascimento"
+                    value={maskedCustomer.birthDate}
+                    onChange={(value) => setCustomer((prev) => ({ ...prev, birthDate: value }))}
+                    required
+                    placeholder="DD/MM/AAAA"
+                    autoComplete="bday"
+                    error={formErrors.birthDate}
+                  />
+                </div>
+              </CheckoutStepCard>
+
+              <CheckoutStepCard
+                step={2}
+                title="Endereço de entrega"
+                description="Conta pra gente onde o seu cuidado Dermosul deve chegar."
+              >
+                <div className="grid gap-4 md:grid-cols-2">
+                  <TextInput
+                    label="CEP"
+                    value={maskedAddress.postalCode}
+                    onChange={(value) => setShippingAddress((prev) => ({ ...prev, postalCode: value }))}
+                    required
+                    placeholder="00000-000"
+                    autoComplete="postal-code"
+                    error={formErrors.postalCode}
+                    helperText={cepHelperText}
+                    loading={cepLookupStatus === "loading"}
+                  />
+                  <TextInput
+                    label="Rua"
+                    value={shippingAddress.street}
+                    onChange={(value) => setShippingAddress((prev) => ({ ...prev, street: value }))}
+                    required
+                    autoComplete="address-line1"
+                    error={formErrors.street}
+                  />
+                  <TextInput
+                    label="Número"
+                    value={shippingAddress.number}
+                    onChange={(value) => setShippingAddress((prev) => ({ ...prev, number: value }))}
+                    required
+                    autoComplete="address-line2"
+                    error={formErrors.number}
+                  />
+                  <TextInput
+                    label="Complemento"
+                    value={shippingAddress.complement}
+                    onChange={(value) => setShippingAddress((prev) => ({ ...prev, complement: value }))}
+                    placeholder="Apartamento, bloco, referência"
+                    autoComplete="address-line3"
+                  />
+                  <TextInput
+                    label="Bairro"
+                    value={shippingAddress.district}
+                    onChange={(value) => setShippingAddress((prev) => ({ ...prev, district: value }))}
+                    required
+                    autoComplete="address-level2"
+                    error={formErrors.district}
+                  />
+                  <TextInput
+                    label="Cidade"
+                    value={shippingAddress.city}
+                    onChange={(value) => setShippingAddress((prev) => ({ ...prev, city: value }))}
+                    required
+                    autoComplete="address-level2"
+                    error={formErrors.city}
+                  />
+                  <TextInput
+                    label="Estado"
+                    value={shippingAddress.state}
+                    onChange={(value) => setShippingAddress((prev) => ({ ...prev, state: value }))}
+                    required
+                    placeholder="UF"
+                    error={formErrors.state}
+                  />
+                </div>
+                <div className="mt-6 space-y-3 text-sm text-violet-800">
+                  <p className="font-medium">Método de entrega</p>
+                  {shippingMethods.length === 0 && (
+                    <p className="text-xs text-zinc-500">Informe um CEP válido para calcular as opções disponíveis.</p>
+                  )}
+                  {shippingMethods.map((method) => (
+                    <label
+                      key={method.id}
+                      className={`flex items-center gap-3 rounded-2xl border px-4 py-3 transition ${
+                        selectedShipping === method.id
+                          ? "border-violet-500 bg-violet-50"
+                          : "border-violet-100 bg-white hover:border-violet-300"
+                      }`}
+                    >
+                      <input
+                        type="radio"
+                        checked={selectedShipping === method.id}
+                        onChange={() => {
+                          setSelectedShipping(method.id);
+                          selectShippingMethod(method.id).catch((err) => {
+                            setError(err?.message || "Falha ao atualizar o frete.");
+                          });
+                        }}
+                        className="h-4 w-4 text-violet-600"
+                      />
+                      <div className="flex-1">
+                        <p className="text-sm font-semibold text-violet-900">{method.name}</p>
+                        <p className="text-xs text-violet-600">{method.deliveryEtaText || "Entrega padrão"}</p>
+                      </div>
+                      <span className="text-sm font-semibold text-violet-900">{formatCurrency(method.flatPriceCents)}</span>
+                    </label>
+                  ))}
+                </div>
+              </CheckoutStepCard>
+
+              <CheckoutStepCard
+                step={3}
+                title="Pagamento"
+                description="Pix confirma rapidinho e garante prioridade no preparo do seu pedido."
+              >
+                <div className="space-y-4">
+                  <PaymentMethodCard
+                    active={paymentMethod === "pix"}
+                    onSelect={() => setPaymentMethod("pix")}
+                    title="Pix Dermosul"
+                    description="Pagamento rápido, com confirmação na hora e preparação imediata."
+                    badge="Recomendado"
+                  >
+                    <ol className="mt-3 list-decimal space-y-1 pl-4 text-xs text-violet-700">
+                      <li>Finalize a compra para gerar o QR Code Pix.</li>
+                      <li>Pague pelo app do seu banco ou carteira digital.</li>
+                      <li>Receba a confirmação e o passo a passo Dermosul por e-mail.</li>
+                    </ol>
+                    <p className="mt-4 rounded-2xl bg-violet-50 px-4 py-3 text-sm font-medium text-violet-900">
+                      Total via Pix: {formatCurrency(total)}
+                    </p>
+                  </PaymentMethodCard>
+                  <PaymentMethodCard
+                    title="Cartão de crédito"
+                    description="Pague com segurança via Asaas e garanta a separação imediata dos produtos."
+                    active={paymentMethod === "cartao"}
+                    onSelect={() => setPaymentMethod("cartao")}
+                  >
+                    {paymentMethod === "cartao" && (
+                      <div className="space-y-3">
+                        <TextInput
+                          label="Nome impresso no cartão"
+                          value={cardData.holderName}
+                          onChange={(value) => setCardData((prev) => ({ ...prev, holderName: value }))}
+                          required
+                          autoComplete="cc-name"
+                          error={formErrors.cardHolderName}
+                        />
+                        <TextInput
+                          label="Número do cartão"
+                          value={cardData.number}
+                          onChange={(value) => setCardData((prev) => ({ ...prev, number: formatCardNumber(value) }))}
+                          required
+                          autoComplete="cc-number"
+                          placeholder="0000 0000 0000 0000"
+                          error={formErrors.cardNumber}
+                        />
+                        <div className="grid gap-3 md:grid-cols-3">
+                          <TextInput
+                            label="Validade (MM/AA)"
+                            value={cardData.expiry}
+                            onChange={(value) => setCardData((prev) => ({ ...prev, expiry: formatCardExpiry(value) }))}
+                            required
+                            autoComplete="cc-exp"
+                            placeholder="MM/AA"
+                            error={formErrors.cardExpiry}
+                          />
+                          <TextInput
+                            label="CVV"
+                            value={cardData.cvv}
+                            onChange={(value) => setCardData((prev) => ({ ...prev, cvv: formatCardCvv(value) }))}
+                            required
+                            autoComplete="cc-csc"
+                            placeholder="123"
+                            error={formErrors.cardCvv}
+                          />
+                          <label className="flex flex-col gap-2 text-sm">
+                            <span className="font-medium text-zinc-600">Parcelas</span>
+                            <select
+                              value={cardData.installments}
+                              onChange={(event) => setCardData((prev) => ({ ...prev, installments: event.target.value }))}
+                              className="rounded border border-zinc-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-violet-200"
+                            >
+                              {Array.from({ length: 12 }).map((_, index) => {
+                                const count = index + 1;
+                                return (
+                                  <option key={count} value={String(count)}>
+                                    {count}x
+                                  </option>
+                                );
+                              })}
+                            </select>
+                          </label>
+                        </div>
+                      </div>
+                    )}
+                  </PaymentMethodCard>
+                  <PaymentMethodCard
+                    title="Boleto bancário"
+                    description="Se preferir boleto, fale com a equipe Dermosul pelo WhatsApp."
+                    disabled
+                  />
+                </div>
+              </CheckoutStepCard>
+
+    

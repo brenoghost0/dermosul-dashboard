@@ -66,7 +66,7 @@ const PixPaymentModal: React.FC<PixPaymentModalProps> = ({
               value={pixCopyPaste} 
               className="w-full bg-transparent text-xs text-gray-700"
             />
-            <button onClick={handleCopy} className="ml-2 text-sm text-emerald-600 hover:text-emerald-800 font-semibold">
+            <button onClick={handleCopy} className="ml-2 text-sm text-violet-600 hover:text-violet-800 font-semibold">
               Copiar
             </button>
           </div>
@@ -103,7 +103,7 @@ const PixPaymentModal: React.FC<PixPaymentModalProps> = ({
               setIsChecking(false);
             }
           }}
-          className="w-full mt-2 py-2 text-sm text-emerald-700 hover:text-emerald-800 font-medium"
+          className="w-full mt-2 py-2 text-sm text-violet-700 hover:text-violet-800 font-medium"
         >
           Já paguei, verificar agora
         </button>
