@@ -1365,7 +1365,7 @@ function PaymentMethodCard({
   const border = active ? "border-violet-500 bg-violet-50" : "border-violet-100 bg-white";
   const opacity = disabled ? "opacity-60" : "";
   return (
-    <article className={`rounded-2xl border px-4 py-4 shadow-sm transition ${border} ${opacity}`}>
+    <article className={`rounded-2xl border px-4 py-4 shadow-sm transition ${border} ${opacity} overflow-hidden`}>
       <header className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
         <div className="flex items-start gap-3">
           <input
@@ -1381,7 +1381,11 @@ function PaymentMethodCard({
             <p className="mt-1 text-xs text-violet-600">{description}</p>
           </div>
         </div>
-        {badge && <span className="inline-flex w-max rounded-full bg-violet-600 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-white">{badge}</span>}
+        {badge && (
+          <span className="inline-flex w-full justify-center rounded-full bg-violet-600 px-3 py-1 text-xs font-semibold uppercase tracking-[0.2em] text-white sm:w-auto">
+            {badge}
+          </span>
+        )}
       </header>
       {children && <div className="mt-4">{children}</div>}
     </article>

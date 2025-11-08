@@ -268,7 +268,7 @@ function AboutDermosulPage() {
         </div>
       </section>
 
-      <section className="mx-auto max-w-6xl space-y-8 rounded-[32px] bg-gradient-to-br from-violet-700 via-violet-600 to-fuchsia-500 p-6 text-white shadow-[0_28px_80px_-60px_rgba(109,40,217,0.6)] sm:p-8">
+      <section className="mx-auto max-w-6xl space-y-8 overflow-hidden rounded-[32px] bg-gradient-to-br from-violet-700 via-violet-600 to-fuchsia-500 p-6 text-white shadow-[0_28px_80px_-60px_rgba(109,40,217,0.6)] sm:p-8">
         <div className="flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between">
           <div className="max-w-2xl space-y-4">
             <h2 className="text-xl font-semibold sm:text-2xl">Equipe clínica multidisciplinar</h2>
@@ -317,7 +317,7 @@ function AboutDermosulPage() {
         </ul>
       </section>
 
-      <section className="mx-auto max-w-6xl space-y-8 rounded-[32px] bg-white p-6 text-violet-900 shadow-[0_28px_90px_-60px_rgba(79,70,229,0.45)] sm:p-8">
+      <section className="mx-auto max-w-6xl space-y-8 overflow-hidden rounded-[32px] bg-white p-6 text-violet-900 shadow-[0_28px_90px_-60px_rgba(79,70,229,0.45)] sm:p-8">
         <div className="grid gap-6 lg:grid-cols-[2fr_1fr] lg:items-center">
           <div className="space-y-4">
             <h2 className="text-xl font-semibold sm:text-2xl">Estamos aqui para cuidar com você</h2>
@@ -336,7 +336,7 @@ function AboutDermosulPage() {
                     );
                   }
                 }}
-                className="inline-flex w-full items-center justify-center rounded-full bg-violet-600 px-5 py-2 text-xs font-semibold uppercase tracking-[0.2em] text-white transition hover:bg-violet-500 sm:w-auto sm:tracking-[0.3em]"
+                className="inline-flex w-full items-center justify-center rounded-full bg-violet-600 px-5 py-2 text-xs font-semibold uppercase tracking-[0.15em] text-white transition hover:bg-violet-500 sm:w-auto sm:tracking-[0.25em]"
               >
                 Iniciar consultoria online
                 <span aria-hidden="true" className="ml-2">
@@ -345,7 +345,7 @@ function AboutDermosulPage() {
               </button>
               <Link
                 to="mailto:atendimento@dermosul.com.br"
-                className="inline-flex w-full items-center justify-center rounded-full border border-violet-200 px-5 py-2 text-xs font-semibold uppercase tracking-[0.2em] text-violet-700 transition hover:border-violet-300 hover:text-violet-900 sm:w-auto sm:tracking-[0.3em] break-words"
+                className="inline-flex w-full items-center justify-center rounded-full border border-violet-200 px-5 py-2 text-xs font-semibold uppercase tracking-[0.15em] text-violet-700 transition hover:border-violet-300 hover:text-violet-900 sm:w-auto sm:tracking-[0.25em] break-words"
               >
                 atendimento@dermosul.com.br
               </Link>
