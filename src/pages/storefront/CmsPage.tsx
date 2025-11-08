@@ -319,7 +319,7 @@ function AboutDermosulPage() {
 
       <section className="mx-auto max-w-6xl space-y-8 overflow-hidden rounded-[32px] bg-white p-6 text-violet-900 shadow-[0_28px_90px_-60px_rgba(79,70,229,0.45)] sm:p-8">
         <div className="grid gap-6 lg:grid-cols-[2fr_1fr] lg:items-center">
-          <div className="space-y-4">
+          <div className="space-y-4 overflow-hidden">
             <h2 className="text-xl font-semibold sm:text-2xl">Estamos aqui para cuidar com você</h2>
             <p className="text-sm text-violet-600">
               Fale com nossa equipe clínica, experimente uma rotina guiada ou descubra o próximo cuidado Dermosul. Estamos prontos para acompanhar cada etapa da sua jornada.

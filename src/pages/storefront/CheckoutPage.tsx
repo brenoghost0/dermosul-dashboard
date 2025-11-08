@@ -1327,12 +1327,12 @@ const CheckoutStepCard = forwardRef<HTMLElement, {
   footer?: ReactNode;
 }>(({ step, title, description, children, footer }, ref) => {
   return (
-    <section ref={ref} className="rounded-3xl border border-violet-100 bg-white p-4 shadow-sm sm:p-6">
-      <header className="flex flex-col items-start gap-3 sm:flex-row sm:gap-4">
+    <section ref={ref} className="rounded-3xl border border-violet-100 bg-white p-4 shadow-sm sm:p-6 overflow-hidden">
+      <header className="flex flex-col items-start gap-3 sm:flex-row sm:gap-4 w-full">
         <span className="mt-1 inline-flex h-9 w-9 items-center justify-center rounded-full bg-violet-100 text-sm font-semibold text-violet-700">
           {step}
         </span>
-        <div>
+        <div className="w-full">
           <h2 className="text-lg font-semibold text-violet-900">{title}</h2>
           {description && <p className="mt-1 text-sm text-violet-600">{description}</p>}
         </div>
@@ -1367,7 +1367,7 @@ function PaymentMethodCard({
   return (
     <article className={`rounded-2xl border px-4 py-4 shadow-sm transition ${border} ${opacity} overflow-hidden`}>
       <header className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-        <div className="flex items-start gap-3">
+        <div className="flex w-full items-start gap-3">
           <input
             type="radio"
             name="payment-method"
@@ -1382,7 +1382,7 @@ function PaymentMethodCard({
           </div>
         </div>
         {badge && (
-          <span className="inline-flex w-full justify-center rounded-full bg-violet-600 px-3 py-1 text-xs font-semibold uppercase tracking-[0.2em] text-white sm:w-auto">
+          <span className="inline-flex w-full justify-center rounded-full bg-violet-600 px-3 py-1 text-xs font-semibold uppercase tracking-[0.1em] text-white sm:w-auto sm:tracking-[0.3em]">
             {badge}
           </span>
         )}
