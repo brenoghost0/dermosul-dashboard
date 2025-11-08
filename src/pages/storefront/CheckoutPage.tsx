@@ -45,6 +45,29 @@ type SelectInputProps = {
   error?: string;
 };
 
+const PAYMENT_HIGHLIGHTS = [
+  {
+    title: "Confirmação imediata",
+    description: "Pix libera o pedido em segundos; cartão passa pelo antifraude Asaas e confirma na mesma tela.",
+  },
+  {
+    title: "Suporte humano",
+    description: "Especialistas Dermosul acompanham seu pagamento e respondem no WhatsApp em tempo real.",
+  },
+  {
+    title: "Flexibilidade total",
+    description: "Pix com desconto automático ou cartão em até 5x sem juros — você escolhe no próprio celular.",
+  },
+];
+
+const PIX_BADGES = ["Desconto imediato", "QR Code válido 15 min", "Comprovante automático"];
+
+const PIX_STEPS = [
+  "Finalize e gere o QR Code.",
+  "Pague pelo app do seu banco ou carteira digital.",
+  "Receba confirmação + passo a passo Dermosul.",
+];
+
 export default function CheckoutPage() {
   const { settings } = useStorefrontContext();
   const {
@@ -813,7 +836,7 @@ useEffect(() => {
             className="mt-8 grid gap-8 lg:grid-cols-[minmax(0,1fr)_minmax(320px,420px)]"
             onSubmit={handleFormSubmit}
           >
-            <div className="space-y-8">
+            <div className="space-y-8 min-w-0">
               {currentStep === 1 && (
                 <CheckoutStepCard
                   ref={registerStepRef(1)}
@@ -1053,8 +1076,8 @@ useEffect(() => {
                 <CheckoutStepCard
                   ref={registerStepRef(3)}
                   step={3}
-                  title="Pagamento"
-                  description="Pix confirma rapidinho e garante prioridade no preparo do seu pedido."
+                  title="Pagamento seguro e imediato"
+                  description="Escolha a forma preferida e confirme o pedido com acompanhamento em tempo real."
                   footer={
                     <>
                       <button
@@ -1067,118 +1090,171 @@ useEffect(() => {
                       <button
                         type="submit"
                         disabled={submitting || !selectedShipping}
-                        className="inline-flex items-center justify-center rounded-full bg-violet-600 px-4 py-3 text-sm font-semibold text-white transition hover:bg-violet-700 focus:outline-none focus:ring-2 focus:ring-violet-200 disabled:cursor-not-allowed disabled:opacity-60"
+                        className="inline-flex flex-1 items-center justify-center rounded-full bg-emerald-500 px-5 py-3 text-sm font-semibold text-white transition hover:bg-emerald-600 focus:outline-none focus:ring-2 focus:ring-emerald-200 disabled:cursor-not-allowed disabled:opacity-60 sm:flex-none"
                       >
-                        {submitting
-                          ? "Finalizando..."
-                          : paymentMethod === "pix"
-                          ? "Finalizar compra com Pix"
-                          : "Finalizar compra com cartão"}
+                        {submitting ? "Processando..." : "Confirmar pedido com segurança"}
                       </button>
                       <span className="w-full text-center text-xs text-violet-500">
-                        Pagamento 100% seguro e processado instantaneamente ⚡
+                        Pix e cartão processados com antifraude, confirmação instantânea e comprovante automático.
                       </span>
                     </>
                   }
                 >
-                <div className="rounded-2xl bg-violet-50/60 p-4 text-sm text-violet-700">
-                  <p>Estamos quase lá! Escolha a forma de pagamento e finalize em segundos.</p>
-                  <p className="mt-2 text-xs text-violet-500">Assim que confirmar, você recebe um e-mail com o passo a passo da marca escolhida e o suporte Dermosul.</p>
-                </div>
-                <div className="space-y-4">
+                <div className="checkout-payment-section space-y-5 lg:space-y-6">
+                  <section className="w-full rounded-3xl border border-violet-100 bg-gradient-to-br from-white via-violet-50 to-violet-100 p-4 text-sm text-violet-700 shadow-sm sm:p-6">
+                    <div className="flex flex-col gap-3">
+                      <div>
+                        <p className="text-xs font-semibold uppercase tracking-[0.2em] text-violet-500">Pagamento protegido</p>
+                        <p className="mt-1 text-xl font-semibold text-violet-900">Mobile-first, com acompanhamento Dermosul</p>
+                        <p className="mt-2 text-sm text-violet-600">
+                          Garantimos a reserva do estoque e notificamos cada atualização do pedido no seu WhatsApp e e-mail.
+                        </p>
+                      </div>
+                      <div className="flex w-full flex-wrap gap-2 text-xs font-medium text-violet-600">
+                        <span className="rounded-full bg-white/90 px-3 py-1">Pix aprovado em segundos</span>
+                        <span className="rounded-full bg-white/90 px-3 py-1">Cartão com antifraude Asaas</span>
+                        <span className="rounded-full bg-white/90 px-3 py-1">Atendimento humano Dermosul</span>
+                      </div>
+                    </div>
+                    <div className="mt-4 grid gap-3 sm:grid-cols-2">
+                      {PAYMENT_HIGHLIGHTS.map((highlight) => (
+                        <div
+                          key={highlight.title}
+                          className="w-full rounded-2xl border border-violet-100 bg-white/80 p-3 text-left text-sm text-violet-700"
+                        >
+                          <p className="text-sm font-semibold text-violet-900">{highlight.title}</p>
+                          <p className="mt-1 text-xs text-violet-600">{highlight.description}</p>
+                        </div>
+                      ))}
+                    </div>
+                  </section>
                   <PaymentMethodCard
                     active={paymentMethod === "pix"}
                     onSelect={() => setPaymentMethod("pix")}
                     title="Pix Dermosul Marketplace"
-                    description="Pagamento rápido, com confirmação na hora e distribuição imediata junto às grandes marcas."
+                    description="Pagamento instantâneo com QR Code válido por 15 minutos e desconto exclusivo."
                     badge="Recomendado"
                   >
-                    <ol className="mt-3 list-decimal space-y-1 pl-4 text-xs text-violet-700">
-                      <li>Finalize a compra para gerar o QR Code Pix.</li>
-                      <li>Pague pelo app do seu banco ou carteira digital.</li>
-                      <li>Receba a confirmação e o passo a passo da marca com suporte Dermosul.</li>
-                    </ol>
-                    <div className="mt-4 rounded-2xl bg-white p-4 text-sm text-violet-900 shadow-sm">
-                      <p className="font-semibold">Total via Pix</p>
-                      <p className="text-2xl font-bold">{formatCurrency(total)}</p>
-                      <p className="mt-2 text-xs text-violet-500">QR Code disponível por 15 minutos com atualização automática.</p>
+                    <div className="flex flex-col gap-4 lg:flex-row lg:items-start">
+                      <div className="flex-1 space-y-3">
+                        <p className="text-xs font-semibold uppercase tracking-[0.2em] text-violet-500">Total via Pix</p>
+                        <p className="text-3xl font-semibold text-violet-900">{formatCurrency(total)}</p>
+                        <p className="text-sm text-violet-600">
+                          Prioridade máxima na expedição, confirmação automática e comprovante enviado no mesmo instante.
+                        </p>
+                        <div className="flex flex-wrap gap-2 text-xs font-semibold text-violet-600">
+                          {PIX_BADGES.map((badge) => (
+                            <span key={badge} className="rounded-full bg-violet-100 px-3 py-1">
+                              {badge}
+                            </span>
+                          ))}
+                        </div>
+                      </div>
+                      <div className="w-full rounded-2xl border border-violet-100 bg-white p-4 text-sm text-violet-700 shadow-inner lg:max-w-sm">
+                        <p className="text-sm font-semibold text-violet-900">Veja como funciona</p>
+                        <ol className="mt-3 list-inside list-decimal space-y-2 pl-4 text-sm text-violet-700">
+                          {PIX_STEPS.map((step) => (
+                            <li key={step}>{step}</li>
+                          ))}
+                        </ol>
+                      </div>
                     </div>
                   </PaymentMethodCard>
                   <PaymentMethodCard
                     title="Cartão de crédito"
-                    description="Pague com segurança via Asaas e garanta a separação imediata dos produtos."
+                    description="Processado via Asaas com tokenização segura e parcelamento em até 5x sem juros."
                     active={paymentMethod === "cartao"}
                     onSelect={() => setPaymentMethod("cartao")}
                   >
                     {paymentMethod === "cartao" && (
-                      <div className="space-y-3">
-                        <TextInput
-                          label="Nome impresso no cartão"
-                          value={cardData.holderName}
-                          onChange={(value) => setCardData((prev) => ({ ...prev, holderName: value }))}
-                          required
-                          autoComplete="cc-name"
-                          error={formErrors.cardHolderName}
-                        />
-                        <TextInput
-                          label="Número do cartão"
-                          value={cardData.number}
-                          onChange={(value) => setCardData((prev) => ({ ...prev, number: formatCardNumber(value) }))}
-                          required
-                          autoComplete="cc-number"
-                          placeholder="0000 0000 0000 0000"
-                          error={formErrors.cardNumber}
-                        />
-                        <div className="grid gap-3 md:grid-cols-3">
-                          <TextInput
-                            label="Validade (MM/AA)"
-                            value={cardData.expiry}
-                            onChange={(value) => setCardData((prev) => ({ ...prev, expiry: formatCardExpiry(value) }))}
-                            required
-                            autoComplete="cc-exp"
-                            placeholder="MM/AA"
-                            error={formErrors.cardExpiry}
-                          />
-                          <TextInput
-                            label="CVV"
-                            value={cardData.cvv}
-                            onChange={(value) => setCardData((prev) => ({ ...prev, cvv: formatCardCvv(value) }))}
-                            required
-                            autoComplete="cc-csc"
-                            placeholder="123"
-                            error={formErrors.cardCvv}
-                          />
-                          <label className="flex flex-col gap-2 text-sm">
-                            <span className="font-medium text-zinc-600">Parcelas</span>
-                            <select
-                              value={cardData.installments}
-                              onChange={(event) => setCardData((prev) => ({ ...prev, installments: event.target.value }))}
-                              className="rounded border border-zinc-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-violet-200"
-                            >
-                              {Array.from({ length: 12 }).map((_, index) => {
-                                const count = index + 1;
-                                return (
-                                  <option key={count} value={String(count)}>
-                                    {count}x
-                                  </option>
-                                );
-                              })}
-                            </select>
-                          </label>
+                      <div className="space-y-4">
+                        <div className="rounded-2xl bg-violet-50/70 p-4 text-xs text-violet-600">
+                          <p>Cobramos via Asaas com antifraude e tokenização. Assim que a operadora aprovar, liberamos o pedido automaticamente.</p>
+                        </div>
+                        <div className="space-y-3">
+                          <div className="grid gap-3 sm:grid-cols-2">
+                            <TextInput
+                              label="Nome impresso no cartão"
+                              value={cardData.holderName}
+                              onChange={(value) => setCardData((prev) => ({ ...prev, holderName: value }))}
+                              required
+                              autoComplete="cc-name"
+                              error={formErrors.cardHolderName}
+                            />
+                            <TextInput
+                              label="Número do cartão"
+                              value={cardData.number}
+                              onChange={(value) => setCardData((prev) => ({ ...prev, number: formatCardNumber(value) }))}
+                              required
+                              autoComplete="cc-number"
+                              placeholder="0000 0000 0000 0000"
+                              error={formErrors.cardNumber}
+                            />
+                          </div>
+                          <div className="grid gap-3 sm:grid-cols-3">
+                            <TextInput
+                              label="Validade (MM/AA)"
+                              value={cardData.expiry}
+                              onChange={(value) => setCardData((prev) => ({ ...prev, expiry: formatCardExpiry(value) }))}
+                              required
+                              autoComplete="cc-exp"
+                              placeholder="MM/AA"
+                              error={formErrors.cardExpiry}
+                            />
+                            <TextInput
+                              label="CVV"
+                              value={cardData.cvv}
+                              onChange={(value) => setCardData((prev) => ({ ...prev, cvv: formatCardCvv(value) }))}
+                              required
+                              autoComplete="cc-csc"
+                              placeholder="123"
+                              error={formErrors.cardCvv}
+                            />
+                            <label className="flex flex-col gap-2 text-sm">
+                              <span className="font-medium text-zinc-600">Parcelas</span>
+                              <select
+                                value={cardData.installments}
+                                onChange={(event) => setCardData((prev) => ({ ...prev, installments: event.target.value }))}
+                                className="rounded border border-zinc-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-violet-200"
+                              >
+                                {Array.from({ length: 12 }).map((_, index) => {
+                                  const count = index + 1;
+                                  return (
+                                    <option key={count} value={String(count)}>
+                                      {count}x
+                                    </option>
+                                  );
+                                })}
+                              </select>
+                            </label>
+                          </div>
                         </div>
                         {error && (
                           <div className="rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-600">
                             {error}
                           </div>
                         )}
+                        <p className="text-xs text-violet-500">
+                          Aprovação em segundos, comprovante automático e acompanhamento via WhatsApp e e-mail.
+                        </p>
                       </div>
                     )}
                   </PaymentMethodCard>
                   <PaymentMethodCard
                     title="Boleto bancário"
-                    description="Se preferir boleto, fale com a equipe Dermosul pelo WhatsApp."
+                    description="Emitimos manualmente para compras corporativas ou pedidos com aprovação especial."
                     disabled
-                  />
+                  >
+                    <p className="text-xs text-violet-500">Nosso atendimento gera o boleto e envia o código de barras em minutos.</p>
+                    <a
+                      href={contactPhoneLink}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="mt-3 inline-flex w-full items-center justify-center rounded-full bg-white px-4 py-2 text-sm font-semibold text-violet-700 shadow-sm transition hover:bg-violet-50 focus:outline-none focus:ring-2 focus:ring-violet-200 sm:w-auto"
+                    >
+                      Solicitar pelo WhatsApp
+                    </a>
+                  </PaymentMethodCard>
                   <div className="rounded-2xl border border-violet-100 bg-white p-4 text-sm text-violet-800 shadow-sm md:hidden">
                     <p className="text-sm font-semibold text-violet-900">Resumo do pedido</p>
                     <ul className="mt-3 space-y-2 text-xs text-violet-700">
@@ -1190,6 +1266,20 @@ useEffect(() => {
                       ))}
                     </ul>
                     <p className="mt-4 text-xs text-violet-500">Total a pagar: <span className="font-semibold text-violet-900">{formatCurrency(total)}</span></p>
+                  </div>
+                  <div className="rounded-2xl border border-violet-100 bg-gradient-to-r from-violet-50 to-white p-4 text-xs text-violet-600 shadow-sm">
+                    <p className="text-sm font-semibold text-violet-900">Precisa de ajuda agora?</p>
+                    <p className="mt-1">
+                      Fale com a equipe Dermosul pelo WhatsApp {contactPhoneDisplay}. Respondemos em tempo real durante o pagamento.
+                    </p>
+                    <a
+                      href={contactPhoneLink}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="mt-3 inline-flex w-full items-center justify-center rounded-full bg-violet-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-violet-700 focus:outline-none focus:ring-2 focus:ring-violet-200 sm:w-auto"
+                    >
+                      Chamar Dermosul agora
+                    </a>
                   </div>
                 </div>
               </CheckoutStepCard>
@@ -1327,7 +1417,7 @@ const CheckoutStepCard = forwardRef<HTMLElement, {
   footer?: ReactNode;
 }>(({ step, title, description, children, footer }, ref) => {
   return (
-    <section ref={ref} className="w-full max-w-full rounded-3xl border border-violet-100 bg-white p-4 shadow-sm sm:p-6 overflow-hidden">
+    <section ref={ref} className="w-full min-w-0 max-w-full rounded-3xl border border-violet-100 bg-white p-4 shadow-sm sm:p-6 overflow-visible">
       <header className="flex w-full flex-col items-start gap-3 sm:flex-row sm:gap-4">
         <span className="mt-1 inline-flex h-9 w-9 items-center justify-center rounded-full bg-violet-100 text-sm font-semibold text-violet-700">
           {step}
@@ -1365,8 +1455,8 @@ function PaymentMethodCard({
   const border = active ? "border-violet-500 bg-violet-50" : "border-violet-100 bg-white";
   const opacity = disabled ? "opacity-60" : "";
   return (
-    <article className={`w-full max-w-full rounded-2xl border px-4 py-4 shadow-sm transition ${border} ${opacity} overflow-hidden`}>
-      <header className="flex w-full flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+    <article className={`w-full min-w-0 max-w-full rounded-2xl border px-4 py-4 shadow-sm transition ${border} ${opacity} overflow-visible flex flex-col gap-4`}>
+      <header className="flex w-full flex-col gap-3 sm:flex-row sm:items-start sm:justify-between sm:flex-wrap">
         <div className="flex w-full items-start gap-3">
           <input
             type="radio"
@@ -1376,13 +1466,13 @@ function PaymentMethodCard({
             onChange={onSelect}
             disabled={disabled}
           />
-          <div className="w-full break-words">
+          <div className="w-full min-w-0 break-words">
             <h3 className="text-sm font-semibold text-violet-900">{title}</h3>
             <p className="mt-1 text-xs text-violet-600">{description}</p>
           </div>
         </div>
         {badge && (
-          <span className="inline-flex w-full justify-center rounded-full bg-violet-600 px-3 py-1 text-xs font-semibold uppercase tracking-[0.05em] text-white sm:w-auto sm:tracking-[0.25em]">
+          <span className="inline-flex w-full max-w-full min-w-0 justify-center rounded-full bg-violet-600 px-3 py-1 text-xs font-semibold uppercase tracking-[0.02em] text-white sm:w-auto sm:px-4 sm:tracking-[0.2em]">
             {badge}
           </span>
         )}
@@ -1474,7 +1564,7 @@ function CheckoutSummary({
   }
 
   return (
-    <aside className="lg:sticky lg:top-6">
+    <aside className="min-w-0 lg:sticky lg:top-6">
       <div className="space-y-6 rounded-3xl border border-violet-100 bg-white p-6 shadow-lg">
         <header className="flex items-start justify-between gap-3">
           <div>

@@ -107,3 +107,15 @@ body {
 .p-LinkButton {
   display: none !important;
 }
+
+.checkout-payment-section {
+  width: 100%;
+  max-width: 100%;
+}
+
+.checkout-payment-section * {
+  max-width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
+  overflow-wrap: anywhere;
+}
