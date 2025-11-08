@@ -1327,12 +1327,12 @@ const CheckoutStepCard = forwardRef<HTMLElement, {
   footer?: ReactNode;
 }>(({ step, title, description, children, footer }, ref) => {
   return (
-    <section ref={ref} className="rounded-3xl border border-violet-100 bg-white p-4 shadow-sm sm:p-6 overflow-hidden">
-      <header className="flex flex-col items-start gap-3 sm:flex-row sm:gap-4 w-full">
+    <section ref={ref} className="w-full max-w-full rounded-3xl border border-violet-100 bg-white p-4 shadow-sm sm:p-6 overflow-hidden">
+      <header className="flex w-full flex-col items-start gap-3 sm:flex-row sm:gap-4">
         <span className="mt-1 inline-flex h-9 w-9 items-center justify-center rounded-full bg-violet-100 text-sm font-semibold text-violet-700">
           {step}
         </span>
-        <div className="w-full">
+        <div className="w-full break-words">
           <h2 className="text-lg font-semibold text-violet-900">{title}</h2>
           {description && <p className="mt-1 text-sm text-violet-600">{description}</p>}
         </div>
@@ -1365,8 +1365,8 @@ function PaymentMethodCard({
   const border = active ? "border-violet-500 bg-violet-50" : "border-violet-100 bg-white";
   const opacity = disabled ? "opacity-60" : "";
   return (
-    <article className={`rounded-2xl border px-4 py-4 shadow-sm transition ${border} ${opacity} overflow-hidden`}>
-      <header className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+    <article className={`w-full max-w-full rounded-2xl border px-4 py-4 shadow-sm transition ${border} ${opacity} overflow-hidden`}>
+      <header className="flex w-full flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
         <div className="flex w-full items-start gap-3">
           <input
             type="radio"
@@ -1376,13 +1376,13 @@ function PaymentMethodCard({
             onChange={onSelect}
             disabled={disabled}
           />
-          <div>
+          <div className="w-full break-words">
             <h3 className="text-sm font-semibold text-violet-900">{title}</h3>
             <p className="mt-1 text-xs text-violet-600">{description}</p>
           </div>
         </div>
         {badge && (
-          <span className="inline-flex w-full justify-center rounded-full bg-violet-600 px-3 py-1 text-xs font-semibold uppercase tracking-[0.1em] text-white sm:w-auto sm:tracking-[0.3em]">
+          <span className="inline-flex w-full justify-center rounded-full bg-violet-600 px-3 py-1 text-xs font-semibold uppercase tracking-[0.05em] text-white sm:w-auto sm:tracking-[0.25em]">
             {badge}
           </span>
         )}
