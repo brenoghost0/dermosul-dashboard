@@ -45,21 +45,6 @@ type SelectInputProps = {
   error?: string;
 };
 
-const PAYMENT_HIGHLIGHTS = [
-  {
-    title: "Confirmação imediata",
-    description: "Pix libera o pedido em segundos; cartão passa pelo antifraude Asaas e confirma na mesma tela.",
-  },
-  {
-    title: "Suporte humano",
-    description: "Especialistas Dermosul acompanham seu pagamento e respondem no WhatsApp em tempo real.",
-  },
-  {
-    title: "Flexibilidade total",
-    description: "Pix com desconto automático ou cartão em até 5x sem juros — você escolhe no próprio celular.",
-  },
-];
-
 const PIX_BADGES = ["Desconto imediato", "QR Code válido 15 min", "Comprovante automático"];
 
 const PIX_STEPS = [
@@ -1101,33 +1086,6 @@ useEffect(() => {
                   }
                 >
                 <div className="checkout-payment-section space-y-5 lg:space-y-6">
-                  <section className="w-full rounded-3xl border border-violet-100 bg-gradient-to-br from-white via-violet-50 to-violet-100 p-4 text-sm text-violet-700 shadow-sm sm:p-6">
-                    <div className="flex flex-col gap-3">
-                      <div>
-                        <p className="text-xs font-semibold uppercase tracking-[0.2em] text-violet-500">Pagamento protegido</p>
-                        <p className="mt-1 text-xl font-semibold text-violet-900">Mobile-first, com acompanhamento Dermosul</p>
-                        <p className="mt-2 text-sm text-violet-600">
-                          Garantimos a reserva do estoque e notificamos cada atualização do pedido no seu WhatsApp e e-mail.
-                        </p>
-                      </div>
-                      <div className="flex w-full flex-wrap gap-2 text-xs font-medium text-violet-600">
-                        <span className="rounded-full bg-white/90 px-3 py-1">Pix aprovado em segundos</span>
-                        <span className="rounded-full bg-white/90 px-3 py-1">Cartão com antifraude Asaas</span>
-                        <span className="rounded-full bg-white/90 px-3 py-1">Atendimento humano Dermosul</span>
-                      </div>
-                    </div>
-                    <div className="mt-4 grid gap-3 sm:grid-cols-2">
-                      {PAYMENT_HIGHLIGHTS.map((highlight) => (
-                        <div
-                          key={highlight.title}
-                          className="w-full rounded-2xl border border-violet-100 bg-white/80 p-3 text-left text-sm text-violet-700"
-                        >
-                          <p className="text-sm font-semibold text-violet-900">{highlight.title}</p>
-                          <p className="mt-1 text-xs text-violet-600">{highlight.description}</p>
-                        </div>
-                      ))}
-                    </div>
-                  </section>
                   <PaymentMethodCard
                     active={paymentMethod === "pix"}
                     onSelect={() => setPaymentMethod("pix")}
@@ -1142,7 +1100,7 @@ useEffect(() => {
                         <p className="text-sm text-violet-600">
                           Prioridade máxima na expedição, confirmação automática e comprovante enviado no mesmo instante.
                         </p>
-                        <div className="flex flex-wrap gap-2 text-xs font-semibold text-violet-600">
+                      <div className="flex flex-wrap gap-2 text-xs font-semibold text-violet-600">
                           {PIX_BADGES.map((badge) => (
                             <span key={badge} className="rounded-full bg-violet-100 px-3 py-1">
                               {badge}
@@ -1267,20 +1225,13 @@ useEffect(() => {
                     </ul>
                     <p className="mt-4 text-xs text-violet-500">Total a pagar: <span className="font-semibold text-violet-900">{formatCurrency(total)}</span></p>
                   </div>
-                  <div className="rounded-2xl border border-violet-100 bg-gradient-to-r from-violet-50 to-white p-4 text-xs text-violet-600 shadow-sm">
-                    <p className="text-sm font-semibold text-violet-900">Precisa de ajuda agora?</p>
-                    <p className="mt-1">
-                      Fale com a equipe Dermosul pelo WhatsApp {contactPhoneDisplay}. Respondemos em tempo real durante o pagamento.
-                    </p>
-                    <a
-                      href={contactPhoneLink}
-                      target="_blank"
-                      rel="noreferrer"
-                      className="mt-3 inline-flex w-full items-center justify-center rounded-full bg-violet-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-violet-700 focus:outline-none focus:ring-2 focus:ring-violet-200 sm:w-auto"
-                    >
-                      Chamar Dermosul agora
-                    </a>
-                  </div>
+                  <button
+                    type="submit"
+                    disabled={submitting || !selectedShipping}
+                    className="mt-4 inline-flex w-full items-center justify-center rounded-full bg-emerald-500 px-5 py-3 text-sm font-semibold text-white transition hover:bg-emerald-600 focus:outline-none focus:ring-2 focus:ring-emerald-200 disabled:cursor-not-allowed disabled:opacity-60"
+                  >
+                    {submitting ? "Processando..." : "Confirmar pedido com segurança"}
+                  </button>
                 </div>
               </CheckoutStepCard>
               )}
