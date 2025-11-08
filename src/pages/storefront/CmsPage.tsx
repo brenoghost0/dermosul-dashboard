@@ -64,7 +64,7 @@ export default function CmsPageView() {
   return (
     <div className="min-h-screen bg-violet-50/40">
       <StorefrontHeader />
-      <main className="mx-auto max-w-4xl px-4 py-10">
+      <main className="mx-auto max-w-4xl px-4 py-10 overflow-x-hidden">
         {isAboutPage ? (
           <AboutDermosulPage />
         ) : (
@@ -324,7 +324,7 @@ function AboutDermosulPage() {
             <p className="text-sm text-violet-600">
               Fale com nossa equipe clínica, experimente uma rotina guiada ou descubra o próximo cuidado Dermosul. Estamos prontos para acompanhar cada etapa da sua jornada.
             </p>
-            <div className="flex flex-wrap gap-3">
+            <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap">
               <button
                 type="button"
                 onClick={() => {
@@ -336,7 +336,7 @@ function AboutDermosulPage() {
                     );
                   }
                 }}
-                className="inline-flex items-center justify-center rounded-full bg-violet-600 px-5 py-2 text-xs font-semibold uppercase tracking-[0.3em] text-white transition hover:bg-violet-500"
+                className="inline-flex w-full items-center justify-center rounded-full bg-violet-600 px-5 py-2 text-xs font-semibold uppercase tracking-[0.2em] text-white transition hover:bg-violet-500 sm:w-auto sm:tracking-[0.3em]"
               >
                 Iniciar consultoria online
                 <span aria-hidden="true" className="ml-2">
@@ -345,7 +345,7 @@ function AboutDermosulPage() {
               </button>
               <Link
                 to="mailto:atendimento@dermosul.com.br"
-                className="inline-flex items-center justify-center rounded-full border border-violet-200 px-5 py-2 text-xs font-semibold uppercase tracking-[0.3em] text-violet-700 transition hover:border-violet-300 hover:text-violet-900"
+                className="inline-flex w-full items-center justify-center rounded-full border border-violet-200 px-5 py-2 text-xs font-semibold uppercase tracking-[0.2em] text-violet-700 transition hover:border-violet-300 hover:text-violet-900 sm:w-auto sm:tracking-[0.3em] break-words"
               >
                 atendimento@dermosul.com.br
               </Link>

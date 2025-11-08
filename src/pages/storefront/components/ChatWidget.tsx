@@ -272,6 +272,16 @@ export function ChatWidget() {
     }
   }
 
+  const buttonPositionStyle = {
+    right: "calc(env(safe-area-inset-right, 0px) + 1rem)",
+    bottom: "calc(env(safe-area-inset-bottom, 0px) + 1rem)",
+  };
+
+  const panelPositionStyle = {
+    right: "calc(env(safe-area-inset-right, 0px) + 1rem)",
+    bottom: "calc(env(safe-area-inset-bottom, 0px) + 5.5rem)",
+  };
+
   return (
     <>
       <button
@@ -280,7 +290,8 @@ export function ChatWidget() {
           setOpen((prev) => !prev);
           registerInteraction();
         }}
-        className="fixed bottom-4 right-4 z-40 flex h-12 w-12 items-center justify-center rounded-full bg-violet-600 text-2xl text-white shadow-lg transition hover:bg-violet-500 animate-chat-icon sm:bottom-6 sm:right-6 sm:h-14 sm:w-14"
+        className="fixed z-40 flex h-12 w-12 items-center justify-center rounded-full bg-violet-600 text-2xl text-white shadow-lg transition hover:bg-violet-500 animate-chat-icon sm:h-14 sm:w-14"
+        style={buttonPositionStyle}
         aria-label="Abrir chat Assistente Dermosul"
       >
         💬
@@ -288,8 +299,12 @@ export function ChatWidget() {
 
       {open && (
         <div
-          className="fixed bottom-20 right-4 z-50 flex w-[min(92vw,400px)] flex-col overflow-hidden rounded-3xl border border-violet-500/30 bg-slate-950/95 text-slate-100 shadow-2xl backdrop-blur sm:bottom-24 sm:right-6 sm:w-[360px]"
-          style={{ maxHeight: "calc(100vh - 7rem)", height: "min(480px, calc(100vh - 7rem))" }}
+          className="fixed z-50 flex w-[min(92vw,400px)] flex-col overflow-hidden rounded-3xl border border-violet-500/30 bg-slate-950/95 text-slate-100 shadow-2xl backdrop-blur sm:w-[360px]"
+          style={{
+            maxHeight: "calc(100vh - 7rem)",
+            height: "min(480px, calc(100vh - 7rem))",
+            ...panelPositionStyle,
+          }}
         >
           <div className="flex items-center justify-between bg-violet-700/80 px-4 py-3">
             <div>

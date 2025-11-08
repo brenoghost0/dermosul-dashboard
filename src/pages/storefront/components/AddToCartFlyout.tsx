@@ -106,7 +106,7 @@ export function AddToCartFlyout() {
           </button>
         </header>
 
-        <section className="max-h-[75vh] overflow-y-auto px-4 py-4 sm:max-h-[55vh] sm:px-6 sm:py-5">
+        <section className="max-h-[55vh] overflow-y-auto px-4 py-4 sm:max-h-[45vh] sm:px-6 sm:py-5">
           <h3 className="text-sm font-semibold uppercase tracking-[0.32em] text-violet-400">
             Aproveite e leve junto
           </h3>

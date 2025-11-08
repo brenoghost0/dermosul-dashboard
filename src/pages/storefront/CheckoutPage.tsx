@@ -801,7 +801,7 @@ useEffect(() => {
         notice={headerNotice}
         currentStep={currentStep}
       />
-      <main className="mx-auto max-w-6xl px-4 pb-16">
+      <main className="mx-auto max-w-6xl px-4 pb-16 overflow-x-hidden">
         {(cartLoading || loading) && <Alert tone="muted">Carregando o checkout Dermosul com as maiores marcas do mundo...</Alert>}
         {(cartError || error) && <Alert tone="error">{cartError || error}</Alert>}
         {cart && cart.items.length === 0 && !loading && (

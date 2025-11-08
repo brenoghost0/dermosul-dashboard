@@ -64,7 +64,7 @@ export default function CartPage() {
       {items.length > 0 && (
         <LuckyWheelExperience cartId={cart?.id ?? undefined} sessionToken={cart?.sessionToken ?? undefined} onApplyCoupon={(code) => applyCoupon(code)} />
       )}
-      <main className="mx-auto max-w-5xl px-4 py-10" data-section-id="cart-products">
+      <main className="mx-auto max-w-5xl px-4 py-10 overflow-x-hidden" data-section-id="cart-products">
         <h1 className="text-2xl font-semibold text-violet-900">Carrinho Dermosul</h1>
         {loading && <p className="mt-4 text-sm text-zinc-500">Atualizando carrinho...</p>}
         {error && <p className="mt-4 text-sm text-red-600">{error}</p>}
@@ -87,56 +87,61 @@ export default function CartPage() {
             <div className="mt-8 grid gap-6 lg:grid-cols-[2fr_1fr]">
               <div className="space-y-4">
                 {items.map((item) => (
-                  <div
+                  <article
                     key={item.id}
-                    className="flex flex-col gap-4 rounded-3xl border border-violet-100 bg-white p-4 sm:flex-row sm:items-center sm:gap-5"
+                    className="rounded-3xl border border-violet-100 bg-white p-4 shadow-sm sm:p-5"
                   >
-                    <div className="flex flex-none justify-center sm:justify-start">
-                      <img
-                        src={item.product.imageUrl || item.product.images?.[0]?.url || "/media/placeholder-product.svg"}
-                        alt={item.product.name}
-                        loading="lazy"
-                        onError={(event) => {
-                          const target = event.currentTarget;
-                          if (!target.dataset.fallbackLoaded) {
-                            target.dataset.fallbackLoaded = "true";
-                            target.src = "/media/placeholder-product.svg";
-                          }
-                        }}
-                        className="h-24 w-24 rounded-2xl border border-violet-100 object-cover"
-                      />
-                    </div>
-                    <div className="flex flex-1 flex-col gap-3">
-                      <div>
-                        <h2 className="text-base font-semibold text-violet-900">{item.product.name}</h2>
-                        <p className="text-xs text-violet-600">SKU {item.product.sku}</p>
-                      </div>
-                      <div className="flex flex-col gap-2 text-xs text-violet-700 sm:flex-row sm:items-center">
-                        <label className="flex items-center gap-2">
-                          Qtde
-                          <input
-                            type="number"
-                            min={1}
-                            value={item.quantity}
-                            onChange={(event) =>
-                              updateItem(item.productId, Number(event.target.value), item.variantId ?? null)
+                    <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:gap-5">
+                      <div className="flex justify-center sm:justify-start">
+                        <img
+                          src={item.product.imageUrl || item.product.images?.[0]?.url || "/media/placeholder-product.svg"}
+                          alt={item.product.name}
+                          loading="lazy"
+                          onError={(event) => {
+                            const target = event.currentTarget;
+                            if (!target.dataset.fallbackLoaded) {
+                              target.dataset.fallbackLoaded = "true";
+                              target.src = "/media/placeholder-product.svg";
                             }
-                            className="w-20 rounded border border-violet-200 px-2 py-1"
-                          />
-                        </label>
-                        <button
-                          type="button"
-                          onClick={() => removeItem(item.productId, item.variantId ?? null)}
-                          className="text-red-500 hover:text-red-700"
-                        >
-                          Remover
-                        </button>
+                          }}
+                          className="h-24 w-24 rounded-2xl border border-violet-100 object-cover"
+                        />
+                      </div>
+
+                      <div className="flex flex-1 flex-col gap-3">
+                        <div className="space-y-1">
+                          <h2 className="text-base font-semibold text-violet-900">{item.product.name}</h2>
+                          <p className="text-xs text-violet-600">SKU {item.product.sku}</p>
+                        </div>
+
+                        <div className="flex flex-wrap items-center justify-between gap-3 text-xs text-violet-700 sm:gap-4">
+                          <label className="flex items-center gap-2">
+                            Qtde
+                            <input
+                              type="number"
+                              min={1}
+                              value={item.quantity}
+                              onChange={(event) =>
+                                updateItem(item.productId, Number(event.target.value), item.variantId ?? null)
+                              }
+                              className="w-20 rounded border border-violet-200 px-2 py-1"
+                            />
+                          </label>
+                          <button
+                            type="button"
+                            onClick={() => removeItem(item.productId, item.variantId ?? null)}
+                            className="text-sm font-semibold text-red-500 transition hover:text-red-600"
+                          >
+                            Remover
+                          </button>
+                        </div>
+                      </div>
+
+                      <div className="text-right text-base font-semibold text-violet-900 sm:min-w-[6rem]">
+                        {formatCurrency(item.totalPriceCents)}
                       </div>
                     </div>
-                    <div className="text-right text-base font-semibold text-violet-900 sm:min-w-[6rem]">
-                      {formatCurrency(item.totalPriceCents)}
-                    </div>
-                  </div>
+                  </article>
                 ))}
               </div>
 
