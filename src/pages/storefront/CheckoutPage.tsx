@@ -1072,13 +1072,6 @@ useEffect(() => {
                       >
                         Voltar à Entrega
                       </button>
-                      <button
-                        type="submit"
-                        disabled={submitting || !selectedShipping}
-                        className="inline-flex flex-1 items-center justify-center rounded-full bg-emerald-500 px-5 py-3 text-sm font-semibold text-white transition hover:bg-emerald-600 focus:outline-none focus:ring-2 focus:ring-emerald-200 disabled:cursor-not-allowed disabled:opacity-60 sm:flex-none"
-                      >
-                        {submitting ? "Processando..." : "Confirmar pedido com segurança"}
-                      </button>
                       <span className="w-full text-center text-xs text-violet-500">
                         Pix e cartão processados com antifraude, confirmação instantânea e comprovante automático.
                       </span>
