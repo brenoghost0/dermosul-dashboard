@@ -186,8 +186,8 @@ export function LuckyWheelExperience({ cartId, sessionToken, onApplyCoupon }: Lu
   const isCompactLayout = viewport.width < 768;
   const baseWheelSize = 360;
   const minViewportAxis = Math.max(320, Math.min(viewport.width, viewport.height));
-  const targetWheelPixels = minViewportAxis * 0.35;
-  const wheelScale = isCompactLayout ? Math.min(0.82, Math.max(0.38, targetWheelPixels / baseWheelSize)) : 0.92;
+  const targetWheelPixels = minViewportAxis * 0.32;
+  const wheelScale = isCompactLayout ? Math.min(0.75, Math.max(0.34, targetWheelPixels / baseWheelSize)) : 0.85;
   const wheelContainerStyle: CSSProperties = {
     width: baseWheelSize * wheelScale,
     height: baseWheelSize * wheelScale,
@@ -353,9 +353,9 @@ export function LuckyWheelExperience({ cartId, sessionToken, onApplyCoupon }: Lu
   const cardStyle: CSSProperties = {
     fontFamily: design.fontFamily || DEFAULT_FONT_FAMILY,
     border: "none",
-    width: isCompactLayout ? "min(82vw, 560px)" : "min(78vw, 820px)",
-    padding: isCompactLayout ? "1.25rem" : "2.5rem",
-    gap: isCompactLayout ? "1.75rem" : "2rem",
+    width: isCompactLayout ? "min(78vw, 520px)" : "min(72vw, 760px)",
+    padding: isCompactLayout ? "1rem" : "2rem",
+    gap: isCompactLayout ? "1.5rem" : "1.75rem",
   };
   const highlightColor = design.highlightColor ?? "#ffe873";
   const wheelGlowColor = design.wheelGlowColor ?? "#6febff";

@@ -106,7 +106,7 @@ export function AddToCartFlyout() {
           </button>
         </header>
 
-        <section className="max-h-[55vh] overflow-y-auto px-4 py-4 sm:max-h-[45vh] sm:px-6 sm:py-5">
+        <section className="max-h-[48vh] overflow-y-auto px-3 py-3 sm:max-h-[40vh] sm:px-5 sm:py-5">
           <h3 className="text-sm font-semibold uppercase tracking-[0.32em] text-violet-400">
             Aproveite e leve junto
           </h3>
@@ -117,14 +117,14 @@ export function AddToCartFlyout() {
               Assim que tivermos sugestões perfeitas para este item, elas aparecem aqui.
             </p>
           ) : (
-            <div className="mt-4 grid gap-4 sm:grid-cols-2">
+            <div className="mt-4 grid gap-3 sm:grid-cols-2">
               {suggestions.map((suggestion) => (
                 <article
                   key={suggestion.id}
-                  className="group flex flex-col gap-3 rounded-2xl border border-violet-100/80 bg-violet-50/40 p-4 transition hover:-translate-y-0.5 hover:shadow sm:flex-row sm:items-center sm:gap-4"
+                  className="group flex flex-col gap-3 rounded-2xl border border-violet-100/80 bg-violet-50/40 p-3 transition hover:-translate-y-0.5 hover:shadow sm:flex-row sm:items-center sm:gap-4"
                 >
-                  <div className="flex items-start gap-3 sm:w-44">
-                    <div className="flex h-16 w-16 flex-shrink-0 items-center justify-center overflow-hidden rounded-2xl bg-white">
+                  <div className="flex items-start gap-3 sm:w-40">
+                    <div className="flex h-14 w-14 flex-shrink-0 items-center justify-center overflow-hidden rounded-2xl bg-white">
                       <img
                         src={
                           suggestion.imageUrl ||
@@ -132,7 +132,7 @@ export function AddToCartFlyout() {
                           "/media/placeholder-product.svg"
                         }
                         alt={suggestion.name}
-                        className="h-16 w-16 object-cover"
+                        className="h-14 w-14 object-cover"
                         loading="lazy"
                         onError={(event) => {
                           const target = event.currentTarget;
@@ -144,7 +144,7 @@ export function AddToCartFlyout() {
                       />
                     </div>
                   </div>
-                  <div className="flex-1 space-y-2">
+                  <div className="flex-1 space-y-1.5">
                     <p className="text-xs uppercase tracking-wide text-violet-500">{suggestion.brand}</p>
                     <p className="text-sm font-semibold text-violet-900 line-clamp-2">{suggestion.name}</p>
                     <p className="text-sm font-medium text-violet-700">{formatCurrency(suggestion.price)}</p>
@@ -153,7 +153,7 @@ export function AddToCartFlyout() {
                     type="button"
                     disabled={addingId === suggestion.id}
                     onClick={() => handleAddSuggestion(suggestion)}
-                    className="mt-2 inline-flex items-center justify-center rounded-full bg-violet-600 px-4 py-2 text-xs font-semibold uppercase tracking-[0.3em] text-white transition hover:bg-violet-500 disabled:cursor-not-allowed disabled:opacity-60 sm:mt-0 sm:min-w-[7.5rem]"
+                    className="mt-2 inline-flex items-center justify-center rounded-full bg-violet-600 px-3 py-1.5 text-xs font-semibold uppercase tracking-[0.25em] text-white transition hover:bg-violet-500 disabled:cursor-not-allowed disabled:opacity-60 sm:mt-0 sm:min-w-[6.5rem]"
                   >
                     {addingId === suggestion.id ? "Adicionando..." : "Adicionar"}
                   </button>
@@ -163,7 +163,7 @@ export function AddToCartFlyout() {
           )}
         </section>
 
-        <footer className="flex flex-col gap-3 border-t border-violet-100 bg-violet-50/70 px-4 py-4 sm:flex-row sm:justify-end sm:px-6">
+        <footer className="flex flex-col gap-2.5 border-t border-violet-100 bg-violet-50/70 px-3 py-3 sm:flex-row sm:justify-end sm:gap-3 sm:px-5">
           <button
             type="button"
             onClick={handleClose}

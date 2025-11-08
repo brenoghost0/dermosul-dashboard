@@ -1327,8 +1327,8 @@ const CheckoutStepCard = forwardRef<HTMLElement, {
   footer?: ReactNode;
 }>(({ step, title, description, children, footer }, ref) => {
   return (
-    <section ref={ref} className="rounded-3xl border border-violet-100 bg-white p-6 shadow-sm">
-      <header className="flex items-start gap-4">
+    <section ref={ref} className="rounded-3xl border border-violet-100 bg-white p-4 shadow-sm sm:p-6">
+      <header className="flex flex-col items-start gap-3 sm:flex-row sm:gap-4">
         <span className="mt-1 inline-flex h-9 w-9 items-center justify-center rounded-full bg-violet-100 text-sm font-semibold text-violet-700">
           {step}
         </span>
@@ -1337,8 +1337,8 @@ const CheckoutStepCard = forwardRef<HTMLElement, {
           {description && <p className="mt-1 text-sm text-violet-600">{description}</p>}
         </div>
       </header>
-      <div className="mt-6 space-y-6 text-sm text-violet-800">{children}</div>
-      {footer && <div className="mt-6 flex flex-wrap items-center gap-3 border-t border-violet-100 pt-4">{footer}</div>}
+      <div className="mt-5 space-y-5 text-sm text-violet-800">{children}</div>
+      {footer && <div className="mt-5 flex flex-wrap items-center gap-3 border-t border-violet-100 pt-4">{footer}</div>}
     </section>
   );
 });
@@ -1366,7 +1366,7 @@ function PaymentMethodCard({
   const opacity = disabled ? "opacity-60" : "";
   return (
     <article className={`rounded-2xl border px-4 py-4 shadow-sm transition ${border} ${opacity}`}>
-      <header className="flex items-start justify-between gap-3">
+      <header className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
         <div className="flex items-start gap-3">
           <input
             type="radio"
@@ -1381,7 +1381,7 @@ function PaymentMethodCard({
             <p className="mt-1 text-xs text-violet-600">{description}</p>
           </div>
         </div>
-        {badge && <span className="rounded-full bg-violet-600 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-white">{badge}</span>}
+        {badge && <span className="inline-flex w-max rounded-full bg-violet-600 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-white">{badge}</span>}
       </header>
       {children && <div className="mt-4">{children}</div>}
     </article>
