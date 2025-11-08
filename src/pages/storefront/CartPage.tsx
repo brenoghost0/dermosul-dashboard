@@ -84,30 +84,35 @@ export default function CartPage() {
               )}
             </div>
           ) : (
-            <div className="mt-8 grid gap-8 lg:grid-cols-[2fr_1fr]">
+            <div className="mt-8 grid gap-6 lg:grid-cols-[2fr_1fr]">
               <div className="space-y-4">
                 {items.map((item) => (
-                  <div key={item.id} className="flex gap-4 rounded-3xl border border-violet-100 bg-white p-4">
-                    <img
-                      src={item.product.imageUrl || item.product.images?.[0]?.url || "/media/placeholder-product.svg"}
-                      alt={item.product.name}
-                      loading="lazy"
-                      onError={(event) => {
-                        const target = event.currentTarget;
-                        if (!target.dataset.fallbackLoaded) {
-                          target.dataset.fallbackLoaded = "true";
-                          target.src = "/media/placeholder-product.svg";
-                        }
-                      }}
-                      className="h-24 w-24 rounded-2xl border border-violet-100 object-cover"
-                    />
-                    <div className="flex flex-1 flex-col gap-2">
+                  <div
+                    key={item.id}
+                    className="flex flex-col gap-4 rounded-3xl border border-violet-100 bg-white p-4 sm:flex-row sm:items-center sm:gap-5"
+                  >
+                    <div className="flex flex-none justify-center sm:justify-start">
+                      <img
+                        src={item.product.imageUrl || item.product.images?.[0]?.url || "/media/placeholder-product.svg"}
+                        alt={item.product.name}
+                        loading="lazy"
+                        onError={(event) => {
+                          const target = event.currentTarget;
+                          if (!target.dataset.fallbackLoaded) {
+                            target.dataset.fallbackLoaded = "true";
+                            target.src = "/media/placeholder-product.svg";
+                          }
+                        }}
+                        className="h-24 w-24 rounded-2xl border border-violet-100 object-cover"
+                      />
+                    </div>
+                    <div className="flex flex-1 flex-col gap-3">
                       <div>
-                        <h2 className="text-sm font-semibold text-violet-900">{item.product.name}</h2>
+                        <h2 className="text-base font-semibold text-violet-900">{item.product.name}</h2>
                         <p className="text-xs text-violet-600">SKU {item.product.sku}</p>
                       </div>
-                      <div className="flex items-center gap-3 text-xs">
-                        <label className="flex items-center gap-2 text-violet-700">
+                      <div className="flex flex-col gap-2 text-xs text-violet-700 sm:flex-row sm:items-center">
+                        <label className="flex items-center gap-2">
                           Qtde
                           <input
                             type="number"
@@ -116,7 +121,7 @@ export default function CartPage() {
                             onChange={(event) =>
                               updateItem(item.productId, Number(event.target.value), item.variantId ?? null)
                             }
-                            className="w-16 rounded border border-violet-200 px-2 py-1"
+                            className="w-20 rounded border border-violet-200 px-2 py-1"
                           />
                         </label>
                         <button
@@ -128,21 +133,23 @@ export default function CartPage() {
                         </button>
                       </div>
                     </div>
-                    <div className="text-sm font-medium text-violet-900">{formatCurrency(item.totalPriceCents)}</div>
+                    <div className="text-right text-base font-semibold text-violet-900 sm:min-w-[6rem]">
+                      {formatCurrency(item.totalPriceCents)}
+                    </div>
                   </div>
                 ))}
               </div>
 
-              <aside className="space-y-4 rounded-3xl border border-violet-100 bg-white p-6">
+              <aside className="space-y-4 rounded-3xl border border-violet-100 bg-white p-5 sm:p-6">
                 <h2 className="text-lg font-semibold text-violet-900">Resumo</h2>
                 <div className="space-y-2 text-sm text-violet-700">
                   <Row label="Subtotal" value={formatCurrency(subtotal)} />
                   {discount > 0 && <Row label="Descontos" value={`- ${formatCurrency(discount)}`} />}
                   <Row label="Frete" value={shipping !== null ? formatCurrency(shipping) : "Calculado no checkout"} />
                 </div>
-                <div className="flex items-center justify-between border-t border-violet-100 pt-3 text-sm font-semibold text-violet-900">
+                <div className="flex flex-wrap items-baseline justify-between gap-1 border-t border-violet-100 pt-3 text-sm font-semibold text-violet-900">
                   <span>Total</span>
-                  <span>{formatCurrency(total)}</span>
+                  <span className="text-base">{formatCurrency(total)}</span>
                 </div>
                 <Link
                   to="/checkout"
@@ -181,9 +188,9 @@ export default function CartPage() {
 
 function Row({ label, value }: { label: string; value: string }) {
   return (
-    <div className="flex items-center justify-between text-xs">
-      <span>{label}</span>
-      <span>{value}</span>
+    <div className="flex flex-wrap items-center justify-between gap-1 text-xs">
+      <span className="text-violet-600">{label}</span>
+      <span className="font-medium text-violet-900">{value}</span>
     </div>
   );
 }

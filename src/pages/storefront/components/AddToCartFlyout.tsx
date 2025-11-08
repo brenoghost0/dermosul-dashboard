@@ -74,14 +74,14 @@ export function AddToCartFlyout() {
   const { product } = state;
 
   return (
-    <div className="fixed inset-0 z-[70] flex items-end justify-center bg-black/40 px-4 pb-[max(1.5rem,var(--safe-area-inset-bottom,1.5rem))] sm:items-center sm:p-6">
+    <div className="fixed inset-0 z-[70] flex items-end justify-center bg-black/40 px-3 pb-[max(1.25rem,var(--safe-area-inset-bottom,1.25rem))] sm:items-center sm:px-6 sm:pb-6 sm:pt-6">
       <div
         role="dialog"
         aria-modal="true"
         aria-labelledby="cart-flyout-title"
-        className="flex w-full max-w-3xl flex-col overflow-hidden rounded-3xl bg-white shadow-2xl"
+        className="flex w-full max-w-lg flex-col overflow-hidden rounded-3xl bg-white shadow-2xl sm:max-w-2xl lg:max-w-3xl"
       >
-        <header className="flex items-start gap-3 border-b border-violet-50 px-6 py-5">
+        <header className="flex items-start gap-3 border-b border-violet-50 px-4 py-4 sm:px-6 sm:py-5">
           <div className="flex h-14 w-14 items-center justify-center overflow-hidden rounded-2xl bg-violet-50">
             {product.imageUrl ? (
               <img src={product.imageUrl} alt={product.name} className="h-14 w-14 object-cover" />
@@ -106,7 +106,7 @@ export function AddToCartFlyout() {
           </button>
         </header>
 
-        <section className="max-h-[65vh] overflow-y-auto px-6 py-5 sm:max-h-[55vh]">
+        <section className="max-h-[75vh] overflow-y-auto px-4 py-4 sm:max-h-[55vh] sm:px-6 sm:py-5">
           <h3 className="text-sm font-semibold uppercase tracking-[0.32em] text-violet-400">
             Aproveite e leve junto
           </h3>
@@ -163,17 +163,17 @@ export function AddToCartFlyout() {
           )}
         </section>
 
-        <footer className="flex flex-col gap-3 border-t border-violet-100 bg-violet-50/70 px-6 py-4 sm:flex-row sm:justify-end">
+        <footer className="flex flex-col gap-3 border-t border-violet-100 bg-violet-50/70 px-4 py-4 sm:flex-row sm:justify-end sm:px-6">
           <button
             type="button"
             onClick={handleClose}
-            className="inline-flex items-center justify-center rounded-full border border-violet-200 px-4 py-2 text-sm font-semibold text-violet-700 transition hover:border-violet-300 hover:text-violet-900"
+            className="inline-flex w-full items-center justify-center rounded-full border border-violet-200 px-4 py-2 text-sm font-semibold text-violet-700 transition hover:border-violet-300 hover:text-violet-900 sm:w-auto"
           >
             Continuar comprando
           </button>
           <Link
             to="/carrinho"
-            className="inline-flex items-center justify-center rounded-full bg-violet-600 px-5 py-2 text-sm font-semibold text-white transition hover:bg-violet-500"
+            className="inline-flex w-full items-center justify-center rounded-full bg-violet-600 px-5 py-2 text-sm font-semibold text-white transition hover:bg-violet-500 sm:w-auto"
             onClick={() => {
               handleClose();
               if (typeof window !== "undefined") {

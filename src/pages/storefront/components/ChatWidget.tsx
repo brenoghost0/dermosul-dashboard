@@ -280,14 +280,17 @@ export function ChatWidget() {
           setOpen((prev) => !prev);
           registerInteraction();
         }}
-        className="fixed bottom-6 right-6 z-40 flex h-14 w-14 items-center justify-center rounded-full bg-violet-600 text-2xl text-white shadow-lg transition hover:bg-violet-500 animate-chat-icon"
+        className="fixed bottom-4 right-4 z-40 flex h-12 w-12 items-center justify-center rounded-full bg-violet-600 text-2xl text-white shadow-lg transition hover:bg-violet-500 animate-chat-icon sm:bottom-6 sm:right-6 sm:h-14 sm:w-14"
         aria-label="Abrir chat Assistente Dermosul"
       >
         💬
       </button>
 
       {open && (
-        <div className="fixed bottom-24 right-6 z-50 flex h-[480px] w-[360px] flex-col overflow-hidden rounded-3xl border border-violet-500/30 bg-slate-950/95 text-slate-100 shadow-2xl backdrop-blur">
+        <div
+          className="fixed bottom-20 right-4 z-50 flex w-[min(92vw,400px)] flex-col overflow-hidden rounded-3xl border border-violet-500/30 bg-slate-950/95 text-slate-100 shadow-2xl backdrop-blur sm:bottom-24 sm:right-6 sm:w-[360px]"
+          style={{ maxHeight: "calc(100vh - 7rem)", height: "min(480px, calc(100vh - 7rem))" }}
+        >
           <div className="flex items-center justify-between bg-violet-700/80 px-4 py-3">
             <div>
               <h3 className="text-sm font-semibold text-white">Assistente Dermosul</h3>

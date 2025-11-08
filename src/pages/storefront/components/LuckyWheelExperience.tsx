@@ -88,50 +88,43 @@ export function LuckyWheelExperience({ cartId, sessionToken, onApplyCoupon }: Lu
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [cartId, sessionToken]);
 
+  const lastKnownResult = useMemo(() => result ?? status.data?.lastResult ?? null, [result, status.data?.lastResult]);
+
   useEffect(() => {
     if (!status.data) return;
-    if (!isMobileViewport) {
-      setIsOpen(false);
-      return;
-    }
-    if (!status.data.settings.enabled) {
-      setIsOpen(false);
-      return;
-    }
-
-    if (status.data.alreadyPlayed) {
+    if (!isMobileViewport || !status.data.settings.enabled) {
       setIsOpen(false);
       return;
     }
 
     const blocked = status.data.blockedReason ?? null;
 
-    if (dismissed && !status.data.lastResult) {
-      setIsOpen(false);
-      return;
-    }
-
-    if (blocked && blocked !== "already_played" && !status.data.lastResult) {
-      setIsOpen(false);
-      return;
-    }
-
-    if (!status.data.alreadyPlayed && !hasPresented) {
+    if (lastKnownResult && !dismissed) {
       setIsOpen(true);
       setHasPresented(true);
       return;
     }
 
-    if (!dismissed && blocked === "already_played" && !isOpen) {
+    if (blocked && blocked !== "already_played") {
+      setIsOpen(false);
+      return;
+    }
+
+    if (status.data.alreadyPlayed && !lastKnownResult) {
+      setIsOpen(false);
+      return;
+    }
+
+    if (!dismissed && !hasPresented) {
       setIsOpen(true);
       setHasPresented(true);
       return;
     }
 
-    if (!dismissed && status.data.lastResult && !isOpen) {
-      setIsOpen(true);
+    if (dismissed) {
+      setIsOpen(false);
     }
-  }, [status.data, hasPresented, isOpen, dismissed, isMobileViewport]);
+  }, [status.data, hasPresented, dismissed, isMobileViewport, lastKnownResult]);
 
   useEffect(() => {
     if (isOpen) {
@@ -340,13 +333,14 @@ export function LuckyWheelExperience({ cartId, sessionToken, onApplyCoupon }: Lu
     scrollToCartProducts();
   }
 
-  if (!status.data || !isOpen || !isMobileViewport || status.data.alreadyPlayed) {
+  if (!status.data || !isOpen || !isMobileViewport || (status.data.alreadyPlayed && !lastKnownResult)) {
     return null;
   }
 
   const { settings } = status.data;
   const design = settings.design ?? {};
-  const disabledMessage = status.data.blockedReason && !status.data.lastResult ? resolveBlockedCopy(status.data.blockedReason, settings) : null;
+  const disabledMessage =
+    status.data.blockedReason && !lastKnownResult ? resolveBlockedCopy(status.data.blockedReason, settings) : null;
   const overlayOpacityBase = design.overlayOpacity ?? 0.9;
   const overlayOpacity = isCompactLayout ? Math.min(overlayOpacityBase, 0.6) : overlayOpacityBase;
   const overlayBlurBase = design.blurRadius ?? 18;

@@ -167,28 +167,30 @@ function AboutDermosulPage() {
   ];
 
   return (
-    <div className="space-y-16">
+    <div className="space-y-12 sm:space-y-16">
       <section className="relative overflow-hidden rounded-[32px] bg-gradient-to-br from-violet-700 via-violet-600 to-fuchsia-500 text-white">
         <div className="absolute -left-32 top-12 h-64 w-64 rounded-full bg-white/20 blur-3xl" />
         <div className="absolute -right-16 bottom-0 h-52 w-52 rounded-full bg-fuchsia-400/40 blur-3xl" />
-        <div className="relative mx-auto max-w-6xl px-6 py-16">
+        <div className="relative mx-auto max-w-6xl px-4 py-12 sm:px-6 sm:py-16">
           <span className="inline-flex items-center rounded-full bg-white/15 px-4 py-1 text-xs font-semibold uppercase tracking-[0.4em] text-white/80">
             Dermatologia Brasileira
           </span>
           <div className="mt-6 grid gap-10 lg:grid-cols-[3fr_2fr] lg:items-end">
             <div className="space-y-6">
-              <h1 className="text-4xl font-semibold leading-tight lg:text-5xl">
+              <h1 className="text-3xl font-semibold leading-tight sm:text-4xl lg:text-5xl">
                 Curadoria clínica para escolher o melhor da dermocosmética.
               </h1>
               <p className="max-w-2xl text-sm text-violet-50 lg:text-base">
                 Reunimos especialistas para analisar ativos, comprovações clínicas e experiência de uso das principais marcas. Assim, você recebe recomendações confiáveis e compra em um único lugar, com apoio antes, durante e depois da entrega.
               </p>
             </div>
-            <div className="grid grid-cols-2 gap-4 rounded-3xl bg-white/10 p-6 text-center text-sm lg:grid-cols-2">
+            <div className="grid grid-cols-2 gap-3 rounded-3xl bg-white/10 p-4 text-center text-sm sm:gap-4 sm:p-6">
               {stats.map((stat) => (
-                <div key={stat.label} className="rounded-2xl bg-white/10 px-4 py-5 whitespace-pre-wrap break-words">
-                  <p className="text-2xl font-semibold text-white">{stat.value}</p>
-                  <p className="mt-1 text-[11px] uppercase tracking-[0.28em] text-white/70">{stat.label}</p>
+                <div key={stat.label} className="rounded-2xl bg-white/10 px-3 py-4 text-sm whitespace-pre-wrap break-words sm:px-4 sm:py-5">
+                  <p className="text-xl font-semibold text-white sm:text-2xl">{stat.value}</p>
+                  <p className="mt-1 text-[9px] uppercase tracking-[0.24em] text-white/70 sm:text-[11px] sm:tracking-[0.28em]">
+                    {stat.label}
+                  </p>
                 </div>
               ))}
             </div>
@@ -196,10 +198,10 @@ function AboutDermosulPage() {
         </div>
       </section>
 
-      <section className="mx-auto max-w-6xl space-y-8 rounded-[32px] border border-violet-100 bg-white p-8 shadow-[0_24px_70px_-55px_rgba(79,70,229,0.45)]">
+      <section className="mx-auto max-w-6xl space-y-8 rounded-[32px] border border-violet-100 bg-white p-6 shadow-[0_24px_70px_-55px_rgba(79,70,229,0.45)] sm:p-8">
         <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
           <div>
-            <h2 className="text-2xl font-semibold text-violet-900">Nossa metodologia de cuidado</h2>
+            <h2 className="text-xl font-semibold text-violet-900 sm:text-2xl">Nossa metodologia de cuidado</h2>
             <p className="text-sm text-violet-600">
               Nossa curadoria aproxima dermatologia clínica das melhores marcas do mercado. Selecionamos apenas produtos com respaldo técnico, uso responsável e experiência positiva para os clientes Dermosul.
             </p>
@@ -227,10 +229,10 @@ function AboutDermosulPage() {
         </div>
       </section>
 
-      <section className="mx-auto max-w-6xl space-y-8 rounded-[32px] bg-white p-8 shadow-[0_24px_70px_-55px_rgba(79,70,229,0.35)]">
+      <section className="mx-auto max-w-6xl space-y-8 rounded-[32px] bg-white p-6 shadow-[0_24px_70px_-55px_rgba(79,70,229,0.35)] sm:p-8">
         <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
           <div>
-            <h2 className="text-2xl font-semibold text-violet-900">Depoimentos reais</h2>
+            <h2 className="text-xl font-semibold text-violet-900 sm:text-2xl">Depoimentos reais</h2>
             <p className="text-sm text-violet-600">
               Construímos vínculos de confiança com quem usa Dermosul todos os dias. Veja o que a nossa comunidade conta.
             </p>
@@ -266,27 +268,27 @@ function AboutDermosulPage() {
         </div>
       </section>
 
-      <section className="mx-auto max-w-6xl space-y-8 rounded-[32px] bg-gradient-to-br from-violet-700 via-violet-600 to-fuchsia-500 p-8 text-white shadow-[0_28px_80px_-60px_rgba(109,40,217,0.6)]">
+      <section className="mx-auto max-w-6xl space-y-8 rounded-[32px] bg-gradient-to-br from-violet-700 via-violet-600 to-fuchsia-500 p-6 text-white shadow-[0_28px_80px_-60px_rgba(109,40,217,0.6)] sm:p-8">
         <div className="flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between">
           <div className="max-w-2xl space-y-4">
-            <h2 className="text-2xl font-semibold">Equipe clínica multidisciplinar</h2>
+            <h2 className="text-xl font-semibold sm:text-2xl">Equipe clínica multidisciplinar</h2>
             <p className="text-sm text-white/80">
               Dermatologistas, farmacêuticas, bioquímicos e esteticistas avaliam laudos clínicos, padronizam orientações de uso e acompanham os resultados das marcas que indicamos. Você compra com transparência e suporte especializado.
             </p>
           </div>
-          <div className="grid gap-6 text-sm text-white/90 sm:grid-cols-2 lg:grid-cols-3 sm:grid-cols-2">
-            <div className="rounded-3xl bg-white/10 p-5 min-h-[14rem] w-full max-w-[18rem] mx-auto text-center break-words">
-              <p className="text-[10px] uppercase tracking-[0.12em] text-white/80 leading-5 sm:text-[11px] break-words whitespace-normal">Direção clínica</p>
+          <div className="grid gap-4 text-sm text-white/90 sm:grid-cols-2 lg:grid-cols-3">
+            <div className="mx-auto w-full max-w-[18rem] min-h-[14rem] rounded-3xl bg-white/10 p-5 text-center break-words">
+              <p className="text-[10px] uppercase tracking-[0.12em] text-white/80 leading-5 sm:text-[11px]">Direção clínica</p>
               <p className="mt-2 font-semibold">Dra. Lígia Monteiro</p>
               <p className="text-xs text-white/70">CRM-SP 118445 · Lidera o conselho clínico que libera novas marcas</p>
             </div>
-            <div className="rounded-3xl bg-white/10 p-5 min-h-[14rem] w-full max-w-[18rem] mx-auto text-center break-words">
-              <p className="text-[10px] uppercase tracking-[0.12em] text-white/80 leading-5 sm:text-[11px] break-words whitespace-normal">Pesquisa & Desenvolvimento</p>
+            <div className="mx-auto w-full max-w-[18rem] min-h-[14rem] rounded-3xl bg-white/10 p-5 text-center break-words">
+              <p className="text-[10px] uppercase tracking-[0.12em] text-white/80 leading-5 sm:text-[11px]">Pesquisa &amp; Desenvolvimento</p>
               <p className="mt-2 font-semibold">Mariana Chaves</p>
               <p className="text-xs text-white/70">Audita dossiês técnicos e estabilidade das linhas parceiras</p>
             </div>
-            <div className="rounded-3xl bg-white/10 p-5 min-h-[14rem] w-full max-w-[18rem] mx-auto text-center break-words">
-              <p className="text-[10px] uppercase tracking-[0.12em] text-white/80 leading-5 sm:text-[11px] break-words whitespace-normal">Experiência do paciente</p>
+            <div className="mx-auto w-full max-w-[18rem] min-h-[14rem] rounded-3xl bg-white/10 p-5 text-center break-words">
+              <p className="text-[10px] uppercase tracking-[0.12em] text-white/80 leading-5 sm:text-[11px]">Experiência do paciente</p>
               <p className="mt-2 font-semibold">Daniela Albuquerque</p>
               <p className="text-xs text-white/70">Co-fundadora e líder de relacionamento com pacientes e marcas</p>
             </div>
@@ -294,10 +296,10 @@ function AboutDermosulPage() {
         </div>
       </section>
 
-      <section className="mx-auto max-w-6xl space-y-8 rounded-[32px] border border-violet-100 bg-white p-8 shadow-[0_18px_60px_-50px_rgba(79,70,229,0.35)]">
+      <section className="mx-auto max-w-6xl space-y-8 rounded-[32px] border border-violet-100 bg-white p-6 shadow-[0_18px_60px_-50px_rgba(79,70,229,0.35)] sm:p-8">
         <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
           <div>
-            <h2 className="text-2xl font-semibold text-violet-900">Compromissos Dermosul</h2>
+            <h2 className="text-xl font-semibold text-violet-900 sm:text-2xl">Compromissos Dermosul</h2>
             <p className="text-sm text-violet-600">
               Transparência em cada passo: do desenvolvimento à entrega em sua casa.
             </p>
@@ -315,10 +317,10 @@ function AboutDermosulPage() {
         </ul>
       </section>
 
-      <section className="mx-auto max-w-6xl space-y-8 rounded-[32px] bg-white p-8 text-violet-900 shadow-[0_28px_90px_-60px_rgba(79,70,229,0.45)]">
+      <section className="mx-auto max-w-6xl space-y-8 rounded-[32px] bg-white p-6 text-violet-900 shadow-[0_28px_90px_-60px_rgba(79,70,229,0.45)] sm:p-8">
         <div className="grid gap-6 lg:grid-cols-[2fr_1fr] lg:items-center">
           <div className="space-y-4">
-            <h2 className="text-2xl font-semibold">Estamos aqui para cuidar com você</h2>
+            <h2 className="text-xl font-semibold sm:text-2xl">Estamos aqui para cuidar com você</h2>
             <p className="text-sm text-violet-600">
               Fale com nossa equipe clínica, experimente uma rotina guiada ou descubra o próximo cuidado Dermosul. Estamos prontos para acompanhar cada etapa da sua jornada.
             </p>
