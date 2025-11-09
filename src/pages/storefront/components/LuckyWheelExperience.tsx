@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { CSSProperties, MutableRefObject, ReactNode } from "react";
 import { storefrontApi } from "../api";
 import type { LuckyWheelPublicState, LuckyWheelSpinResult, LuckyWheelPrize, LuckyWheelSettings } from "../../../types/lucky-wheel";
