@@ -380,11 +380,11 @@ export function LuckyWheelExperience({ cartId, sessionToken, onApplyCoupon }: Lu
     border: "1px solid rgba(255,255,255,0.55)",
     background: "linear-gradient(145deg, rgba(255,255,255,0.92), rgba(245,244,255,0.96), rgba(249,243,255,0.98))",
     boxShadow: "0 55px 120px -60px rgba(143,123,255,0.65)",
-    width: isCompactLayout ? "min(84vw, 480px)" : "min(72vw, 760px)",
-    padding: isCompactLayout ? "0.85rem 1rem 1.3rem" : "2rem",
-    gap: isCompactLayout ? "1rem" : "1.75rem",
-    maxHeight: isCompactLayout ? "86vh" : undefined,
-    overflowY: isCompactLayout ? "auto" : "visible",
+    width: isCompactLayout ? "min(82vw, 460px)" : "min(72vw, 760px)",
+    padding: isCompactLayout ? "0.85rem 1rem 1.1rem" : "2rem",
+    gap: isCompactLayout ? "0.85rem" : "1.75rem",
+    maxHeight: isCompactLayout ? "calc(100vh - 52px)" : undefined,
+    overflow: isCompactLayout ? "hidden" : "visible",
   };
   const highlightColor = design.highlightColor ?? "#f8c6ff";
   const wheelGlowColor = design.wheelGlowColor ?? "#bfe6ff";
@@ -487,7 +487,7 @@ export function LuckyWheelExperience({ cartId, sessionToken, onApplyCoupon }: Lu
               type="button"
               onClick={handleSpin}
               disabled={spinDisabled}
-              className={`mx-auto inline-flex items-center justify-center rounded-full px-5 py-3 text-xs font-semibold uppercase tracking-[0.32em] transition md:px-6 md:text-sm md:tracking-[0.4em] ${
+              className={`mx-auto inline-flex items-center justify-center rounded-full px-5 py-3 text-xs font-semibold uppercase tracking-[0.32em] transition touch-manipulation cursor-pointer md:px-6 md:text-sm md:tracking-[0.4em] ${
                 spinDisabled ? "cursor-not-allowed bg-slate-200 text-slate-400" : "lucky-wheel-cta hover:brightness-[1.05]"
               }`}
               style={buttonStyles}
