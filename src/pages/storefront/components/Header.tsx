@@ -1,5 +1,5 @@
-import { FormEvent, useCallback, useMemo, useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { FormEvent, MouseEvent, useCallback, useMemo, useState } from "react";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import { useStorefrontContext } from "../StorefrontContext";
 import { useCart } from "../CartContext";
 import { StoreTextBlocks } from "../../Store/api";
@@ -52,9 +52,34 @@ export default function StorefrontHeader() {
   const { settings, headerMenu } = useStorefrontContext();
   const { cart } = useCart();
   const navigate = useNavigate();
+  const location = useLocation();
   const [search, setSearch] = useState("");
   const announcement = useAnnouncement(settings?.textBlocks || null);
   const cartCount = useMemo(() => (cart?.items || []).reduce((sum, item) => sum + item.quantity, 0), [cart?.items]);
+
+  const requestProductFocus = useCallback(() => {
+    if (typeof window === "undefined") return;
+    window.dispatchEvent(
+      new CustomEvent("dermosul:scroll-to", {
+        detail: { target: "home-products" },
+      })
+    );
+  }, []);
+
+  const handleLogoClick = useCallback(
+    (event: MouseEvent<HTMLAnchorElement>) => {
+      event.preventDefault();
+      if (location.pathname === "/") {
+        requestProductFocus();
+        return;
+      }
+
+      navigate("/", {
+        state: { focusSection: "home-products", focusTimestamp: Date.now() },
+      });
+    },
+    [location.pathname, navigate, requestProductFocus]
+  );
 
   function handleSearch(event: FormEvent) {
     event.preventDefault();
@@ -75,7 +100,7 @@ export default function StorefrontHeader() {
       )}
       <div className="mx-auto flex max-w-6xl flex-col gap-3 px-4 pt-5">
         <div className="flex items-center justify-between gap-4">
-          <Link to="/" className="flex items-center gap-2 text-violet-800">
+          <Link to="/" onClick={handleLogoClick} className="flex items-center gap-2 text-violet-800">
             <span className="text-xl font-semibold">Dermosul</span>
             <span className="text-xs uppercase tracking-wide text-violet-500">store</span>
           </Link>

@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import { useLocation } from "react-router-dom";
 import StorefrontHeader from "./components/Header";
 import StorefrontFooter from "./components/Footer";
 import ProductGrid from "./components/ProductGrid";
@@ -58,6 +59,7 @@ function normalizeBannerUrl(url?: string | null): string {
 
 export default function HomePage() {
   const { settings } = useStorefrontContext();
+  const location = useLocation();
   const layout = useMemo<HomeLayoutSection[]>(() => {
     const source = settings?.homeLayout && settings.homeLayout.length > 0 ? settings.homeLayout : FALLBACK_HOME_LAYOUT;
     return source.map((section) => {
@@ -155,6 +157,17 @@ export default function HomePage() {
   }, []);
 
   useEffect(() => {
+    const focusSection = (location.state as { focusSection?: string; focusTimestamp?: number } | null)?.focusSection;
+    if (!focusSection) return;
+    if (typeof window === "undefined") return;
+    window.dispatchEvent(
+      new CustomEvent("dermosul:scroll-to", {
+        detail: { target: focusSection },
+      })
+    );
+  }, [location.state]);
+
+  useEffect(() => {
     let isMounted = true;
     async function loadSections() {
       setLoadingSections(true);
@@ -221,7 +234,7 @@ export default function HomePage() {
           <HeroHighlightBar />
         </section>
         {!recommendationsLoading && (
-          <section className="mt-12 grid gap-10">
+          <section className="mt-12 grid gap-10" data-section-id="home-products">
             {mostLovedProducts.length ? (
               <ProductRail
                 title="Os mais amados agora"
