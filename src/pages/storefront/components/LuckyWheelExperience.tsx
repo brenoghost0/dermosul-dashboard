@@ -210,7 +210,7 @@ export function LuckyWheelExperience({ cartId, sessionToken, onApplyCoupon }: Lu
   const isCompactLayout = viewport.width < 768;
   const baseWheelSize = 360;
   const minViewportAxis = Math.max(320, Math.min(viewport.width, viewport.height));
-  const targetWheelPixels = minViewportAxis * 0.32;
+  const targetWheelPixels = minViewportAxis * (isCompactLayout ? 0.24 : 0.32); // compact layout gets ~25% shorter wheel
   const wheelScale = isCompactLayout ? Math.min(0.75, Math.max(0.34, targetWheelPixels / baseWheelSize)) : 0.85;
   const wheelContainerStyle: CSSProperties = {
     width: baseWheelSize * wheelScale,
