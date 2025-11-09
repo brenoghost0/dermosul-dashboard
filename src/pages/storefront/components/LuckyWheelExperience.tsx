@@ -80,6 +80,7 @@ export function LuckyWheelExperience({ cartId, sessionToken, onApplyCoupon }: Lu
   const [status, setStatus] = useState<WheelStatus>({ loading: true, error: null, data: null });
   const [isOpen, setIsOpen] = useState(false);
   const [isSpinning, setIsSpinning] = useState(false);
+  const [localPlayLocked, setLocalPlayLocked] = useState(false);
   const [rotation, setRotation] = useState(0);
   const [activePrizeId, setActivePrizeId] = useState<string | null>(null);
   const [result, setResult] = useState<LuckyWheelSpinResult | null>(null);
@@ -118,6 +119,10 @@ export function LuckyWheelExperience({ cartId, sessionToken, onApplyCoupon }: Lu
     if (!isMobileViewport || !status.data.settings.enabled) {
       setIsOpen(false);
       return;
+    }
+
+    if (status.data.alreadyPlayed) {
+      setLocalPlayLocked(true);
     }
 
     const blocked = status.data.blockedReason ?? null;
@@ -204,8 +209,10 @@ export function LuckyWheelExperience({ cartId, sessionToken, onApplyCoupon }: Lu
   }, [prizes.length]);
   const auroraParticles = useMemo(() => LUCKY_AURORA_PARTICLES, []);
 
+  const hasPlayed = Boolean(status.data?.alreadyPlayed) || localPlayLocked;
+  const displayAlreadyPlayed = hasPlayed && !isSpinning;
   const spinDisabled =
-    !status.data || status.data.alreadyPlayed || isSpinning || status.data.blockedReason === "limit_daily" || status.data.blockedReason === "limit_monthly";
+    !status.data || hasPlayed || isSpinning || status.data.blockedReason === "limit_daily" || status.data.blockedReason === "limit_monthly";
 
   const isCompactLayout = viewport.width < 768;
   const baseWheelSize = 360;
@@ -251,6 +258,9 @@ export function LuckyWheelExperience({ cartId, sessionToken, onApplyCoupon }: Lu
         lastResult: data?.lastResult ?? null,
       };
       setStatus({ loading: false, error: null, data: normalized });
+      if (!normalized.alreadyPlayed) {
+        setLocalPlayLocked(false);
+      }
       if (data.lastResult && !options?.suppressLastResult) {
         setResult(data.lastResult);
         setActivePrizeId(data.lastResult.prize.id);
@@ -284,21 +294,11 @@ export function LuckyWheelExperience({ cartId, sessionToken, onApplyCoupon }: Lu
       });
       const outcome = response.result;
       setRotation((prev) => prev + outcome.rotationDegrees);
-      setStatus((prev) => {
-        if (!prev.data) return prev;
-        return {
-          ...prev,
-          data: {
-            ...prev.data,
-            alreadyPlayed: true,
-            lastResult: outcome,
-          },
-        };
-      });
       const settleTimeout = window.setTimeout(() => {
         setIsSpinning(false);
         setResult(outcome);
         setActivePrizeId(outcome.prize.id);
+        setLocalPlayLocked(true);
         const isWin = Boolean(outcome.freeShipping || outcome.freeOrder || outcome.couponCode);
         if (soundEnabled) {
           const winSound = soundSettings?.win || soundSettings?.spin;
@@ -364,7 +364,9 @@ export function LuckyWheelExperience({ cartId, sessionToken, onApplyCoupon }: Lu
   const { settings } = status.data;
   const design = settings.design ?? {};
   const disabledMessage =
-    status.data.blockedReason && !lastKnownResult ? resolveBlockedCopy(status.data.blockedReason, settings) : null;
+    status.data.blockedReason && !lastKnownResult && !isSpinning
+      ? resolveBlockedCopy(status.data.blockedReason, settings)
+      : null;
   const overlayOpacityBase = design.overlayOpacity ?? 0.9;
   const overlayOpacity = isCompactLayout ? Math.min(overlayOpacityBase, 0.6) : overlayOpacityBase;
   const overlayBlurBase = design.blurRadius ?? 18;
@@ -419,8 +421,8 @@ export function LuckyWheelExperience({ cartId, sessionToken, onApplyCoupon }: Lu
   const buttonLabel = settings.buttonLabel?.trim() || "GIRAR AGORA";
   const resultCopy = result && messageVisible ? result.message || `🎉 Parabéns! Você desbloqueou ${result.prize.label}!` : null;
   const defaultPrompt = "Gire agora e sinta a alegria de destravar um mimo escolhido só pra você.";
-  const infoCopy = disabledMessage ?? resultCopy ?? (status.data.alreadyPlayed ? alreadyPlayedMessage : defaultPrompt);
-  const infoTone: InfoTone = disabledMessage ? "warning" : resultCopy ? "success" : status.data.alreadyPlayed ? "info" : "neutral";
+  const infoCopy = disabledMessage ?? resultCopy ?? (displayAlreadyPlayed ? alreadyPlayedMessage : defaultPrompt);
+  const infoTone: InfoTone = disabledMessage ? "warning" : resultCopy ? "success" : displayAlreadyPlayed ? "info" : "neutral";
   const infoToneMap: Record<InfoTone, string> = {
     warning: "border-amber-300/80 bg-amber-50 text-amber-700",
     success: "border-emerald-200/80 bg-emerald-50 text-emerald-700",
@@ -472,7 +474,7 @@ export function LuckyWheelExperience({ cartId, sessionToken, onApplyCoupon }: Lu
           <p className="text-sm leading-relaxed text-[#5c577f]">{descriptionCopy}</p>
 
           <div className="mt-3 flex flex-wrap gap-2 text-[11px] text-[#4a437a]">
-            {status.data.alreadyPlayed ? <Badge tone="violet">Já participou</Badge> : <Badge tone="teal">Primeira chance</Badge>}
+            {displayAlreadyPlayed ? <Badge tone="violet">Já participou</Badge> : <Badge tone="teal">Primeira chance</Badge>}
             {disabledMessage && <Badge tone="amber">Limite ativo</Badge>}
             {result?.freeShipping && <Badge tone="teal">Frete grátis</Badge>}
             {result?.freeOrder && <Badge tone="pink">Pedido 100% nosso</Badge>}
@@ -494,7 +496,7 @@ export function LuckyWheelExperience({ cartId, sessionToken, onApplyCoupon }: Lu
             >
               {isSpinning ? "Girando..." : buttonLabel}
             </button>
-            {status.data.alreadyPlayed && !resultCopy && !disabledMessage && (
+            {displayAlreadyPlayed && !resultCopy && !disabledMessage && (
               <p className="text-xs text-[#8177b2]">Você já participou hoje, volte amanhã para mais sorte!</p>
             )}
           </div>
