@@ -24,18 +24,42 @@ const PixPaymentModal: React.FC<PixPaymentModalProps> = ({
       return;
     }
 
-    setIsChecking(true);
-    const intervalId = setInterval(async () => {
-      const isPaid = await onCheckPaymentStatus();
-      if (isPaid) {
-        clearInterval(intervalId);
-        setIsChecking(false);
-      }
-    }, 5000); // Verifica a cada 5 segundos
+    let active = true;
+    let intervalId: ReturnType<typeof setInterval> | null = null;
 
-    // Limpa o intervalo quando o modal é fechado
+    const checkStatus = async () => {
+      if (!active) return;
+      setIsChecking(true);
+      try {
+        const paid = await onCheckPaymentStatus();
+        if (paid) {
+          if (intervalId) {
+            clearInterval(intervalId);
+            intervalId = null;
+          }
+          if (active) {
+            setIsChecking(false);
+          }
+          return;
+        }
+        if (active) {
+          setIsChecking(false);
+        }
+      } catch {
+        if (active) {
+          setIsChecking(false);
+        }
+      }
+    };
+
+    checkStatus();
+    intervalId = setInterval(checkStatus, 5000);
+
     return () => {
-      clearInterval(intervalId);
+      active = false;
+      if (intervalId) {
+        clearInterval(intervalId);
+      }
       setIsChecking(false);
     };
   }, [isOpen, onCheckPaymentStatus]);
@@ -76,14 +100,21 @@ const PixPaymentModal: React.FC<PixPaymentModalProps> = ({
           Total: {amount.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
         </p>
 
-        <div className="bg-blue-50 border border-blue-200 text-blue-800 text-sm rounded-lg p-3 mb-6">
-          <div className="flex items-center justify-center">
+        <div className="bg-blue-50 border border-blue-200 text-blue-800 text-sm rounded-lg p-4 mb-6 text-left">
+          <div className="flex items-center justify-center text-blue-900 font-medium">
             <svg className="animate-spin h-5 w-5 mr-3" viewBox="0 0 24 24">
               <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
               <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
             </svg>
-            <span>Aguardando confirmação de pagamento...</span>
+            <span>{isChecking ? "Verificando confirmação..." : "Aguardando confirmação de pagamento..."}</span>
           </div>
+          <p className="mt-3 text-xs leading-relaxed text-blue-700">
+            Atualizamos automaticamente a cada 5 segundos. Se você já efetuou o Pix, mantenha esta tela aberta — a confirmação costuma chegar em até
+            <strong> 1 minuto</strong>.
+          </p>
+          <p className="mt-1 text-[11px] text-blue-600">
+            Assim que o banco confirmar, liberamos sua compra e redirecionamos para o comprovante.
+          </p>
         </div>
 
         <button
@@ -103,9 +134,12 @@ const PixPaymentModal: React.FC<PixPaymentModalProps> = ({
               setIsChecking(false);
             }
           }}
-          className="w-full mt-2 py-2 text-sm text-violet-700 hover:text-violet-800 font-medium"
+          disabled={isChecking}
+          className={`w-full mt-2 py-2 text-sm font-medium ${
+            isChecking ? "text-violet-300 cursor-not-allowed" : "text-violet-700 hover:text-violet-800"
+          }`}
         >
-          Já paguei, verificar agora
+          {isChecking ? "Verificando..." : "Já paguei, verificar agora"}
         </button>
       </div>
     </div>
