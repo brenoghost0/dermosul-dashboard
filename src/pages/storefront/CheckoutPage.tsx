@@ -13,7 +13,6 @@ import { emitAddedToCartEvent } from "./utils/cartEvents";
 import { sanitizeDigits } from "../../utils/sanitizeDigits";
 
 const ORDER_STORAGE_KEY = (orderId: string) => `dermosul_order_${orderId}`;
-const CHECKOUT_PROFILE_KEY = "dermosul_checkout_profile";
 const CHECKOUT_RESERVATION_KEY = "dermosul_checkout_reservation_expires_at";
 const INITIAL_RESERVATION_SECONDS = 12 * 60;
 
@@ -125,7 +124,6 @@ export default function CheckoutPage() {
     cvv: "",
     installments: "1",
   });
-  const [saveAddress, setSaveAddress] = useState(true);
 
   const sanitizedPostalCode = sanitizeDigits(shippingAddress.postalCode);
   const hasPostalCode = sanitizedPostalCode.length === 8;
@@ -195,25 +193,14 @@ export default function CheckoutPage() {
     };
   }, [cart?.shippingMethod?.id, selectShippingMethod, hasPostalCode]);
 
-useEffect(() => {
-  try {
-    const raw = localStorage.getItem(CHECKOUT_PROFILE_KEY);
-    if (!raw) return;
-    const parsed = JSON.parse(raw);
-      if (parsed?.customer) {
-        const hydratedCustomer = { ...parsed.customer };
-        if (hydratedCustomer.birthDate) {
-          hydratedCustomer.birthDate = toDisplayBirthdate(hydratedCustomer.birthDate);
-        }
-        setCustomer((prev) => ({ ...prev, ...hydratedCustomer }));
-      }
-      if (parsed?.shippingAddress) {
-        setShippingAddress((prev) => ({ ...prev, ...parsed.shippingAddress }));
-      }
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    try {
+      localStorage.removeItem("dermosul_checkout_profile");
     } catch (err) {
-      console.warn("Perfil de checkout inválido", err);
+      console.warn("Falha ao limpar dados de checkout salvos", err);
     }
-}, []);
+  }, []);
 
 useEffect(() => {
   if (typeof window === "undefined") return;
@@ -250,13 +237,12 @@ useEffect(() => {
 
   useEffect(() => {
     if (typeof window === "undefined") return;
-    const payload = { customer, shippingAddress };
     try {
-      localStorage.setItem(CHECKOUT_PROFILE_KEY, JSON.stringify(payload));
+      localStorage.removeItem("dermosul_checkout_profile");
     } catch (err) {
-      console.warn("Falha ao autosalvar checkout", err);
+      console.warn("Falha ao limpar dados de checkout salvos", err);
     }
-  }, [customer, shippingAddress]);
+  }, []);
 
   useEffect(() => {
     if (currentStep === 1 && !stepMessage) {
@@ -637,12 +623,6 @@ useEffect(() => {
     };
       const response = await storefrontApi.checkout(payload);
       sessionStorage.setItem(ORDER_STORAGE_KEY(response.orderId), JSON.stringify(response));
-      if (saveAddress) {
-        localStorage.setItem(
-          CHECKOUT_PROFILE_KEY,
-          JSON.stringify({ customer: sanitizedCustomer, shippingAddress: sanitizedAddress })
-        );
-      }
       if (paymentMethod === "pix" && response.payment.pix) {
         setPixData({
           orderId: response.orderId,
@@ -1082,17 +1062,6 @@ useEffect(() => {
                       </span>
                     </label>
                     ))}
-                </div>
-                <div className="mt-6 rounded-2xl bg-white p-4 text-sm text-violet-800 shadow-sm">
-                  <label className="flex items-center gap-3">
-                    <input
-                      type="checkbox"
-                      checked={saveAddress}
-                      onChange={(event) => setSaveAddress(event.target.checked)}
-                      className="h-4 w-4 rounded border-violet-300 text-violet-600 focus:outline-none focus:ring-2 focus:ring-violet-200"
-                    />
-                    <span>Salvar este endereço para agilizar as próximas compras</span>
-                  </label>
                 </div>
                 <div className="grid gap-4 md:grid-cols-2">
                   <div className="rounded-2xl border border-violet-100 bg-white p-4 text-xs text-violet-600">
