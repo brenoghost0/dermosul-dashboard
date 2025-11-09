@@ -23,6 +23,8 @@ const LIGHT_COUNT = 24;
 const DEFAULT_SLICE_COLORS = ["#00b5e9", "#ff9f1b", "#00a7ff", "#ff4f86", "#80d63d", "#ffda42", "#0091ff", "#ff6b39", "#23c2f3", "#ff8f1f", "#199bff", "#ff4f9f"];
 const DEFAULT_FONT_FAMILY = "'Poppins', 'Outfit', sans-serif";
 const LABEL_RADIUS = 128;
+const LUCKY_WHEEL_SNOOZE_KEY = "dermosul_lucky_wheel_next_available_at";
+const LUCKY_WHEEL_SNOOZE_MS = 24 * 60 * 60 * 1000;
 const ICON_MAP: Record<string, string> = {
   sparkles: "✨",
   stars: "🌟",
@@ -81,6 +83,7 @@ export function LuckyWheelExperience({ cartId, sessionToken, onApplyCoupon }: Lu
   const [isOpen, setIsOpen] = useState(false);
   const [isSpinning, setIsSpinning] = useState(false);
   const [localPlayLocked, setLocalPlayLocked] = useState(false);
+  const [nextAvailability, setNextAvailability] = useState<number | null>(null);
   const [rotation, setRotation] = useState(0);
   const [activePrizeId, setActivePrizeId] = useState<string | null>(null);
   const [result, setResult] = useState<LuckyWheelSpinResult | null>(null);
@@ -107,16 +110,57 @@ export function LuckyWheelExperience({ cartId, sessionToken, onApplyCoupon }: Lu
     return () => window.removeEventListener("resize", handleResize);
   }, []);
 
+useEffect(() => {
+  fetchState();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+}, [cartId, sessionToken]);
+
   useEffect(() => {
-    fetchState();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [cartId, sessionToken]);
+    if (typeof window === "undefined") return;
+    try {
+      const stored = window.localStorage.getItem(LUCKY_WHEEL_SNOOZE_KEY);
+      if (stored) {
+        const parsed = Number(stored);
+        if (!Number.isNaN(parsed)) {
+          setNextAvailability(parsed);
+        }
+      }
+    } catch (error) {
+      console.warn("[lucky-wheel] falha ao carregar disponibilidade", error);
+    }
+  }, []);
+
+  const markWheelSnoozed = useCallback(() => {
+    if (typeof window === "undefined") return;
+    const next = Date.now() + LUCKY_WHEEL_SNOOZE_MS;
+    try {
+      window.localStorage.setItem(LUCKY_WHEEL_SNOOZE_KEY, String(next));
+    } catch (error) {
+      console.warn("[lucky-wheel] falha ao salvar disponibilidade", error);
+    }
+    setNextAvailability(next);
+  }, []);
 
   const lastKnownResult = useMemo(() => result ?? status.data?.lastResult ?? null, [result, status.data?.lastResult]);
 
   useEffect(() => {
     if (!status.data) return;
     if (!isMobileViewport || !status.data.settings.enabled) {
+      setIsOpen(false);
+      return;
+    }
+
+    const now = Date.now();
+    if (nextAvailability && now >= nextAvailability) {
+      setNextAvailability(null);
+      if (typeof window !== "undefined") {
+        try {
+          window.localStorage.removeItem(LUCKY_WHEEL_SNOOZE_KEY);
+        } catch (error) {
+          console.warn("[lucky-wheel] falha ao limpar snooze", error);
+        }
+      }
+    } else if (nextAvailability && now < nextAvailability) {
       setIsOpen(false);
       return;
     }
@@ -152,7 +196,7 @@ export function LuckyWheelExperience({ cartId, sessionToken, onApplyCoupon }: Lu
     if (dismissed) {
       setIsOpen(false);
     }
-  }, [status.data, hasPresented, dismissed, isMobileViewport, lastKnownResult]);
+  }, [status.data, hasPresented, dismissed, isMobileViewport, lastKnownResult, nextAvailability]);
 
   useEffect(() => {
     if (isOpen) {
@@ -355,6 +399,9 @@ export function LuckyWheelExperience({ cartId, sessionToken, onApplyCoupon }: Lu
     setDismissed(true);
     clearPendingTimeouts();
     scrollToCartProducts();
+    if (localPlayLocked || status.data?.alreadyPlayed || lastKnownResult) {
+      markWheelSnoozed();
+    }
   }
 
   if (!status.data || !isOpen || !isMobileViewport || (status.data.alreadyPlayed && !lastKnownResult)) {
