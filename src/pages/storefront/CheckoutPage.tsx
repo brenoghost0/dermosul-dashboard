@@ -96,7 +96,6 @@ export default function CheckoutPage() {
     2: null,
     3: null,
   });
-  const pendingScrollStep = useRef<1 | 2 | 3 | null>(null);
 
   const [customer, setCustomer] = useState({
     firstName: "",
@@ -137,17 +136,21 @@ export default function CheckoutPage() {
   const scrollStepIntoView = useCallback((step: 1 | 2 | 3) => {
     if (typeof window === "undefined") return;
     const target = stepRefs.current[step];
+    const offset = 80;
     if (target) {
-      target.scrollIntoView({ behavior: "smooth", block: "start", inline: "nearest" });
+      const rect = target.getBoundingClientRect();
+      const top = rect.top + window.scrollY - offset;
+      window.scrollTo({ top: Math.max(top, 0), behavior: "smooth" });
+    } else {
+      window.scrollTo({ top: 0, behavior: "smooth" });
     }
   }, []);
 
   const registerStepRef = useCallback(
     (step: 1 | 2 | 3) => (node: HTMLElement | null) => {
       stepRefs.current[step] = node;
-      if (node && pendingScrollStep.current === step) {
+      if (node) {
         scrollStepIntoView(step);
-        pendingScrollStep.current = null;
       }
     },
     [scrollStepIntoView]
@@ -450,27 +453,16 @@ useEffect(() => {
 
       if (step === currentStep) {
         scrollStepIntoView(step);
-        pendingScrollStep.current = null;
         return;
       }
 
-      pendingScrollStep.current = step;
       setCurrentStep(step);
     },
     [currentStep, scrollStepIntoView]
   );
 
   useEffect(() => {
-    if (pendingScrollStep.current === null) return;
-    const step = pendingScrollStep.current;
-    const target = stepRefs.current[step];
-    if (target) {
-      scrollStepIntoView(step);
-      pendingScrollStep.current = null;
-    } else if (typeof window !== "undefined") {
-      window.scrollTo({ top: 0, behavior: "smooth" });
-      pendingScrollStep.current = null;
-    }
+    scrollStepIntoView(currentStep);
   }, [currentStep, scrollStepIntoView]);
 
   function handleIdentificationNext() {
