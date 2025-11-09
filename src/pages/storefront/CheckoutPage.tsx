@@ -201,7 +201,11 @@ useEffect(() => {
     if (!raw) return;
     const parsed = JSON.parse(raw);
       if (parsed?.customer) {
-        setCustomer((prev) => ({ ...prev, ...parsed.customer }));
+        const hydratedCustomer = { ...parsed.customer };
+        if (hydratedCustomer.birthDate) {
+          hydratedCustomer.birthDate = toDisplayBirthdate(hydratedCustomer.birthDate);
+        }
+        setCustomer((prev) => ({ ...prev, ...hydratedCustomer }));
       }
       if (parsed?.shippingAddress) {
         setShippingAddress((prev) => ({ ...prev, ...parsed.shippingAddress }));
