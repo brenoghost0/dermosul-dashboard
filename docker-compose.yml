@@ -30,12 +30,18 @@ services:
       - "3003:3003"
     depends_on:
       - db
+      - redis
     environment:
       - DATABASE_URL=postgresql://postgres:postgres@db:5432/dermosul
     env_file:
       - .env
     volumes:
       - ./uploads:/usr/src/app/backend/public/uploads
+  redis:
+    image: redis:7
+    restart: always
+    ports:
+      - "6379:6379"
 volumes:
   pgdata:
   uploads:
