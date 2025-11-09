@@ -10,15 +10,15 @@ export default defineConfig({
     port: 5174,
     proxy: {
       "/api": {
-        target: "http://localhost:3008",
+        target: "http://127.0.0.1:3008",
         changeOrigin: true,
       },
       "/uploads": {
-        target: "http://localhost:3008",
+        target: "http://127.0.0.1:3008",
         changeOrigin: true,
       },
       "/socket.io": {
-        target: "http://localhost:3008",
+        target: "http://127.0.0.1:3008",
         changeOrigin: true,
         ws: true,
       },

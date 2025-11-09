@@ -14,6 +14,7 @@ const storeSections = [
   { path: "navegacao", label: "Navegação", description: "Configure menus do cabeçalho e rodapé da loja." },
   { path: "frete", label: "Frete", description: "Defina regras de frete, faixas de CEP e frete grátis." },
   { path: "pagamentos", label: "Pagamentos", description: "Configure provedores e métodos de pagamento." },
+  { path: "cupons", label: "Cupons", description: "Gerencie códigos promocionais, limites e segmentações inteligentes." },
   { path: "seo", label: "SEO", description: "Ajuste título padrão, meta tags, OG e sitemap." },
   { path: "dominio", label: "Domínio", description: "Configure domínio principal ou subdomínios da loja." },
   { path: "integracoes", label: "Integrações", description: "Conecte pixel, Google Tag Manager, e-mail marketing e mais." },

@@ -1,16 +1,26 @@
-import axios from 'axios';
-import { PaymentProvider, PaymentRequest, PaymentResponse } from './types.js';
+import axios from "axios";
+import { PaymentProvider, PaymentRequest, PaymentResponse } from "./types.js";
 
 const TEST_CARD_NUMBER = (process.env.TEST_CARD_NUMBER || "4111111111111111").replace(/\D/g, "");
 const TEST_CARD_CVV = (process.env.TEST_CARD_CVV || "").replace(/\D/g, "");
+const ASAAS_API_BASE = process.env.ASAAS_API_BASE || "https://sandbox.asaas.com/api/v3";
+const ASAAS_API_KEY = process.env.ASAAS_API_KEY || "";
+const CONFIG_ERROR_MESSAGE =
+  "Gateway Asaas não está configurado. Defina ASAAS_API_KEY no .env (sandbox ou produção) e reinicie o servidor.";
 
 const apiClient = axios.create({
-  baseURL: process.env.ASAAS_API_BASE,
+  baseURL: ASAAS_API_BASE,
   headers: {
-    'Content-Type': 'application/json',
-    'access_token': process.env.ASAAS_API_KEY,
+    "Content-Type": "application/json",
+    ...(ASAAS_API_KEY ? { access_token: ASAAS_API_KEY } : {}),
   },
 });
+
+function ensureGatewayConfigured() {
+  if (!ASAAS_API_KEY) {
+    throw new Error(CONFIG_ERROR_MESSAGE);
+  }
+}
 
 class AsaasProvider implements PaymentProvider {
   private async getOrCreateCustomer(customerData: PaymentRequest['customer']): Promise<string> {
@@ -18,6 +28,7 @@ class AsaasProvider implements PaymentProvider {
       if (customerData.cpf === "00000000000") {
         return "test-customer";
       }
+      ensureGatewayConfigured();
       // 1. Tenta buscar o cliente pelo CPF
       const searchResponse = await apiClient.get(`/customers?cpfCnpj=${customerData.cpf}`);
       if (searchResponse.data.data.length > 0) {
@@ -33,8 +44,8 @@ class AsaasProvider implements PaymentProvider {
       });
       return createResponse.data.id;
     } catch (error: any) {
-      console.error('Asaas - Error getting or creating customer:', error.response?.data);
-      throw new Error('Failed to process customer in Asaas.');
+      console.error("Asaas - Error getting or creating customer:", error.response?.data || error.message);
+      throw new Error(error.message || "Failed to process customer in Asaas.");
     }
   }
 
@@ -65,6 +76,7 @@ class AsaasProvider implements PaymentProvider {
     }
 
     try {
+      ensureGatewayConfigured();
       const customerId = await this.getOrCreateCustomer(paymentRequest.customer);
 
       const paymentData: any = {
@@ -115,8 +127,8 @@ class AsaasProvider implements PaymentProvider {
         };
       }
     } catch (error: any) {
-      console.error('Asaas - Error processing credit card payment:', error.response?.data);
-      const errorMessage = error.response?.data?.errors?.[0]?.description || 'Failed to process payment.';
+      console.error("Asaas - Error processing credit card payment:", error.response?.data || error.message);
+      const errorMessage = error.response?.data?.errors?.[0]?.description || error.message || "Failed to process payment.";
       return {
         success: false,
         message: errorMessage,
@@ -126,6 +138,7 @@ class AsaasProvider implements PaymentProvider {
 
   async createPixPayment(paymentRequest: PaymentRequest): Promise<PaymentResponse> {
     try {
+      ensureGatewayConfigured();
       const customerId = await this.getOrCreateCustomer(paymentRequest.customer);
 
       const paymentData = {
@@ -150,8 +163,8 @@ class AsaasProvider implements PaymentProvider {
         copyPaste: qrCodeResponse.data.payload,
       };
     } catch (error: any) {
-      console.error('Asaas - Error creating PIX payment:', error.response?.data);
-      const errorMessage = error.response?.data?.errors?.[0]?.description || 'Failed to create PIX payment.';
+      console.error('Asaas - Error creating PIX payment:', error.response?.data || error.message);
+      const errorMessage = error.response?.data?.errors?.[0]?.description || error.message || 'Failed to create PIX payment.';
       return {
         success: false,
         message: errorMessage,
@@ -161,6 +174,7 @@ class AsaasProvider implements PaymentProvider {
 
   async getPaymentStatusByExternalReference(externalReference: string): Promise<{ success: boolean; status?: string; paid: boolean; paymentId?: string; }>{
     try {
+      ensureGatewayConfigured();
       const resp = await apiClient.get('/payments', { params: { externalReference } });
       const payment = Array.isArray(resp.data?.data) && resp.data.data.length > 0 ? resp.data.data[0] : null;
       if (!payment) {
@@ -178,6 +192,7 @@ class AsaasProvider implements PaymentProvider {
 
   async getPaymentStatusById(paymentId: string): Promise<{ success: boolean; status?: string; paid: boolean; paymentId?: string; }>{
     try {
+      ensureGatewayConfigured();
       const resp = await apiClient.get(`/payments/${paymentId}`);
       const payment = resp.data;
       if (!payment) return { success: true, paid: false };

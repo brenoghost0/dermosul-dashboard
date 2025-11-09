@@ -86,6 +86,7 @@ model Customer {
   cart      Cart?
   events    StorefrontEvent[]
   luckyWheelSpins LuckyWheelSpin[]
+  couponRedemptions CouponRedemption[]
 
   @@map("customers")
 }
@@ -132,6 +133,7 @@ model Order {
   items             OrderItem[]
   payments          Payment[]
   addresses         Address[]
+  couponRedemptions CouponRedemption[]
 
   @@index([createdAt])
   @@index([status])
@@ -504,16 +506,51 @@ model PaymentProvider {
 model Coupon {
   id        String     @id @default(cuid())
   code      String     @unique
+  name      String?
+  description String?
   type      CouponType
   value     Int
+  freeShipping Boolean  @default(false) @map("free_shipping")
+  autoApply Boolean     @default(false) @map("auto_apply")
+  stackable Boolean     @default(false)
+  usageLimit Int?       @map("usage_limit")
+  usageCount Int        @default(0) @map("usage_count")
+  perCustomerLimit Int? @map("per_customer_limit")
+  minSubtotalCents Int? @map("min_subtotal_cents")
+  maxDiscountCents Int? @map("max_discount_cents")
+  newCustomerOnly Boolean @default(false) @map("new_customer_only")
+  targetProductIds String[] @default([]) @map("target_product_ids")
+  targetCollectionIds String[] @default([]) @map("target_collection_ids")
+  targetCategoryIds String[] @default([]) @map("target_category_ids")
+  excludedProductIds String[] @default([]) @map("excluded_product_ids")
+  metadata  Json?
   startsAt  DateTime?  @map("starts_at")
   endsAt    DateTime?  @map("ends_at")
   active    Boolean    @default(true)
   createdAt DateTime   @default(now()) @map("created_at")
   updatedAt DateTime   @updatedAt @map("updated_at")
   carts     Cart[]
+  redemptions CouponRedemption[]
 
   @@map("coupons")
+}
+
+model CouponRedemption {
+  id        String    @id @default(cuid())
+  couponId  String    @map("coupon_id")
+  coupon    Coupon    @relation(fields: [couponId], references: [id], onDelete: Cascade)
+  orderId   String?   @map("order_id")
+  order     Order?    @relation(fields: [orderId], references: [id], onDelete: SetNull)
+  customerId String?  @map("customer_id")
+  customer  Customer? @relation(fields: [customerId], references: [id], onDelete: SetNull)
+  amountCents Int     @default(0) @map("amount_cents")
+  freeShipping Boolean @default(false) @map("free_shipping")
+  metadata  Json?
+  createdAt DateTime  @default(now()) @map("created_at")
+
+  @@index([couponId])
+  @@index([customerId])
+  @@map("coupon_redemptions")
 }
 
 model LandingPage {

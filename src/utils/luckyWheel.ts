@@ -89,7 +89,7 @@ const baseDisplayRules = (rules?: LuckyWheelDisplayRules | null): LuckyWheelDisp
 export const DEFAULT_LUCKY_WHEEL_SETTINGS: LuckyWheelSettings = {
   enabled: true,
   headline: "Roleta da Sorte Dermosul",
-  subheadline: "Mimos leves pra sua rotina real.",
+  subheadline: "Um mimo pra você.",
   description: "Gire e descubra na hora qual presente Dermosul liberou especialmente pra você hoje.",
   ctaLabel: "Um mimo só pra você",
   buttonLabel: "GIRAR AGORA",

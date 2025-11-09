@@ -512,11 +512,50 @@ async function seedShippingMethods() {
 async function seedCoupons() {
   await prisma.coupon.upsert({
     where: { code: 'DERMOSUL10' },
-    update: { value: 10, type: 'PERCENT', active: true },
+    update: {
+      name: 'Dermodesconto 10%',
+      description: 'Presente de boas-vindas válido na primeira compra.',
+      value: 10,
+      type: 'PERCENT',
+      minSubtotalCents: 8000,
+      perCustomerLimit: 1,
+      usageLimit: 500,
+      active: true,
+    },
     create: {
       code: 'DERMOSUL10',
+      name: 'Dermodesconto 10%',
+      description: 'Presente de boas-vindas válido na primeira compra.',
       type: 'PERCENT',
       value: 10,
+      minSubtotalCents: 8000,
+      perCustomerLimit: 1,
+      usageLimit: 500,
+      active: true,
+    },
+  });
+
+  await prisma.coupon.upsert({
+    where: { code: 'FRETEVIP' },
+    update: {
+      name: 'Frete Premium Dermosul',
+      description: 'Libera frete grátis automático para campanhas especiais.',
+      freeShipping: true,
+      stackable: false,
+      minSubtotalCents: 3000,
+      usageLimit: 200,
+      active: true,
+    },
+    create: {
+      code: 'FRETEVIP',
+      name: 'Frete Premium Dermosul',
+      description: 'Libera frete grátis automático para campanhas especiais.',
+      type: 'AMOUNT',
+      value: 0,
+      freeShipping: true,
+      stackable: false,
+      minSubtotalCents: 3000,
+      usageLimit: 200,
       active: true,
     },
   });

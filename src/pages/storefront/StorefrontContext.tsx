@@ -1,4 +1,4 @@
-import { createContext, useContext, useEffect, useMemo, useState } from "react";
+import { createContext, useContext, useEffect, useMemo, useRef, useState } from "react";
 import type { StoreSettings } from "../Store/api";
 import type { StorefrontMenu } from "./api";
 import { storefrontApi } from "./api";
@@ -54,6 +54,37 @@ export function StorefrontProvider({ children }: { children: React.ReactNode }) 
 
   useEffect(() => {
     load();
+  }, [load]);
+
+  const retryTimeout = useRef<NodeJS.Timeout | null>(null);
+
+  useEffect(() => {
+    if (!error) return;
+    if (retryTimeout.current) {
+      clearTimeout(retryTimeout.current);
+    }
+    retryTimeout.current = setTimeout(() => {
+      load();
+    }, 5000);
+    return () => {
+      if (retryTimeout.current) {
+        clearTimeout(retryTimeout.current);
+        retryTimeout.current = null;
+      }
+    };
+  }, [error, load]);
+
+  useEffect(() => {
+    const handleSettingsUpdated = () => {
+      load();
+    };
+    if (typeof window !== "undefined") {
+      window.addEventListener("dermosul:store-settings-updated", handleSettingsUpdated);
+      return () => {
+        window.removeEventListener("dermosul:store-settings-updated", handleSettingsUpdated);
+      };
+    }
+    return undefined;
   }, [load]);
 
   const value: StorefrontContextValue = {

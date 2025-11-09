@@ -10,6 +10,7 @@ import PagesSection from "./sections/PagesSection";
 import NavigationSection from "./sections/NavigationSection";
 import ShippingSection from "./sections/ShippingSection";
 import PaymentsSection from "./sections/PaymentsSection";
+import CouponsSection from "./sections/CouponsSection";
 import SeoSection from "./sections/SeoSection";
 import DomainSection from "./sections/DomainSection";
 import IntegrationsSection from "./sections/IntegrationsSection";
@@ -32,6 +33,7 @@ const sectionMap: Record<string, React.ReactNode> = {
   navegacao: <NavigationSection />,
   frete: <ShippingSection />,
   pagamentos: <PaymentsSection />,
+  cupons: <CouponsSection />,
   seo: <SeoSection />,
   dominio: <DomainSection />,
   integracoes: <IntegrationsSection />,

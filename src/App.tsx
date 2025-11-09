@@ -44,6 +44,9 @@ export default function App() {
         <Route path="checkout" element={<CheckoutPage />} />
         <Route path="pedido/:id/confirmacao" element={<OrderConfirmationPage />} />
         <Route path="pg/:slug" element={<CmsPageView />} />
+        <Route path="contato" element={<Navigate to="/pg/contato" replace />} />
+        <Route path="sobre" element={<Navigate to="/pg/sobre" replace />} />
+        <Route path="politica-de-troca" element={<Navigate to="/pg/politica-de-troca" replace />} />
       </Route>
       <Route path="/login" element={<Login />} />
       <Route

@@ -2,7 +2,7 @@ import express, { Router, Request, Response } from 'express';
 import multer from 'multer';
 import path from 'path';
 import fs from 'fs';
-import type { Prisma } from '@prisma/client';
+import type { Prisma, CouponType } from '@prisma/client';
 
 import {
   listOrders,
@@ -35,6 +35,10 @@ import {
   deleteBanner,
   getLuckyWheelSettings,
   updateLuckyWheelSettings,
+  listCoupons,
+  createCoupon,
+  updateCoupon,
+  deleteCoupon,
 } from './data/index.js';
 import { getPaymentProvider, PaymentRequest } from './lib/payment/index.js';
 import { prisma } from './db/prisma.js';
@@ -261,6 +265,105 @@ const mapProductAssets = <T extends { images?: Array<{ url: string | null }>; im
     ...product,
     images,
     imageUrl,
+  };
+};
+
+const parseBooleanInput = (value: unknown, fallback = false) => {
+  if (typeof value === "boolean") return value;
+  if (typeof value === "string") {
+    const normalized = value.trim().toLowerCase();
+    if (["1", "true", "on", "yes"].includes(normalized)) return true;
+    if (["0", "false", "off", "no"].includes(normalized)) return false;
+  }
+  if (typeof value === "number") return value === 1;
+  return fallback;
+};
+
+const parseIntegerInput = (value: unknown) => {
+  if (value === undefined || value === null || value === "") return null;
+  const parsed = Number(value);
+  if (!Number.isFinite(parsed)) return null;
+  return Math.max(0, Math.floor(parsed));
+};
+
+const parseCurrencyToCents = (value: unknown) => {
+  if (value === undefined || value === null || value === "") return null;
+  if (typeof value === "number" && Number.isFinite(value)) {
+    return Math.round(value);
+  }
+  if (typeof value === "string") {
+    const normalized = value
+      .replace(/\s/g, "")
+      .replace(/\./g, "")
+      .replace(",", ".")
+      .replace(/[^\d.-]/g, "");
+    const parsed = Number(normalized);
+    if (!Number.isFinite(parsed)) return null;
+    return Math.round(parsed * 100);
+  }
+  return null;
+};
+
+const normalizeIdList = (value: unknown) => {
+  if (Array.isArray(value)) {
+    return value
+      .map((item) => (typeof item === "string" ? item.trim() : ""))
+      .filter((item): item is string => Boolean(item));
+  }
+  if (typeof value === "string" && value.trim()) {
+    return value
+      .split(",")
+      .map((item) => item.trim())
+      .filter(Boolean);
+  }
+  return [] as string[];
+};
+
+const sanitizeCouponPayload = (body: any) => {
+  if (!body || typeof body !== "object") {
+    throw new Error("Envie os campos do cupom.");
+  }
+  const code = typeof body.code === "string" ? body.code.trim().toUpperCase() : "";
+  if (!code) {
+    throw new Error("Informe o código do cupom.");
+  }
+  const type: CouponType = String(body.type || "").toUpperCase() === "AMOUNT" ? "AMOUNT" : "PERCENT";
+  const rawValue = body.value;
+  const amountValue = type === "AMOUNT" ? parseCurrencyToCents(rawValue) : parseIntegerInput(rawValue);
+  if (!amountValue || amountValue <= 0) {
+    throw new Error("Informe o valor de desconto do cupom.");
+  }
+  const minSubtotal = parseCurrencyToCents(body.minSubtotalCents);
+  const maxDiscount = parseCurrencyToCents(body.maxDiscountCents);
+  const startsAt = body.startsAt ? new Date(body.startsAt) : null;
+  const endsAt = body.endsAt ? new Date(body.endsAt) : null;
+  if (startsAt && Number.isNaN(Number(startsAt))) {
+    throw new Error("Data inicial inválida.");
+  }
+  if (endsAt && Number.isNaN(Number(endsAt))) {
+    throw new Error("Data final inválida.");
+  }
+  return {
+    code,
+    name: typeof body.name === "string" && body.name.trim() ? body.name.trim() : null,
+    description: typeof body.description === "string" && body.description.trim() ? body.description.trim() : null,
+    type,
+    value: amountValue,
+    freeShipping: parseBooleanInput(body.freeShipping),
+    autoApply: parseBooleanInput(body.autoApply),
+    stackable: parseBooleanInput(body.stackable),
+    newCustomerOnly: parseBooleanInput(body.newCustomerOnly),
+    usageLimit: parseIntegerInput(body.usageLimit),
+    perCustomerLimit: parseIntegerInput(body.perCustomerLimit),
+    minSubtotalCents: minSubtotal,
+    maxDiscountCents: maxDiscount,
+    startsAt: startsAt ?? null,
+    endsAt: endsAt ?? null,
+    targetProductIds: normalizeIdList(body.targetProductIds),
+    targetCollectionIds: normalizeIdList(body.targetCollectionIds),
+    targetCategoryIds: normalizeIdList(body.targetCategoryIds),
+    excludedProductIds: normalizeIdList(body.excludedProductIds),
+    active: parseBooleanInput(body.active, true),
   };
 };
 
@@ -574,6 +677,54 @@ router.get("/admin/store/collections", async (_req, res) => {
   } catch (error: any) {
     console.error("[admin] Falha ao listar coleções", error);
     res.status(500).json({ error: "server_error", message: error?.message || "Não foi possível carregar as coleções." });
+  }
+});
+
+router.get("/admin/store/coupons", requireAuth, async (_req, res) => {
+  try {
+    const coupons = await listCoupons();
+    res.json(coupons);
+  } catch (error: any) {
+    console.error("[admin] Falha ao listar cupons", error);
+    res.status(500).json({ error: "server_error", message: error?.message || "Não foi possível carregar os cupons." });
+  }
+});
+
+router.post("/admin/store/coupons", requireAuth, async (req, res) => {
+  try {
+    const payload = sanitizeCouponPayload(req.body);
+    const created = await createCoupon(payload);
+    res.status(201).json(created);
+  } catch (error: any) {
+    console.error("[admin] Falha ao criar cupom", error);
+    res
+      .status(400)
+      .json({ error: "coupon_save_failed", message: error?.message || "Não foi possível salvar este cupom." });
+  }
+});
+
+router.put("/admin/store/coupons/:id", requireAuth, async (req, res) => {
+  try {
+    const payload = sanitizeCouponPayload(req.body);
+    const updated = await updateCoupon(req.params.id, payload);
+    res.json(updated);
+  } catch (error: any) {
+    console.error("[admin] Falha ao atualizar cupom", error);
+    res
+      .status(400)
+      .json({ error: "coupon_update_failed", message: error?.message || "Não foi possível atualizar este cupom." });
+  }
+});
+
+router.delete("/admin/store/coupons/:id", requireAuth, async (req, res) => {
+  try {
+    await deleteCoupon(req.params.id);
+    res.json({ success: true });
+  } catch (error: any) {
+    console.error("[admin] Falha ao remover cupom", error);
+    res
+      .status(400)
+      .json({ error: "coupon_delete_failed", message: error?.message || "Não foi possível remover este cupom." });
   }
 });
 

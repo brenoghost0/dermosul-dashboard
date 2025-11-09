@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import StorefrontHeader from "./components/Header";
 import StorefrontFooter from "./components/Footer";
@@ -17,6 +17,13 @@ export default function CartPage() {
   const discount = cart?.discountCents || 0;
   const shipping = cart?.shippingCents ?? null;
   const total = cart?.totalCents || 0;
+  const appliedCoupon = cart?.coupon ?? null;
+  const couponDiscountValue = cart?.couponDiscountCents ?? 0;
+  const couponDiscountDisplay = couponDiscountValue > 0 ? formatCurrency(couponDiscountValue) : null;
+  const shippingLabel = cart?.freeShippingApplied ? "Grátis" : shipping !== null ? formatCurrency(shipping) : "Calculado no checkout";
+  const [couponCode, setCouponCode] = useState("");
+  const [couponStatus, setCouponStatus] = useState<"idle" | "loading" | "success" | "error">("idle");
+  const [couponFeedback, setCouponFeedback] = useState<string | null>(null);
 
   const items = useMemo(() => cart?.items || [], [cart?.items]);
   const {
@@ -57,6 +64,34 @@ export default function CartPage() {
       behavior: prefersReducedMotion ? "auto" : "smooth",
     });
   }, [loading, items.length]);
+
+  const handleApplyCoupon = async () => {
+    if (!couponCode.trim()) return;
+    setCouponStatus("loading");
+    setCouponFeedback(null);
+    try {
+      await applyCoupon(couponCode.trim().toUpperCase());
+      setCouponStatus("success");
+      setCouponFeedback("Cupom aplicado. Os valores foram atualizados.");
+      setCouponCode("");
+    } catch (err: any) {
+      setCouponStatus("error");
+      setCouponFeedback(err?.message || "Não foi possível aplicar este cupom.");
+    }
+  };
+
+  const handleRemoveCoupon = async () => {
+    setCouponStatus("loading");
+    setCouponFeedback(null);
+    try {
+      await applyCoupon(null);
+      setCouponStatus("success");
+      setCouponFeedback("Cupom removido. Você pode testar um novo código.");
+    } catch (err: any) {
+      setCouponStatus("error");
+      setCouponFeedback(err?.message || "Não foi possível remover o cupom.");
+    }
+  };
 
   return (
     <div className="min-h-screen bg-violet-50/40">
@@ -150,8 +185,58 @@ export default function CartPage() {
                 <div className="space-y-2 text-sm text-violet-700">
                   <Row label="Subtotal" value={formatCurrency(subtotal)} />
                   {discount > 0 && <Row label="Descontos" value={`- ${formatCurrency(discount)}`} />}
-                  <Row label="Frete" value={shipping !== null ? formatCurrency(shipping) : "Calculado no checkout"} />
+                  <Row label="Frete" value={shippingLabel} />
                 </div>
+
+                <div className="rounded-2xl border border-violet-50 bg-violet-50/70 p-4 text-sm text-violet-800">
+                  <p className="font-semibold text-violet-900">Cupom Dermosul</p>
+                  {appliedCoupon && (
+                    <div className="mt-3 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-xs text-emerald-700">
+                      <div className="flex items-start justify-between gap-3">
+                        <div>
+                          <p className="text-[10px] uppercase tracking-[0.35em] text-emerald-500">Ativo</p>
+                          <p className="text-base font-semibold text-emerald-700">{appliedCoupon.code}</p>
+                          <p>{appliedCoupon.name ?? "Presente especial Dermosul"}</p>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={handleRemoveCoupon}
+                          disabled={couponStatus === "loading"}
+                          className="text-xs font-semibold text-emerald-700 hover:text-emerald-900 disabled:opacity-60"
+                        >
+                          Remover
+                        </button>
+                      </div>
+                      <p className="mt-2 text-[11px] text-emerald-600">
+                        {appliedCoupon.freeShipping && "Frete grátis ativo. "}
+                        {couponDiscountDisplay ? `Economia de ${couponDiscountDisplay}.` : null}
+                        {!appliedCoupon.freeShipping && !couponDiscountDisplay && "Benefício aplicado ao pedido."}
+                      </p>
+                    </div>
+                  )}
+                  <div className="mt-3 flex flex-col gap-2 sm:flex-row">
+                    <input
+                      type="text"
+                      value={couponCode}
+                      onChange={(event) => setCouponCode(event.target.value)}
+                      placeholder="Digite seu código"
+                      className="w-full rounded-full border border-violet-200 px-3 py-2 text-sm text-violet-900 outline-none transition focus:border-violet-400"
+                      disabled={couponStatus === "loading"}
+                    />
+                    <button
+                      type="button"
+                      onClick={handleApplyCoupon}
+                      disabled={couponStatus === "loading" || !couponCode.trim()}
+                      className="inline-flex items-center justify-center rounded-full bg-violet-600 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-violet-700 disabled:cursor-not-allowed disabled:opacity-60"
+                    >
+                      {couponStatus === "loading" ? "Aplicando..." : "Aplicar"}
+                    </button>
+                  </div>
+                  {couponFeedback && (
+                    <p className={`mt-2 text-xs ${couponStatus === "error" ? "text-rose-600" : "text-emerald-600"}`}>{couponFeedback}</p>
+                  )}
+                </div>
+
                 <div className="flex flex-wrap items-baseline justify-between gap-1 border-t border-violet-100 pt-3 text-sm font-semibold text-violet-900">
                   <span>Total</span>
                   <span className="text-base">{formatCurrency(total)}</span>

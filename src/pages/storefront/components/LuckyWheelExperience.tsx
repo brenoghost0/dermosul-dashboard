@@ -39,6 +39,27 @@ const ICON_MAP: Record<string, string> = {
   fire: "🔥",
 };
 
+type ParticlePreset = {
+  top: string;
+  left: string;
+  size: number;
+  delay: string;
+  duration: string;
+  color: string;
+  glow: string;
+};
+
+const LUCKY_AURORA_PARTICLES: ParticlePreset[] = [
+  { top: "8%", left: "12%", size: 32, delay: "0s", duration: "9s", color: "rgba(156, 197, 255, 0.55)", glow: "rgba(156,197,255,0.7)" },
+  { top: "18%", left: "78%", size: 42, delay: "1s", duration: "11s", color: "rgba(249, 198, 255, 0.6)", glow: "rgba(249,198,255,0.78)" },
+  { top: "34%", left: "6%", size: 26, delay: "2s", duration: "8s", color: "rgba(177, 240, 231, 0.5)", glow: "rgba(177,240,231,0.65)" },
+  { top: "65%", left: "14%", size: 38, delay: "1.4s", duration: "10s", color: "rgba(255, 227, 173, 0.45)", glow: "rgba(255,227,173,0.66)" },
+  { top: "72%", left: "84%", size: 30, delay: "0.8s", duration: "7s", color: "rgba(147, 182, 255, 0.55)", glow: "rgba(147,182,255,0.75)" },
+  { top: "12%", left: "58%", size: 28, delay: "2.3s", duration: "9s", color: "rgba(255, 210, 234, 0.58)", glow: "rgba(255,210,234,0.78)" },
+  { top: "48%", left: "90%", size: 36, delay: "1.9s", duration: "12s", color: "rgba(188, 216, 255, 0.62)", glow: "rgba(188,216,255,0.85)" },
+  { top: "82%", left: "38%", size: 24, delay: "0.6s", duration: "7.5s", color: "rgba(239, 196, 255, 0.5)", glow: "rgba(239,196,255,0.74)" },
+];
+
 type WheelSegment = {
   id: string;
   label: string;
@@ -52,6 +73,8 @@ type WheelSegment = {
 type FetchOptions = {
   suppressLastResult?: boolean;
 };
+
+type InfoTone = "warning" | "success" | "info" | "neutral";
 
 export function LuckyWheelExperience({ cartId, sessionToken, onApplyCoupon }: LuckyWheelExperienceProps) {
   const [status, setStatus] = useState<WheelStatus>({ loading: true, error: null, data: null });
@@ -179,6 +202,7 @@ export function LuckyWheelExperience({ cartId, sessionToken, onApplyCoupon }: Lu
       color: index % 3 === 0 ? "#1dd2ff" : index % 3 === 1 ? "#ff73aa" : "#ffe26f",
     }));
   }, [prizes.length]);
+  const auroraParticles = useMemo(() => LUCKY_AURORA_PARTICLES, []);
 
   const spinDisabled =
     !status.data || status.data.alreadyPlayed || isSpinning || status.data.blockedReason === "limit_daily" || status.data.blockedReason === "limit_monthly";
@@ -348,28 +372,31 @@ export function LuckyWheelExperience({ cartId, sessionToken, onApplyCoupon }: Lu
   const overlayBackground = withAlpha(design.overlayColor ?? "rgba(4,6,20,0.92)", overlayOpacity);
   const overlayStyle: CSSProperties = {
     backgroundColor: overlayBackground,
+    backgroundImage: `radial-gradient(circle at 20% 20%, rgba(255,255,255,0.25), transparent 45%), linear-gradient(135deg, rgba(224,235,255,${overlayOpacity}), rgba(220,210,255,${overlayOpacity}), rgba(255,231,250,${overlayOpacity}))`,
     backdropFilter: `blur(${overlayBlur}px)`,
   };
   const cardStyle: CSSProperties = {
     fontFamily: design.fontFamily || DEFAULT_FONT_FAMILY,
-    border: "none",
+    border: "1px solid rgba(255,255,255,0.55)",
+    background: "linear-gradient(145deg, rgba(255,255,255,0.92), rgba(245,244,255,0.96), rgba(249,243,255,0.98))",
+    boxShadow: "0 55px 120px -60px rgba(143,123,255,0.65)",
     width: isCompactLayout ? "min(78vw, 520px)" : "min(72vw, 760px)",
     padding: isCompactLayout ? "1rem" : "2rem",
     gap: isCompactLayout ? "1.5rem" : "1.75rem",
   };
-  const highlightColor = design.highlightColor ?? "#ffe873";
-  const wheelGlowColor = design.wheelGlowColor ?? "#6febff";
-  const pointerColor = design.pointerColor ?? "#23d0ff";
-  const buttonColor = design.buttonColor ?? "#23c1ff";
+  const highlightColor = design.highlightColor ?? "#f8c6ff";
+  const wheelGlowColor = design.wheelGlowColor ?? "#bfe6ff";
+  const pointerColor = design.pointerColor ?? "#f8d57e";
+  const buttonColor = design.buttonColor ?? "linear-gradient(120deg, #39e3c3, #7d7bff 45%, #c596ff)";
   const buttonTextColor = design.buttonTextColor ?? "#ffffff";
-  const buttonShadow = design.buttonShadow ?? "0 30px 85px -45px rgba(11,132,255,0.9)";
-  const wheelBorderColor = withAlpha(design.borderColor ?? "#00a9d6", 0.85);
+  const buttonShadow = design.buttonShadow ?? "0 25px 90px -40px rgba(103,118,255,0.85)";
+  const wheelBorderColor = withAlpha(design.borderColor ?? "#c1e9ff", 0.85);
   const wheelStyles: CSSProperties = {
     backgroundColor: design.wheelBackground ?? "#ffffff",
-    backgroundImage: `${gradient}, radial-gradient(circle at 50% 55%, rgba(255,255,255,0.92) 0%, rgba(255,255,255,0.42) 52%, rgba(32,183,223,0.22) 100%)`,
+    backgroundImage: `${gradient}, radial-gradient(circle at 50% 55%, rgba(255,255,255,0.92) 0%, rgba(255,255,255,0.42) 52%, rgba(225,222,255,0.22) 100%)`,
     backgroundBlendMode: "normal",
     borderColor: wheelBorderColor,
-    boxShadow: `${design.wheelShadow ?? "0 42px 120px rgba(13,174,218,0.35)"}, inset 0 30px 55px rgba(255,255,255,0.42), inset 0 -22px 40px rgba(7,122,183,0.25)`,
+    boxShadow: `${design.wheelShadow ?? "0 42px 120px rgba(82,129,255,0.3)"}, inset 0 30px 55px rgba(255,255,255,0.42), inset 0 -22px 40px rgba(139,162,255,0.18)`,
   };
   const buttonStyles: CSSProperties | undefined = spinDisabled
     ? undefined
@@ -378,76 +405,106 @@ export function LuckyWheelExperience({ cartId, sessionToken, onApplyCoupon }: Lu
         color: buttonTextColor,
         boxShadow: buttonShadow,
       };
-  const ctaLabel = settings.ctaLabel?.trim() || "Um mimo só pra você";
-  const headline = settings.headline?.trim() || "Gire pra ganhar agora";
+  const ctaLabel = settings.ctaLabel?.trim() || "Experiência exclusiva Dermosul";
+  const headline = settings.headline?.trim() || "✨ Roleta da Sorte Dermosul";
+  const normalizedSubheadline = settings.subheadline?.trim() || "";
+  const legacySubheadline = "Mimos leves pra sua rotina real.";
+  const subheadlineCopy =
+    !normalizedSubheadline || normalizedSubheadline === legacySubheadline ? "Um mimo pra você" : normalizedSubheadline;
+  const descriptionCopy =
+    settings.description?.trim() || "Prêmios de frete grátis, cupons até 30% e surpresas reluzentes para elevar seu ritual de autocuidado.";
+  const alreadyPlayedMessage = settings.messages?.alreadyPlayed?.trim() || "Você já participou hoje, volte amanhã para mais sorte!";
   const buttonLabel = settings.buttonLabel?.trim() || "GIRAR AGORA";
+  const resultCopy = result && messageVisible ? result.message || `🎉 Parabéns! Você desbloqueou ${result.prize.label}!` : null;
+  const defaultPrompt = "Gire agora e sinta a alegria de destravar um mimo escolhido só pra você.";
+  const infoCopy = disabledMessage ?? resultCopy ?? (status.data.alreadyPlayed ? alreadyPlayedMessage : defaultPrompt);
+  const infoTone: InfoTone = disabledMessage ? "warning" : resultCopy ? "success" : status.data.alreadyPlayed ? "info" : "neutral";
+  const infoToneMap: Record<InfoTone, string> = {
+    warning: "border-amber-300/80 bg-amber-50 text-amber-700",
+    success: "border-emerald-200/80 bg-emerald-50 text-emerald-700",
+    info: "border-violet-200/70 bg-violet-50 text-violet-700",
+    neutral: "border-slate-200/70 bg-white/80 text-slate-600",
+  };
 
   return (
     <div className="fixed inset-0 z-[70] flex items-center justify-center px-4 py-6 md:px-6 md:py-10" style={overlayStyle}>
       <div className="absolute inset-0" onClick={closeOverlay} />
+      <div className="pointer-events-none absolute inset-0 overflow-hidden">
+        {auroraParticles.map((particle, index) => (
+          <span
+            key={`particle-${index}`}
+            className="lucky-wheel-particle"
+            style={{
+              top: particle.top,
+              left: particle.left,
+              width: particle.size,
+              height: particle.size,
+              animationDelay: particle.delay,
+              animationDuration: particle.duration,
+              background: particle.color,
+              boxShadow: `0 0 55px ${particle.glow}`,
+            }}
+          />
+        ))}
+      </div>
       <div
-        className={`relative z-10 flex w-full max-w-4xl flex-col overflow-visible rounded-[42px] bg-[#050b1d]/95 text-slate-100 shadow-[0_70px_160px_-60px_rgba(20,116,255,0.55)] ${isCompactLayout ? "gap-8" : "gap-10"} ${isCompactLayout ? "p-6 pt-12" : "p-8 md:flex-row md:p-12"}`}
+        className={`relative z-10 flex w-full max-w-4xl flex-col overflow-visible rounded-[48px] text-[#1e2040] shadow-[0_45px_160px_-70px_rgba(106,95,255,0.8)] ${isCompactLayout ? "gap-8" : "gap-10"} ${isCompactLayout ? "p-6 pt-12" : "p-8 md:flex-row md:p-12"}`}
         style={cardStyle}
       >
-        <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(120%_120%_at_50%_50%,rgba(61,166,255,0.18),transparent_65%),radial-gradient(80%_100%_at_50%_100%,rgba(130,255,222,0.08),transparent)]" />
+        <div className="pointer-events-none absolute inset-0 rounded-[48px] bg-[radial-gradient(120%_120%_at_50%_0%,rgba(255,255,255,0.7),transparent_70%),radial-gradient(120%_150%_at_50%_100%,rgba(166,194,255,0.35),transparent)]" />
         <button
           type="button"
           onClick={closeOverlay}
           aria-label="Fechar"
-          className={`absolute z-20 flex h-9 w-9 items-center justify-center rounded-full border border-white/30 bg-white/15 text-lg font-semibold text-white/80 transition hover:border-white/60 hover:text-white ${isCompactLayout ? "right-3 top-3" : "right-5 top-5"}`}
+          className={`absolute z-20 flex h-9 w-9 items-center justify-center rounded-full border border-white/60 bg-white/80 text-lg font-semibold text-[#1d1b3f] transition hover:border-[#d5ccff] hover:bg-white ${isCompactLayout ? "right-3 top-3" : "right-5 top-5"}`}
         >
           <span aria-hidden="true">×</span>
         </button>
 
         <div className="relative z-10 flex flex-1 flex-col gap-5">
-          <span className="text-[11px] uppercase tracking-[0.5em] text-sky-200/90">{ctaLabel}</span>
-          <h2 className="text-4xl font-semibold text-white md:text-[46px]">{headline}</h2>
-          {settings.subheadline && <p className="text-lg text-sky-100/85">{settings.subheadline}</p>}
-          {settings.description && <p className="text-sm text-slate-100/70 leading-relaxed">{settings.description}</p>}
+          <span className="inline-flex w-fit items-center gap-2 rounded-full bg-white/70 px-4 py-1 text-[11px] font-semibold uppercase tracking-[0.45em] text-[#7f6bff] shadow-sm">
+            {ctaLabel}
+          </span>
+          <h2 className="text-4xl font-semibold text-[#1c1b3a] md:text-[44px]">{headline}</h2>
+          <p className="text-lg text-[#514c7c]">{subheadlineCopy}</p>
+          <p className="text-sm leading-relaxed text-[#5c577f]">{descriptionCopy}</p>
 
-          <div className="mt-5 flex flex-wrap gap-2 text-[11px] text-sky-100/75">
-            {status.data.alreadyPlayed ? <Badge tone="violet">Já participou</Badge> : <Badge tone="teal">Chance única</Badge>}
+          <div className="mt-5 flex flex-wrap gap-2 text-[11px] text-[#4a437a]">
+            {status.data.alreadyPlayed ? <Badge tone="violet">Já participou</Badge> : <Badge tone="teal">Primeira chance</Badge>}
             {disabledMessage && <Badge tone="amber">Limite ativo</Badge>}
             {result?.freeShipping && <Badge tone="teal">Frete grátis</Badge>}
             {result?.freeOrder && <Badge tone="pink">Pedido 100% nosso</Badge>}
           </div>
 
           <div className="mt-auto space-y-4 text-center">
-            {disabledMessage ? (
-              <p className="rounded-2xl border border-amber-400/60 bg-gradient-to-br from-amber-400/15 to-transparent px-4 py-3 text-sm text-amber-100 shadow-[0_16px_50px_-35px_rgba(249,193,135,0.9)]">
-                {disabledMessage}
-              </p>
-            ) : result && messageVisible ? (
-              <p className="rounded-2xl border border-sky-400/60 bg-gradient-to-br from-sky-400/20 to-transparent px-4 py-3 text-sm text-sky-100 shadow-[0_16px_55px_-35px_rgba(56,189,248,0.85)]">
-                {result.message}
-              </p>
-            ) : (
-              <p className="rounded-2xl border border-white/15 bg-white/10 px-4 py-3 text-sm text-slate-100/85">
-                Aperte em &quot;Girar agora&quot; e descubra na hora o presente que reservamos pra você.
-              </p>
-            )}
+            <p className={`rounded-3xl px-4 py-3 text-sm leading-relaxed shadow-[0_25px_45px_-30px_rgba(101,92,255,0.55)] ${infoToneMap[infoTone]}`}>
+              {infoCopy}
+            </p>
 
             <button
               type="button"
               onClick={handleSpin}
               disabled={spinDisabled}
-              className={`mx-auto inline-flex items-center justify-center rounded-full px-6 py-3 text-sm font-semibold uppercase tracking-[0.45em] transition ${
-                spinDisabled ? "cursor-not-allowed bg-slate-600/45 text-slate-200/65" : "hover:brightness-[1.05]"
+              className={`mx-auto inline-flex items-center justify-center rounded-full px-6 py-3 text-sm font-semibold uppercase tracking-[0.4em] transition ${
+                spinDisabled ? "cursor-not-allowed bg-slate-200 text-slate-400" : "lucky-wheel-cta hover:brightness-[1.05]"
               }`}
               style={buttonStyles}
             >
               {isSpinning ? "Girando..." : buttonLabel}
             </button>
+            {status.data.alreadyPlayed && !resultCopy && !disabledMessage && (
+              <p className="text-xs text-[#8177b2]">Você já participou hoje, volte amanhã para mais sorte!</p>
+            )}
           </div>
         </div>
 
         <div className="relative z-10 mx-auto flex flex-none items-center justify-center" style={wheelContainerStyle}>
           <div className="absolute left-1/2 top-1/2" style={wheelTransformStyle}>
             <div className="relative flex h-[360px] w-[360px] items-center justify-center md:h-[420px] md:w-[420px]">
-              <div className="pointer-events-none absolute inset-[-58px] rounded-full bg-[radial-gradient(circle_at_50%_22%,rgba(94,243,255,0.55),transparent_75%)] blur-[1px]" />
-              <div className="pointer-events-none absolute inset-[-48px] rounded-full bg-[radial-gradient(circle,rgba(0,197,255,0.9),rgba(0,140,206,0.92))] shadow-[0_70px_140px_-45px_rgba(0,148,214,0.65)]" />
-              <div className="pointer-events-none absolute inset-[-44px] rounded-full border-[8px] border-[#9df4ff]" />
-              <div className="pointer-events-none absolute inset-[-34px] rounded-full border-[14px] border-[#0fb4df] bg-[#0bb8df]/20 shadow-[inset_0_18px_45px_rgba(255,255,255,0.4)]" />
+              <div className="pointer-events-none absolute inset-[-58px] rounded-full bg-[radial-gradient(circle_at_50%_22%,rgba(255,255,255,0.6),transparent_75%)] blur-[1px]" />
+              <div className="pointer-events-none absolute inset-[-48px] rounded-full bg-[radial-gradient(circle,rgba(201,220,255,0.75),rgba(167,182,255,0.85))] shadow-[0_70px_140px_-45px_rgba(131,146,255,0.55)]" />
+              <div className="pointer-events-none absolute inset-[-44px] rounded-full border-[8px] border-[#fbe8ff]" />
+              <div className="pointer-events-none absolute inset-[-34px] rounded-full border-[14px] border-[#cbd9ff] bg-[#f7f1ff]/60 shadow-[inset_0_18px_45px_rgba(255,255,255,0.6)]" />
               <div className="absolute inset-[-28px] rounded-full bg-transparent">
                 {lights.map((light) => (
                   <WheelLight key={light.id} angle={light.angle} radius={light.radius} glowColor={wheelGlowColor} tone={light.tone} />
@@ -561,10 +618,10 @@ function resolveBlockedCopy(reason: string, settings: LuckyWheelSettings) {
 type BadgeTone = "violet" | "teal" | "amber" | "pink";
 
 const BADGE_PALETTE: Record<BadgeTone, string> = {
-  violet: "border-[#725bff]/70 bg-[#7c66ff]/25 text-[#ebe9ff]",
-  teal: "border-[#4de4c4]/70 bg-[#54f0cf]/20 text-[#e8fff9]",
-  amber: "border-[#ffce73]/70 bg-[#ffdb94]/25 text-[#fff8eb]",
-  pink: "border-[#ff6ec7]/70 bg-[#ff79cf]/20 text-[#ffe9f7]",
+  violet: "border-[#b6a5ff] bg-[#f1edff] text-[#5c4aa0]",
+  teal: "border-[#8de5d6] bg-[#ecfffa] text-[#2a7a6b]",
+  amber: "border-[#ffd9a1] bg-[#fff9f0] text-[#8b5a1f]",
+  pink: "border-[#ffc4eb] bg-[#fff1fb] text-[#a03d88]",
 };
 
 function Badge({ children, tone }: { children: ReactNode; tone: BadgeTone }) {

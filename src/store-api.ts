@@ -1,5 +1,6 @@
 import express, { Router, Request } from 'express';
 import { prisma } from './db/prisma';
+import type { Prisma } from "@prisma/client";
 import {
   getStoreSettings as fetchStoreSettings,
   getMenuByKey,
@@ -28,6 +29,40 @@ import type { LuckyWheelSpinResult, LuckyWheelPublicState, LuckyWheelSpinPayload
 import type { ProductSortOption } from './data/index.js';
 
 const router = Router();
+
+async function buildPublicOrderPayload(orderId: string) {
+  const order = await prisma.order.findUnique({
+    where: { id: orderId },
+    include: {
+      payments: { orderBy: { createdAt: "desc" }, take: 1 },
+    },
+  });
+  if (!order) return null;
+  const paymentGateway = (order.metadata as Prisma.JsonObject | null | undefined)?.paymentGateway as
+    | { gatewayPaymentId?: string | null; gatewayStatus?: string | null }
+    | undefined;
+  const latestPayment = order.payments?.[0] ?? null;
+
+  return {
+    orderId: order.id,
+    orderNumber: order.number ?? order.id.slice(-6),
+    status: order.status,
+    totals: {
+      subtotalCents: order.subtotalAmount,
+      discountCents: order.discountAmount,
+      shippingCents: order.shippingAmount,
+      totalCents: order.totalAmount,
+    },
+    payment: {
+      method: latestPayment?.paymentMethod ?? "pix",
+      status: latestPayment?.status ?? order.status,
+      externalReference: order.externalReference ?? undefined,
+      gatewayPaymentId: paymentGateway?.gatewayPaymentId ?? null,
+      gatewayStatus: paymentGateway?.gatewayStatus ?? latestPayment?.status ?? null,
+      pix: null,
+    },
+  };
+}
 
 router.use(express.json());
 
@@ -753,6 +788,19 @@ router.get('/recommendations', async (req, res) => {
   } catch (error) {
     console.error('Erro ao buscar recomendações personalizadas:', error);
     res.status(500).json({ error: 'server_error', message: 'Não foi possível carregar recomendações.' });
+  }
+});
+
+router.get("/orders/:orderId/status", async (req, res) => {
+  try {
+    const payload = await buildPublicOrderPayload(req.params.orderId);
+    if (!payload) {
+      return res.status(404).json({ error: "order_not_found", message: "Pedido não encontrado." });
+    }
+    res.json(payload);
+  } catch (error) {
+    console.error("[storefront] Falha ao consultar status do pedido", error);
+    res.status(500).json({ error: "server_error", message: "Não foi possível consultar o pedido." });
   }
 });
 

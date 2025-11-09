@@ -57,7 +57,17 @@ export type Cart = {
   discountCents: number;
   shippingCents: number;
   totalCents: number;
-  coupon?: { id: string; code: string; type: string; value: number } | null;
+  couponDiscountCents?: number;
+  freeShippingApplied?: boolean;
+  coupon?: {
+    id: string;
+    code: string;
+    type: string;
+    value: number;
+    name?: string | null;
+    description?: string | null;
+    freeShipping?: boolean;
+  } | null;
   shippingMethod?: ShippingMethod | null;
   shippingAddress?: any;
   billingAddress?: any;
@@ -223,6 +233,9 @@ export const storefrontApi = {
       method: "POST",
       body: JSON.stringify(payload),
     });
+  },
+  async getOrderStatus(orderId: string) {
+    return http<CheckoutResponse>(`/api/store/orders/${orderId}/status`);
   },
   async trackEvent(payload: StorefrontEventPayload) {
     return http<{ success: boolean }>("/api/store/events", {

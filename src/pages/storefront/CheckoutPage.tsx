@@ -10,6 +10,7 @@ import { storefrontApi, CheckoutPayload } from "./api";
 import type { ShippingMethod, ProductSummary } from "../Store/api";
 import PixPaymentModal from "../../components/PixPaymentModal";
 import { emitAddedToCartEvent } from "./utils/cartEvents";
+import { sanitizeDigits } from "../../utils/sanitizeDigits";
 
 const ORDER_STORAGE_KEY = (orderId: string) => `dermosul_order_${orderId}`;
 const CHECKOUT_PROFILE_KEY = "dermosul_checkout_profile";
@@ -64,10 +65,11 @@ export default function CheckoutPage() {
     addItem,
     removeItem,
     selectShippingMethod,
+    applyCoupon,
   } = useCart();
   const [shippingMethods, setShippingMethods] = useState<ShippingMethod[]>([]);
   const [selectedShipping, setSelectedShipping] = useState<string | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [formErrors, setFormErrors] = useState<Record<string, string>>({});
@@ -86,6 +88,7 @@ export default function CheckoutPage() {
     qrCode: string;
     copyPaste: string;
     externalReference: string;
+    paymentId?: string | null;
     total: number;
   } | null>(null);
   const reservationExpiredRef = useRef(false);
@@ -124,8 +127,12 @@ export default function CheckoutPage() {
   });
   const [saveAddress, setSaveAddress] = useState(true);
 
-  const contactEmail = settings?.textBlocks?.footer?.contactEmail || settings?.contact?.email || "atendimento@dermosul.com.br";
-  const contactPhoneRaw = settings?.textBlocks?.footer?.contactPhone || settings?.contact?.phone || "+55 11 4000-0000";
+  const sanitizedPostalCode = sanitizeDigits(shippingAddress.postalCode);
+  const hasPostalCode = sanitizedPostalCode.length === 8;
+  const freeShippingApplied = Boolean(cart?.luckyWheelPerks?.freeShippingApplied || cart?.freeShippingApplied);
+
+  const contactEmail = settings?.textBlocks?.footer?.contactEmail ?? "atendimento@dermosul.com.br";
+  const contactPhoneRaw = settings?.textBlocks?.footer?.contactPhone ?? "+55 11 4000-0000";
   const contactPhoneDisplay = formatDisplayPhone(contactPhoneRaw);
   const contactPhoneLink = `https://wa.me/${phoneDigitsForWhatsapp(contactPhoneRaw)}`;
 
@@ -149,11 +156,20 @@ export default function CheckoutPage() {
   );
 
   useEffect(() => {
-    async function load() {
-      setLoading(true);
+    if (!hasPostalCode) {
+      setShippingMethods([]);
+      setSelectedShipping(null);
+      setLoading(false);
       setError(null);
+      return;
+    }
+    let active = true;
+    setLoading(true);
+    setError(null);
+    async function load() {
       try {
         const methods = await storefrontApi.listShippingMethods();
+        if (!active) return;
         setShippingMethods(methods);
         if (cart?.shippingMethod?.id) {
           setSelectedShipping(cart.shippingMethod.id);
@@ -165,13 +181,19 @@ export default function CheckoutPage() {
           });
         }
       } catch (err: any) {
+        if (!active) return;
         setError(err?.message || "Falha ao carregar métodos de frete.");
       } finally {
-        setLoading(false);
+        if (active) {
+          setLoading(false);
+        }
       }
     }
     load();
-  }, [cart?.shippingMethod?.id, selectShippingMethod]);
+    return () => {
+      active = false;
+    };
+  }, [cart?.shippingMethod?.id, selectShippingMethod, hasPostalCode]);
 
 useEffect(() => {
   try {
@@ -261,10 +283,6 @@ useEffect(() => {
     image: settings?.metaImageUrl || "/media/dermosul/og-image.png",
     url: checkoutUrl,
   });
-
-  function sanitizeDigits(value: string) {
-    return value.replace(/\D/g, "");
-  }
 
   function formatCurrency(value: number) {
     return (value / 100).toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
@@ -592,26 +610,27 @@ useEffect(() => {
 
     const payload: CheckoutPayload = {
       cartId: cart.id,
-        sessionToken: cart.sessionToken || undefined,
-        customer: sanitizedCustomer,
-        shippingAddress: sanitizedAddress,
-        billingAddress: null,
-        shippingMethodId: selectedShipping,
-        paymentMethod,
-        paymentDetails:
-          paymentMethod === "cartao"
-            ? {
-                installments: Math.max(1, parseInt(cardData.installments, 10) || 1),
-                creditCard: {
-                  holderName: cardData.holderName.trim(),
-                  number: sanitizeDigits(cardData.number),
-                  expiryMonth: parsedCardExpiry!.month,
-                  expiryYear: parsedCardExpiry!.year,
-                  cvv: sanitizeDigits(cardData.cvv),
-                },
-              }
-            : null,
-      };
+      sessionToken: cart.sessionToken || undefined,
+      customer: sanitizedCustomer,
+      shippingAddress: sanitizedAddress,
+      billingAddress: null,
+      shippingMethodId: selectedShipping,
+      paymentMethod,
+      paymentDetails:
+        paymentMethod === "cartao"
+          ? {
+              installments: Math.max(1, parseInt(cardData.installments, 10) || 1),
+              creditCard: {
+                holderName: cardData.holderName.trim(),
+                number: sanitizeDigits(cardData.number),
+                expiryMonth: parsedCardExpiry!.month,
+                expiryYear: parsedCardExpiry!.year,
+                cvv: sanitizeDigits(cardData.cvv),
+              },
+            }
+          : null,
+      couponCode: cart.coupon?.code ?? undefined,
+    };
       const response = await storefrontApi.checkout(payload);
       sessionStorage.setItem(ORDER_STORAGE_KEY(response.orderId), JSON.stringify(response));
       if (saveAddress) {
@@ -626,6 +645,7 @@ useEffect(() => {
           qrCode: response.payment.pix.qrCode,
           copyPaste: response.payment.pix.copyPaste,
           externalReference: response.payment.externalReference || "",
+          paymentId: response.payment.gatewayPaymentId || null,
           total: response.totals.totalCents,
         });
         setIsPixModalOpen(true);
@@ -644,7 +664,10 @@ useEffect(() => {
   async function handleCheckPaymentStatus() {
     if (!pixData?.externalReference) return false;
     try {
-      const result = await storefrontApi.checkPaymentStatus(pixData.externalReference);
+    const result = await storefrontApi.checkPaymentStatus(
+      pixData.externalReference,
+      pixData.paymentId ? { paymentId: pixData.paymentId } : undefined
+    );
       if (result.paid) {
         setIsPixModalOpen(false);
         const storedOrder = getStoredOrder(pixData.orderId);
@@ -734,7 +757,11 @@ useEffect(() => {
     };
   }, [shippingAddress.postalCode]);
 
-  const total = cart?.totalCents || 0;
+  const rawSubtotal = cart?.subtotalCents ?? 0;
+  const rawDiscount = cart?.discountCents ?? 0;
+  const rawShipping = cart?.shippingCents ?? 0;
+  const effectiveShippingCents = freeShippingApplied ? 0 : hasPostalCode ? rawShipping : 0;
+  const total = Math.max(rawSubtotal - rawDiscount + effectiveShippingCents, 0);
   const cartItems = cart?.items || [];
   const countdownLabel = useMemo(() => {
     const minutes = Math.floor(timeLeft / 60)
@@ -791,7 +818,9 @@ useEffect(() => {
     });
   };
 
-  const hasItems = !!cart && cart.items.length > 0;
+  const hasCart = Boolean(cart);
+  const hasItems = Boolean(cart?.items && cart.items.length > 0);
+  const showEmptyState = !loading && !cartLoading && (!cart || cart.items.length === 0);
 
   const headerNotice = useMemo(() => {
     if (stepMessage && fastCheckoutNotice) {
@@ -812,11 +841,11 @@ useEffect(() => {
       <main className="mx-auto max-w-6xl px-4 pb-16 overflow-x-hidden">
         {(cartLoading || loading) && <Alert tone="muted">Carregando o checkout Dermosul com as maiores marcas do mundo...</Alert>}
         {(cartError || error) && <Alert tone="error">{cartError || error}</Alert>}
-        {cart && cart.items.length === 0 && !loading && (
+        {showEmptyState && (
           <Alert tone="muted">Seu carrinho está vazio. Visite a vitrine Dermosul e descubra as maiores marcas de dermocosméticos.</Alert>
         )}
 
-        {hasItems && !loading && cart && (
+        {hasItems && !loading && hasCart && (
           <form
             className="mt-8 grid gap-8 lg:grid-cols-[minmax(0,1fr)_minmax(320px,420px)]"
             onSubmit={handleFormSubmit}
@@ -1003,15 +1032,21 @@ useEffect(() => {
                 </div>
                 <div className="mt-6 space-y-3 text-sm text-violet-800">
                   <p className="font-medium">Método de entrega</p>
-                  {shippingMethods.length === 0 && (
-                    <p className="text-xs text-zinc-500">Informe um CEP válido para calcular as opções disponíveis.</p>
+                  {!hasPostalCode && (
+                    <div className="rounded-2xl border border-dashed border-violet-200 bg-violet-50/50 px-4 py-3 text-xs text-violet-600">
+                      Preencha o CEP para liberar as opções de envio e calcular o frete.
+                    </div>
                   )}
-                  {shippingMethods.map((method) => (
-                    <label
-                      key={method.id}
-                      className={`flex items-center gap-3 rounded-2xl border px-4 py-3 transition ${
-                        selectedShipping === method.id
-                          ? "border-violet-500 bg-violet-50"
+                  {hasPostalCode && shippingMethods.length === 0 && (
+                    <p className="text-xs text-zinc-500">Estamos carregando opções disponíveis para o CEP informado.</p>
+                  )}
+                  {hasPostalCode &&
+                    shippingMethods.map((method) => (
+                      <label
+                        key={method.id}
+                        className={`flex items-center gap-3 rounded-2xl border px-4 py-3 transition ${
+                          selectedShipping === method.id
+                            ? "border-violet-500 bg-violet-50"
                           : "border-violet-100 bg-white hover:border-violet-300"
                       }`}
                     >
@@ -1025,14 +1060,24 @@ useEffect(() => {
                           });
                         }}
                         className="h-4 w-4 text-violet-600"
+                        disabled={!hasPostalCode}
                       />
                       <div className="flex-1">
                         <p className="text-sm font-semibold text-violet-900">{method.name}</p>
-                        <p className="text-xs text-violet-600">{method.deliveryEtaText || "Entrega padrão"}</p>
+                        <p className="text-xs text-violet-600">
+                          {method.deliveryEtaText || (hasPostalCode ? "Entrega padrão" : "Calcule após informar o CEP")}
+                        </p>
+                        {freeShippingApplied && (
+                          <span className="mt-1 inline-flex items-center rounded-full bg-emerald-50 px-2 py-0.5 text-[11px] font-semibold uppercase tracking-[0.3em] text-emerald-700">
+                            Frete Dermosul liberado
+                          </span>
+                        )}
                       </div>
-                      <span className="text-sm font-semibold text-violet-900">{formatCurrency(method.flatPriceCents)}</span>
+                      <span className="text-sm font-semibold text-violet-900">
+                        {freeShippingApplied ? "R$ 0,00" : hasPostalCode ? formatCurrency(method.flatPriceCents) : "Informe o CEP"}
+                      </span>
                     </label>
-                  ))}
+                    ))}
                 </div>
                 <div className="mt-6 rounded-2xl bg-white p-4 text-sm text-violet-800 shadow-sm">
                   <label className="flex items-center gap-3">
@@ -1129,7 +1174,7 @@ useEffect(() => {
                               value={cardData.holderName}
                               onChange={(value) => setCardData((prev) => ({ ...prev, holderName: value }))}
                               required
-                              autoComplete="cc-name"
+                              autoComplete="off"
                               error={formErrors.cardHolderName}
                             />
                             <TextInput
@@ -1137,7 +1182,7 @@ useEffect(() => {
                               value={cardData.number}
                               onChange={(value) => setCardData((prev) => ({ ...prev, number: formatCardNumber(value) }))}
                               required
-                              autoComplete="cc-number"
+                              autoComplete="off"
                               placeholder="0000 0000 0000 0000"
                               error={formErrors.cardNumber}
                             />
@@ -1148,7 +1193,7 @@ useEffect(() => {
                               value={cardData.expiry}
                               onChange={(value) => setCardData((prev) => ({ ...prev, expiry: formatCardExpiry(value) }))}
                               required
-                              autoComplete="cc-exp"
+                              autoComplete="off"
                               placeholder="MM/AA"
                               error={formErrors.cardExpiry}
                             />
@@ -1157,7 +1202,7 @@ useEffect(() => {
                               value={cardData.cvv}
                               onChange={(value) => setCardData((prev) => ({ ...prev, cvv: formatCardCvv(value) }))}
                               required
-                              autoComplete="cc-csc"
+                              autoComplete="off"
                               placeholder="123"
                               error={formErrors.cardCvv}
                             />
@@ -1168,11 +1213,11 @@ useEffect(() => {
                                 onChange={(event) => setCardData((prev) => ({ ...prev, installments: event.target.value }))}
                                 className="rounded border border-zinc-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-violet-200"
                               >
-                                {Array.from({ length: 12 }).map((_, index) => {
+                                {Array.from({ length: 5 }).map((_, index) => {
                                   const count = index + 1;
                                   return (
                                     <option key={count} value={String(count)}>
-                                      {count}x
+                                      {count}x sem juros
                                     </option>
                                   );
                                 })}
@@ -1244,6 +1289,9 @@ useEffect(() => {
               contactEmail={contactEmail}
               contactPhoneDisplay={contactPhoneDisplay}
               contactPhoneLink={contactPhoneLink}
+              showShippingValue={hasPostalCode}
+              freeShippingApplied={freeShippingApplied}
+              onApplyCoupon={applyCoupon}
             />
           </form>
         )}
@@ -1439,6 +1487,9 @@ function CheckoutSummary({
   contactEmail,
   contactPhoneDisplay,
   contactPhoneLink,
+  showShippingValue,
+  freeShippingApplied,
+  onApplyCoupon,
 }: {
   cart: NonNullable<ReturnType<typeof useCart>["cart"]>;
   cartItems: typeof cart.items;
@@ -1452,13 +1503,20 @@ function CheckoutSummary({
   contactEmail: string;
   contactPhoneDisplay: string;
   contactPhoneLink: string;
+  showShippingValue: boolean;
+  freeShippingApplied: boolean;
+  onApplyCoupon: (code: string | null) => Promise<void>;
 }) {
   const subtotal = formatCurrency(cart.subtotalCents);
   const discount = cart.discountCents > 0 ? formatCurrency(cart.discountCents) : null;
-  const shipping = cart.shippingCents > 0 || cart.shippingCents === 0
-    ? formatCurrency(cart.shippingCents)
-    : "Calculado no próximo passo";
+  const shipping = freeShippingApplied ? "Grátis" : showShippingValue ? formatCurrency(cart.shippingCents) : "Informe o CEP";
   const totalFormatted = formatCurrency(total);
+  const appliedCoupon = cart.coupon;
+  const couponDiscountValue = cart.couponDiscountCents ?? 0;
+  const couponDiscountDisplay = couponDiscountValue > 0 ? formatCurrency(couponDiscountValue) : null;
+  const [couponCode, setCouponCode] = useState("");
+  const [couponStatus, setCouponStatus] = useState<"idle" | "loading" | "success" | "error">("idle");
+  const [couponFeedback, setCouponFeedback] = useState<string | null>(null);
 
   function InlineAddButton({ onConfirm }: { onConfirm: () => Promise<void> | void }) {
     const [animating, setAnimating] = useState(false);
@@ -1507,6 +1565,34 @@ function CheckoutSummary({
     );
   }
 
+  const handleApplyCoupon = async () => {
+    if (!couponCode.trim()) return;
+    setCouponStatus("loading");
+    setCouponFeedback(null);
+    try {
+      await onApplyCoupon(couponCode.trim().toUpperCase());
+      setCouponStatus("success");
+      setCouponFeedback("Cupom aplicado com carinho. Atualizamos os valores imediatamente.");
+      setCouponCode("");
+    } catch (err: any) {
+      setCouponStatus("error");
+      setCouponFeedback(err?.message || "Não conseguimos aplicar este cupom. Tente novamente.");
+    }
+  };
+
+  const handleRemoveCoupon = async () => {
+    setCouponStatus("loading");
+    setCouponFeedback(null);
+    try {
+      await onApplyCoupon(null);
+      setCouponStatus("success");
+      setCouponFeedback("Cupom removido. Você pode testar outro código acima.");
+    } catch (err: any) {
+      setCouponStatus("error");
+      setCouponFeedback(err?.message || "Não conseguimos remover o cupom agora.");
+    }
+  };
+
   return (
     <aside className="min-w-0 lg:sticky lg:top-6">
       <div className="space-y-6 rounded-3xl border border-violet-100 bg-white p-6 shadow-lg">
@@ -1522,6 +1608,57 @@ function CheckoutSummary({
           <SummaryRow label="Subtotal" value={subtotal} />
           {discount && <SummaryRow label="Descontos" value={`- ${discount}`} />}
           <SummaryRow label="Frete" value={shipping} />
+        </div>
+
+        <div className="rounded-2xl border border-violet-100 bg-white/80 p-4 shadow-sm">
+          <p className="text-sm font-semibold text-violet-900">Cupom / presente Dermosul</p>
+          {appliedCoupon && (
+            <div className="mt-3 rounded-2xl border border-emerald-200 bg-emerald-50/80 px-4 py-3 text-sm text-emerald-800">
+              <div className="flex flex-wrap items-start justify-between gap-3">
+                <div>
+                  <p className="text-[11px] uppercase tracking-[0.35em] text-emerald-500">Cupom ativo</p>
+                  <p className="text-lg font-semibold text-emerald-800">{appliedCoupon.code}</p>
+                  <p className="text-xs text-emerald-700">{appliedCoupon.name || "Benefício exclusivo Dermosul"}</p>
+                </div>
+                <button
+                  type="button"
+                  onClick={handleRemoveCoupon}
+                  disabled={couponStatus === "loading"}
+                  className="text-xs font-semibold text-emerald-700 transition hover:text-emerald-900 disabled:opacity-60"
+                >
+                  Remover
+                </button>
+              </div>
+              <p className="mt-2 text-xs text-emerald-700">
+                {appliedCoupon.freeShipping && "Frete grátis liberado. "}
+                {couponDiscountDisplay ? `Economia de ${couponDiscountDisplay}.` : null}
+                {!appliedCoupon.freeShipping && !couponDiscountDisplay && "Benefício aplicado ao pedido."}
+              </p>
+            </div>
+          )}
+          <div className="mt-3 flex flex-col gap-2 sm:flex-row">
+            <input
+              type="text"
+              value={couponCode}
+              onChange={(event) => setCouponCode(event.target.value)}
+              placeholder="Digite seu cupom"
+              className="w-full rounded-full border border-violet-200 px-4 py-2 text-sm text-violet-900 outline-none transition focus:border-violet-400 focus:ring-0"
+              disabled={couponStatus === "loading"}
+            />
+            <button
+              type="button"
+              onClick={handleApplyCoupon}
+              disabled={couponStatus === "loading" || !couponCode.trim()}
+              className="inline-flex items-center justify-center rounded-full bg-violet-600 px-5 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-violet-700 focus:outline-none focus:ring-2 focus:ring-violet-200 disabled:cursor-not-allowed disabled:opacity-60"
+            >
+              {couponStatus === "loading" ? "Aplicando..." : "Aplicar"}
+            </button>
+          </div>
+          {couponFeedback && (
+            <p className={`mt-2 text-xs ${couponStatus === "error" ? "text-rose-600" : "text-emerald-600"}`}>
+              {couponFeedback}
+            </p>
+          )}
         </div>
 
         <div className="rounded-2xl bg-violet-50/70 p-4">

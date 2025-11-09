@@ -221,11 +221,28 @@ export interface PaymentProvider {
 export interface Coupon {
   id: string;
   code: string;
+  name?: string | null;
+  description?: string | null;
   type: "PERCENT" | "AMOUNT";
   value: number;
+  freeShipping: boolean;
+  autoApply: boolean;
+  stackable: boolean;
+  usageLimit?: number | null;
+  usageCount: number;
+  perCustomerLimit?: number | null;
+  minSubtotalCents?: number | null;
+  maxDiscountCents?: number | null;
+  newCustomerOnly: boolean;
+  targetProductIds: string[];
+  targetCollectionIds: string[];
+  targetCategoryIds: string[];
+  excludedProductIds: string[];
   startsAt?: string | null;
   endsAt?: string | null;
   active: boolean;
+  createdAt?: string;
+  updatedAt?: string;
 }
 
 const toQueryString = (params: Record<string, unknown>) => {

@@ -15,6 +15,22 @@ export default function StorefrontFooter() {
   const paymentLogos = textBlocks?.footer?.paymentLogos || [];
   const socialItems = textBlocks?.footer?.socialLinks || [];
 
+  const focusPrimaryContent = () => {
+    if (typeof window === "undefined") return;
+    window.setTimeout(() => {
+      const anchor =
+        document.querySelector("[data-storefront-content-start]") ||
+        document.querySelector("main");
+      if (!anchor) {
+        window.scrollTo({ top: 0, behavior: "smooth" });
+        return;
+      }
+      const top = anchor.getBoundingClientRect().top + window.scrollY;
+      const offset = Math.max(top - 80, 0);
+      window.scrollTo({ top: offset, behavior: "smooth" });
+    }, 150);
+  };
+
   return (
     <footer className="mt-12 border-t border-[#221445] bg-[#110120] text-violet-100">
       <div className="mx-auto flex max-w-6xl flex-wrap gap-10 px-4 py-12">
@@ -33,7 +49,7 @@ export default function StorefrontFooter() {
           <ul className="mt-3 space-y-2 text-sm text-violet-300">
             {(footerMenu?.items || []).map((item) => (
               <li key={item.id}>
-                <Link to={item.href} className="hover:text-white transition">
+                <Link to={item.href} className="hover:text-white transition" onClick={focusPrimaryContent}>
                   {item.label}
                 </Link>
               </li>

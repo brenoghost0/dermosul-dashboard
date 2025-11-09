@@ -119,3 +119,61 @@ body {
   box-sizing: border-box;
   overflow-wrap: anywhere;
 }
+
+@keyframes luckyWheelButtonPulse {
+  0% {
+    transform: scale(1);
+    box-shadow: 0 25px 65px rgba(123, 135, 255, 0.35);
+  }
+  50% {
+    transform: scale(1.03);
+    box-shadow: 0 30px 85px rgba(123, 135, 255, 0.55);
+  }
+  100% {
+    transform: scale(1);
+    box-shadow: 0 25px 65px rgba(123, 135, 255, 0.35);
+  }
+}
+
+.lucky-wheel-cta {
+  color: #fff;
+  position: relative;
+  animation: luckyWheelButtonPulse 2.6s ease-in-out infinite;
+}
+
+.lucky-wheel-cta::after {
+  content: "";
+  position: absolute;
+  inset: 4px;
+  border-radius: 999px;
+  background: linear-gradient(90deg, rgba(255, 255, 255, 0.2), transparent);
+  opacity: 0.5;
+  pointer-events: none;
+}
+
+@keyframes luckyWheelParticleFloat {
+  0% {
+    transform: translate3d(0, 0, 0) scale(0.8);
+    opacity: 0;
+  }
+  25% {
+    opacity: 0.85;
+  }
+  75% {
+    opacity: 0.85;
+  }
+  100% {
+    transform: translate3d(0, -25px, 0) scale(1.1);
+    opacity: 0;
+  }
+}
+
+.lucky-wheel-particle {
+  position: absolute;
+  border-radius: 999px;
+  opacity: 0;
+  filter: blur(0.5px);
+  animation-name: luckyWheelParticleFloat;
+  animation-iteration-count: infinite;
+  animation-timing-function: ease-in-out;
+}

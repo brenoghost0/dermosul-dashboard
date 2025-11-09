@@ -30,6 +30,9 @@ export function useStoreSettings() {
     try {
       const updated = await storeAdminApi.updateSettings(patch);
       setSettings(updated);
+      if (typeof window !== "undefined") {
+        window.dispatchEvent(new CustomEvent("dermosul:store-settings-updated"));
+      }
       return updated;
     } catch (err: any) {
       const message = err?.message || "Falha ao salvar configurações.";
@@ -50,4 +53,3 @@ export function useStoreSettings() {
     setSettings,
   };
 }
-

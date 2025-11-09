@@ -403,9 +403,10 @@ async function runSeedIfNeeded() {
 }
 // Start
 const PORT = parseInt(process.env.PORT || '3003', 10);
+const HOST = process.env.HOST || '0.0.0.0';
 const ENABLE_AUTO_SEED = process.env.ENABLE_AUTO_SEED === 'true';
-httpServer.listen(PORT, '0.0.0.0', () => {
-    console.log(`Backend listening on http://0.0.0.0:${PORT}`);
+httpServer.listen(PORT, HOST, () => {
+    console.log(`Backend listening on http://${HOST}:${PORT}`);
     if (ENABLE_AUTO_SEED) {
         runSeedIfNeeded().catch(e => {
             console.error("Falha ao executar o seed no boot:", e);

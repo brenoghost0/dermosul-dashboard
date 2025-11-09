@@ -1,6 +1,6 @@
 import { prisma } from "../db/prisma.js";
 import { Prisma } from "@prisma/client";
-import type { BannerKind } from "@prisma/client";
+import type { BannerKind, Coupon, ProductVariant } from "@prisma/client";
 import dayjs from "dayjs";
 import { generateUniqueId, generateShortId } from "../utils/index.js";
 import { getPaymentProvider } from "../lib/payment/index.js";
@@ -15,6 +15,32 @@ import type {
   LuckyWheelDisplayRules,
   LuckyWheelLimits,
 } from "../types/lucky-wheel";
+
+type CartProductContext = {
+  categories: string[];
+  collections: string[];
+};
+
+type CouponTargetsSet = {
+  products: Set<string>;
+  collections: Set<string>;
+  categories: Set<string>;
+  excludedProducts: Set<string>;
+};
+
+type CouponEvaluationContext = {
+  cart: CartWithRelations;
+  subtotalCents: number;
+  customerId?: string | null;
+  strict?: boolean;
+  productContext?: Map<string, CartProductContext>;
+};
+
+type ResolvedCouponPayload = {
+  coupon: Coupon;
+  discountCents: number;
+  productContext?: Map<string, CartProductContext>;
+};
 
 const validateCpf = (cpf: string): boolean => {
   const cleanedCpf = cpf.replace(/\D/g, "");
@@ -210,7 +236,7 @@ const DEFAULT_CHECKOUT_SETTINGS = Object.freeze({
 const DEFAULT_LUCKY_WHEEL_SETTINGS: LuckyWheelSettings = {
   enabled: true,
   headline: "Roleta da Sorte Dermosul",
-  subheadline: "Mimos leves pra sua rotina real.",
+  subheadline: "Um mimo pra você.",
   description:
     "Gire e descubra cuidados presentes da Dermosul. Cada prêmio foi criado para deixar sua experiência ainda mais especial.",
   ctaLabel: "Liberamos presentes exclusivos hoje",
@@ -1004,22 +1030,139 @@ export const calculateShippingForMethod = (
   return Math.max(method.flatPriceCents || 0, 0);
 };
 
+const toIdSet = (values?: string[] | null) =>
+  new Set((values ?? []).map((value) => value?.trim()).filter((value): value is string => Boolean(value && value.length > 0)));
+
+const buildCouponTargets = (coupon: Coupon): CouponTargetsSet => ({
+  products: toIdSet(coupon.targetProductIds),
+  collections: toIdSet(coupon.targetCollectionIds),
+  categories: toIdSet(coupon.targetCategoryIds),
+  excludedProducts: toIdSet(coupon.excludedProductIds),
+});
+
+async function buildCartProductContext(tx: Prisma.TransactionClient, cart: CartWithRelations) {
+  const ids = Array.from(new Set(cart.items.map((item) => item.productId)));
+  if (ids.length === 0) {
+    return new Map<string, CartProductContext>();
+  }
+  const products = await tx.product.findMany({
+    where: { id: { in: ids } },
+    select: {
+      id: true,
+      categoryId: true,
+      productLinks: { select: { categoryId: true } },
+      collectionLinks: { select: { collectionId: true } },
+    },
+  });
+  const map = new Map<string, CartProductContext>();
+  for (const product of products) {
+    const categorySet = new Set<string>();
+    if (product.categoryId) {
+      categorySet.add(product.categoryId);
+    }
+    product.productLinks?.forEach((link) => {
+      if (link.categoryId) {
+        categorySet.add(link.categoryId);
+      }
+    });
+    const collectionSet = new Set<string>();
+    product.collectionLinks?.forEach((link) => {
+      if (link.collectionId) {
+        collectionSet.add(link.collectionId);
+      }
+    });
+    map.set(product.id, {
+      categories: Array.from(categorySet),
+      collections: Array.from(collectionSet),
+    });
+  }
+  return map;
+}
+
+const cartMatchesTargets = (
+  cart: CartWithRelations,
+  targets: CouponTargetsSet,
+  productContext: Map<string, CartProductContext>
+) => {
+  const hasSpecificTargets =
+    targets.products.size > 0 || targets.collections.size > 0 || targets.categories.size > 0;
+
+  for (const item of cart.items) {
+    if (targets.excludedProducts.has(item.productId)) {
+      return false;
+    }
+  }
+
+  if (!hasSpecificTargets) {
+    return true;
+  }
+
+  return cart.items.some((item) => {
+    if (targets.products.has(item.productId)) {
+      return true;
+    }
+    const context = productContext.get(item.productId);
+    if (!context) {
+      return false;
+    }
+    const matchesCollection =
+      targets.collections.size === 0
+        ? false
+        : context.collections.some((id) => targets.collections.has(id));
+    if (matchesCollection) {
+      return true;
+    }
+    const matchesCategory =
+      targets.categories.size === 0
+        ? false
+        : context.categories.some((id) => targets.categories.has(id));
+    return matchesCategory;
+  });
+};
+
 export const computeCouponDiscount = (
-  type: 'PERCENT' | 'AMOUNT',
+  type: "PERCENT" | "AMOUNT",
   value: number,
-  subtotalCents: number
+  subtotalCents: number,
+  options?: { maxDiscountCents?: number | null }
 ) => {
   if (subtotalCents <= 0 || value <= 0) {
     return 0;
   }
-  if (type === 'PERCENT') {
+  let rawDiscount = 0;
+  if (type === "PERCENT") {
     const discount = Math.floor((subtotalCents * value) / 100);
-    return Math.min(subtotalCents, Math.max(discount, 0));
+    rawDiscount = Math.max(discount, 0);
+  } else {
+    rawDiscount = Math.max(value, 0);
   }
-  return Math.min(subtotalCents, Math.max(value, 0));
+  const capped =
+    options?.maxDiscountCents && options.maxDiscountCents > 0
+      ? Math.min(rawDiscount, options.maxDiscountCents)
+      : rawDiscount;
+  return Math.min(subtotalCents, capped);
 };
 
 function mapCart(cart: CartWithRelations) {
+  const couponSummary = cart.coupon
+    ? {
+        id: cart.coupon.id,
+        code: cart.coupon.code,
+        type: cart.coupon.type,
+        value: cart.coupon.value,
+        name: cart.coupon.name,
+        description: cart.coupon.description,
+        freeShipping: cart.coupon.freeShipping,
+        minSubtotalCents: cart.coupon.minSubtotalCents,
+        maxDiscountCents: cart.coupon.maxDiscountCents,
+        usageLimit: cart.coupon.usageLimit,
+        usageCount: cart.coupon.usageCount,
+        perCustomerLimit: cart.coupon.perCustomerLimit,
+        startsAt: cart.coupon.startsAt,
+        endsAt: cart.coupon.endsAt,
+      }
+    : null;
+
   return {
     id: cart.id,
     sessionToken: cart.sessionToken,
@@ -1028,14 +1171,9 @@ function mapCart(cart: CartWithRelations) {
     discountCents: cart.discountCents,
     shippingCents: cart.shippingCents,
     totalCents: cart.totalCents,
-    coupon: cart.coupon
-      ? {
-          id: cart.coupon.id,
-          code: cart.coupon.code,
-          type: cart.coupon.type,
-          value: cart.coupon.value,
-        }
-      : null,
+    couponDiscountCents: cart.discountCents,
+    freeShippingApplied: Boolean(cart.coupon?.freeShipping),
+    coupon: couponSummary,
     shippingMethod: cart.shippingMethod
       ? {
           id: cart.shippingMethod.id,
@@ -1051,11 +1189,11 @@ function mapCart(cart: CartWithRelations) {
     items: cart.items.map((item) => {
       const productImages = (item.product.images ?? []).filter((img) => img?.url);
       const primaryProductImage =
-        productImages.find((img) => img.url && !img.url.includes("placeholder-product")) ||
+        productImages.find((img) => img.url && !img.url.includes('placeholder-product')) ||
         productImages[0] ||
         null;
       const snapshotImage =
-        (item as any)?.productSnapshot && typeof (item as any).productSnapshot === "object"
+        (item as any)?.productSnapshot && typeof (item as any).productSnapshot === 'object'
           ? ((item as any).productSnapshot as any).imageUrl ?? null
           : null;
       const resolvedImageUrl = primaryProductImage?.url ?? snapshotImage ?? null;
@@ -1066,36 +1204,35 @@ function mapCart(cart: CartWithRelations) {
         variantId: item.variantId,
         quantity: item.quantity,
         unitPriceCents: item.unitPriceCents,
-      totalPriceCents: item.totalPriceCents,
-      product: {
-        id: item.product.id,
-        name: item.product.name,
-        slug: item.product.slug,
+        totalPriceCents: item.totalPriceCents,
+        product: {
+          id: item.product.id,
+          name: item.product.name,
+          slug: item.product.slug,
           brand: item.product.brand,
           sku: item.product.sku,
-          priceCents: item.product.price,
-          compareAtPriceCents: item.product.compareAtPrice,
-        images: productImages,
-        imageUrl: resolvedImageUrl,
-      },
-      variant: item.variant
-        ? {
-            id: item.variant.id,
-            name: item.variant.name,
-            sku: item.variant.sku,
-            priceCents: item.variant.price,
-            stock: item.variant.stock,
-          }
-        : null,
+          price: item.product.price,
+          compareAtPrice: item.product.compareAtPrice,
+          imageUrl: resolvedImageUrl,
+          images: productImages,
+        },
+        variant: item.variant
+          ? {
+              id: item.variant.id,
+              name: item.variant.name,
+              sku: item.variant.sku,
+              price: item.variant.price,
+              stock: item.variant.stock,
+            }
+          : null,
       };
     }),
   };
 }
 
-async function loadCart(
-  tx: Prisma.TransactionClient,
-  identifiers: { cartId?: string | null; sessionToken?: string | null }
-) {
+type CartIdentifiers = { cartId?: string | null; sessionToken?: string | null };
+
+async function loadCart(tx: Prisma.TransactionClient, identifiers: CartIdentifiers) {
   const { cartId, sessionToken } = identifiers;
   if (cartId) {
     return tx.cart.findUnique({ where: { id: cartId }, include: CART_INCLUDE });
@@ -1106,11 +1243,7 @@ async function loadCart(
   return null;
 }
 
-async function loadCartOrThrow(
-  tx: Prisma.TransactionClient,
-  identifiers: { cartId?: string | null; sessionToken?: string | null },
-  errorMessage = "Carrinho não encontrado."
-): Promise<CartWithRelations> {
+async function loadCartOrThrow(tx: Prisma.TransactionClient, identifiers: CartIdentifiers, errorMessage = "Carrinho não encontrado.") {
   const cart = await loadCart(tx, identifiers);
   if (!cart) {
     throw new Error(errorMessage);
@@ -1118,10 +1251,7 @@ async function loadCartOrThrow(
   return cart;
 }
 
-async function resolveProductAndVariant(
-  tx: Prisma.TransactionClient,
-  input: CartItemInput
-) {
+async function resolveProductAndVariant(tx: Prisma.TransactionClient, input: CartItemInput) {
   const product = await tx.product.findUnique({
     where: { id: input.productId },
     include: {
@@ -1129,12 +1259,11 @@ async function resolveProductAndVariant(
       variants: { select: VARIANT_SELECT },
     },
   });
-
   if (!product || !product.active) {
     throw new Error("Produto não encontrado ou inativo.");
   }
 
-  let variant = null;
+  let variant: ProductVariant | null = null;
   if (input.variantId) {
     variant = await tx.productVariant.findUnique({ where: { id: input.variantId } });
     if (!variant || variant.productId !== product.id) {
@@ -1167,21 +1296,20 @@ async function resolveProductAndVariant(
       sku: product.sku,
       imageUrl: product.images?.[0]?.url ?? null,
     },
-  } as const;
+  };
 }
 
 async function resolveCoupon(
   tx: Prisma.TransactionClient,
-  couponCode: string | null | undefined,
-  subtotalCents: number
-) {
+  couponCode: string,
+  context: CouponEvaluationContext
+): Promise<ResolvedCouponPayload> {
   if (!couponCode) {
-    return { coupon: null, discountCents: 0 } as const;
+    throw new Error("Informe um cupom válido.");
   }
-
   const sanitized = couponCode.trim().toUpperCase();
   if (!sanitized) {
-    return { coupon: null, discountCents: 0 } as const;
+    throw new Error("Cupom inválido.");
   }
 
   const now = new Date();
@@ -1189,10 +1317,7 @@ async function resolveCoupon(
     where: {
       code: sanitized,
       active: true,
-      AND: [
-        { OR: [{ startsAt: null }, { startsAt: { lte: now } }] },
-        { OR: [{ endsAt: null }, { endsAt: { gte: now } }] },
-      ],
+      AND: [{ OR: [{ startsAt: null }, { startsAt: { lte: now } }] }, { OR: [{ endsAt: null }, { endsAt: { gte: now } }] }],
     },
   });
 
@@ -1200,36 +1325,85 @@ async function resolveCoupon(
     throw new Error("Cupom inválido ou expirado.");
   }
 
-  const discountCents = computeCouponDiscount(coupon.type, coupon.value, subtotalCents);
+  if (coupon.usageLimit && coupon.usageCount >= coupon.usageLimit) {
+    throw new Error("Este presente Dermosul já atingiu o limite de utilizações.");
+  }
 
-  return { coupon, discountCents } as const;
+  const productContext = context.productContext ?? (await buildCartProductContext(tx, context.cart));
+  const targets = buildCouponTargets(coupon);
+
+  if (!cartMatchesTargets(context.cart, targets, productContext)) {
+    throw new Error("Este cupom não se aplica aos itens do carrinho.");
+  }
+
+  if (coupon.minSubtotalCents && context.subtotalCents < coupon.minSubtotalCents) {
+    const minimum = (coupon.minSubtotalCents / 100).toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
+    throw new Error(`Valor mínimo para usar este cupom: ${minimum}.`);
+  }
+
+  if (coupon.perCustomerLimit) {
+    if (!context.customerId) {
+      if (context.strict) {
+        throw new Error("Identifique-se para usar este cupom.");
+      }
+    } else {
+      const perCustomerUsage = await tx.couponRedemption.count({
+        where: { couponId: coupon.id, customerId: context.customerId },
+      });
+      if (perCustomerUsage >= coupon.perCustomerLimit) {
+        throw new Error("Você já utilizou este presente Dermosul.");
+      }
+    }
+  }
+
+  if (coupon.newCustomerOnly) {
+    if (!context.customerId) {
+      if (context.strict) {
+        throw new Error("Disponível apenas para a primeira compra.");
+      }
+    } else {
+      const existingOrders = await tx.order.count({
+        where: { customerId: context.customerId, status: { not: "cancelado" } },
+      });
+      if (existingOrders > 0) {
+        throw new Error("Disponível apenas para a primeira compra.");
+      }
+    }
+  }
+
+  const discountCents = computeCouponDiscount(coupon.type, coupon.value, context.subtotalCents, {
+    maxDiscountCents: coupon.maxDiscountCents ?? undefined,
+  });
+
+  if (discountCents <= 0 && !coupon.freeShipping) {
+    throw new Error("Não foi possível aplicar este cupom.");
+  }
+
+  return { coupon, discountCents, productContext };
 }
 
-export async function getCart(params: { cartId?: string | null; sessionToken?: string | null }) {
+export async function getCart(params: CartIdentifiers) {
   const { cartId, sessionToken } = params;
   if (!cartId && !sessionToken) {
     return null;
   }
-
   const cart = cartId
     ? await prisma.cart.findUnique({ where: { id: cartId }, include: CART_INCLUDE })
     : sessionToken
     ? await prisma.cart.findUnique({ where: { sessionToken }, include: CART_INCLUDE })
     : null;
-
   if (!cart) return null;
   return mapCart(cart);
 }
 
 export async function upsertCart(input: UpsertCartInput) {
-  return prisma.$transaction(async (tx: Prisma.TransactionClient) => {
-    const identifiers = {
+  return prisma.$transaction(async (tx) => {
+    const identifiers: CartIdentifiers = {
       cartId: input.cartId?.trim() || undefined,
       sessionToken: input.sessionToken?.trim() || undefined,
     };
 
     let cart = await loadCart(tx, identifiers);
-
     if (!cart) {
       const sessionToken = identifiers.sessionToken ?? generateCartSessionToken();
       cart = await tx.cart.create({
@@ -1246,7 +1420,6 @@ export async function upsertCart(input: UpsertCartInput) {
     }
 
     const sessionToken = cart.sessionToken ?? identifiers.sessionToken ?? generateCartSessionToken();
-
     if (!cart.sessionToken || cart.sessionToken !== sessionToken) {
       cart = await tx.cart.update({
         where: { id: cart.id },
@@ -1259,9 +1432,8 @@ export async function upsertCart(input: UpsertCartInput) {
 
     if (Array.isArray(input.items)) {
       await tx.cartItem.deleteMany({ where: { cartId: cart.id } });
-
       let tempSubtotal = 0;
-      const records: Prisma.CartItemCreateManyInput[] = [];
+      const records: Array<Prisma.CartItemCreateManyInput> = [];
 
       for (const raw of input.items) {
         const resolved = await resolveProductAndVariant(tx, raw);
@@ -1280,42 +1452,54 @@ export async function upsertCart(input: UpsertCartInput) {
       if (records.length > 0) {
         await tx.cartItem.createMany({ data: records });
       }
-
       subtotalCents = tempSubtotal;
       cart = await loadCartOrThrow(tx, { cartId: cart.id }, "Falha ao carregar o carrinho atualizado.");
     }
 
+    let productContext = await buildCartProductContext(tx, cart);
     subtotalCents = cart.items.reduce((sum, item) => sum + item.totalPriceCents, 0);
 
     const previousCouponCode = cart.coupon?.code ?? null;
-
     let discountCents = cart.discountCents;
+    let couponFreeShipping = Boolean(cart.coupon?.freeShipping);
     let couponUpdate: Prisma.CartUpdateInput["coupon"] | undefined;
 
     if (input.couponCode !== undefined) {
       if (input.couponCode) {
-        const { coupon, discountCents: appliedDiscount } = await resolveCoupon(tx, input.couponCode, subtotalCents);
-        if (!coupon) {
-          throw new Error("Cupom inválido.");
-        }
-        couponUpdate = { connect: { id: coupon.id } };
-        discountCents = appliedDiscount;
+        const resolved = await resolveCoupon(tx, input.couponCode, {
+          cart,
+          subtotalCents,
+          customerId: cart.customerId,
+          productContext,
+        });
+        couponUpdate = { connect: { id: resolved.coupon.id } };
+        discountCents = resolved.discountCents;
+        couponFreeShipping = resolved.coupon.freeShipping;
+        productContext = resolved.productContext ?? productContext;
       } else {
         couponUpdate = { disconnect: true };
         discountCents = 0;
+        couponFreeShipping = false;
       }
     } else if (previousCouponCode) {
       try {
-        const { discountCents: recalculated } = await resolveCoupon(tx, previousCouponCode, subtotalCents);
-        discountCents = recalculated;
+        const resolved = await resolveCoupon(tx, previousCouponCode, {
+          cart,
+          subtotalCents,
+          customerId: cart.customerId,
+          productContext,
+        });
+        discountCents = resolved.discountCents;
+        couponFreeShipping = resolved.coupon.freeShipping;
+        productContext = resolved.productContext ?? productContext;
       } catch {
         couponUpdate = { disconnect: true };
         discountCents = 0;
+        couponFreeShipping = false;
       }
     }
 
     let shippingMethodRecord = cart.shippingMethod ?? null;
-
     if (input.shippingMethodId !== undefined) {
       if (input.shippingMethodId) {
         const method = await tx.shippingMethod.findUnique({ where: { id: input.shippingMethodId } });
@@ -1345,7 +1529,7 @@ export async function upsertCart(input: UpsertCartInput) {
       }
     }
 
-    const shippingCents = shippingMethodRecord
+    let shippingCents = shippingMethodRecord
       ? calculateShippingForMethod(
           {
             flatPriceCents: shippingMethodRecord.flatPriceCents,
@@ -1354,6 +1538,10 @@ export async function upsertCart(input: UpsertCartInput) {
           Math.max(subtotalCents - discountCents, 0)
         )
       : 0;
+
+    if (couponFreeShipping) {
+      shippingCents = 0;
+    }
 
     const totalCents = Math.max(subtotalCents - discountCents + shippingCents, 0);
 
@@ -1370,18 +1558,12 @@ export async function upsertCart(input: UpsertCartInput) {
     }
 
     if (input.shippingAddress !== undefined) {
-      updateData.shippingAddress = shippingAddressToUse
-        ? (shippingAddressToUse as Prisma.InputJsonValue)
-        : Prisma.JsonNull;
+      updateData.shippingAddress = shippingAddressToUse ? shippingAddressToUse : Prisma.JsonNull;
     }
 
     if (input.billingAddress !== undefined) {
-      const billingAddressToUse = input.billingAddress
-        ? sanitizeCartAddress(input.billingAddress)
-        : null;
-      updateData.billingAddress = billingAddressToUse
-        ? (billingAddressToUse as Prisma.InputJsonValue)
-        : Prisma.JsonNull;
+      const billingAddressToUse = input.billingAddress ? sanitizeCartAddress(input.billingAddress) : null;
+      updateData.billingAddress = billingAddressToUse ? billingAddressToUse : Prisma.JsonNull;
     }
 
     if (input.shippingMethodId !== undefined) {
@@ -1457,38 +1639,13 @@ export async function checkoutCart(payload: CheckoutPayload) {
 
     let coupon = cart.coupon ?? null;
     let discountCents = cart.discountCents;
-
-    if (payload.couponCode) {
-      const resolved = await resolveCoupon(tx, payload.couponCode, subtotalCents);
-      coupon = resolved.coupon;
-      discountCents = resolved.discountCents;
-    } else if (coupon) {
-      try {
-        const resolved = await resolveCoupon(tx, coupon.code, subtotalCents);
-        discountCents = resolved.discountCents;
-      } catch {
-        coupon = null;
-        discountCents = 0;
-      }
-    }
+    let couponFreeShipping = Boolean(cart.coupon?.freeShipping);
+    let productContext = await buildCartProductContext(tx, cart);
 
     const perkFlags = {
       freeShipping: Boolean(payload.perks?.freeShipping),
       freeOrder: Boolean(payload.perks?.freeOrder),
     };
-
-    let shippingCents = calculateShippingForMethod(
-      { flatPriceCents: shippingMethod.flatPriceCents, freeOverCents: shippingMethod.freeOverCents },
-      Math.max(subtotalCents - discountCents, 0)
-    );
-    if (perkFlags.freeShipping) {
-      shippingCents = 0;
-    }
-    if (perkFlags.freeOrder) {
-      discountCents = subtotalCents;
-    }
-
-    const totalCents = Math.max(subtotalCents - discountCents + shippingCents, 0);
 
     const document = payload.customer.document.replace(/\D/g, "");
     if (!validateCpf(document)) {
@@ -1520,6 +1677,46 @@ export async function checkoutCart(payload: CheckoutPayload) {
       existingCustomer = await tx.customer.create({ data: customerData });
     }
 
+    const couponContext: CouponEvaluationContext = {
+      cart,
+      subtotalCents,
+      customerId: existingCustomer.id,
+      productContext,
+      strict: true,
+    };
+
+    if (payload.couponCode) {
+      const resolved = await resolveCoupon(tx, payload.couponCode, couponContext);
+      coupon = resolved.coupon;
+      discountCents = resolved.discountCents;
+      couponFreeShipping = resolved.coupon.freeShipping;
+      productContext = resolved.productContext ?? productContext;
+    } else if (coupon) {
+      try {
+        const resolved = await resolveCoupon(tx, coupon.code, couponContext);
+        discountCents = resolved.discountCents;
+        couponFreeShipping = resolved.coupon.freeShipping;
+        productContext = resolved.productContext ?? productContext;
+      } catch {
+        coupon = null;
+        discountCents = 0;
+        couponFreeShipping = false;
+      }
+    }
+
+    let shippingCents = calculateShippingForMethod(
+      { flatPriceCents: shippingMethod.flatPriceCents, freeOverCents: shippingMethod.freeOverCents },
+      Math.max(subtotalCents - discountCents, 0)
+    );
+    if (perkFlags.freeShipping || couponFreeShipping) {
+      shippingCents = 0;
+    }
+    if (perkFlags.freeOrder) {
+      discountCents = subtotalCents;
+    }
+
+    const totalCents = Math.max(subtotalCents - discountCents + shippingCents, 0);
+
     const orderId = generateUniqueId();
     const orderNumber = generateShortId(9);
     const externalReference = `store-${orderNumber}`;
@@ -1528,7 +1725,9 @@ export async function checkoutCart(payload: CheckoutPayload) {
 
     const baseMetadata = {
       cartId: cart.id,
-      coupon: coupon ? { code: coupon.code, type: coupon.type, value: coupon.value } : null,
+      coupon: coupon
+        ? { code: coupon.code, type: coupon.type, value: coupon.value, freeShipping: coupon.freeShipping }
+        : null,
       notes: payload.notes || null,
       luckyWheelPerks: perkFlags,
     };
@@ -1620,6 +1819,34 @@ export async function checkoutCart(payload: CheckoutPayload) {
       }
     }
 
+    if (coupon) {
+      await tx.coupon.update({
+        where: { id: coupon.id },
+        data: { usageCount: { increment: 1 } },
+      });
+      await tx.couponRedemption.create({
+        data: {
+          couponId: coupon.id,
+          orderId,
+          customerId: existingCustomer.id,
+          amountCents: discountCents,
+          freeShipping: coupon.freeShipping || perkFlags.freeShipping,
+          metadata: {
+            source: "checkout",
+          },
+        },
+      });
+    }
+
+    const appliedCoupon = coupon
+      ? {
+        id: coupon.id,
+        code: coupon.code,
+        freeShipping: coupon.freeShipping,
+        discountCents,
+      }
+      : null;
+
     return {
       orderId,
       orderNumber,
@@ -1641,6 +1868,7 @@ export async function checkoutCart(payload: CheckoutPayload) {
       paymentMethod: payload.paymentMethod,
       baseMetadata,
       cartId: cart.id,
+      appliedCoupon,
       cartItems: cart.items.map((item) => ({
         productId: item.productId,
         variantId: item.variantId,
