@@ -210,8 +210,8 @@ export function LuckyWheelExperience({ cartId, sessionToken, onApplyCoupon }: Lu
   const isCompactLayout = viewport.width < 768;
   const baseWheelSize = 360;
   const minViewportAxis = Math.max(320, Math.min(viewport.width, viewport.height));
-  const targetWheelPixels = minViewportAxis * (isCompactLayout ? 0.24 : 0.32); // compact layout gets ~25% shorter wheel
-  const wheelScale = isCompactLayout ? Math.min(0.75, Math.max(0.34, targetWheelPixels / baseWheelSize)) : 0.85;
+  const targetWheelPixels = Math.min(baseWheelSize, minViewportAxis * (isCompactLayout ? 0.22 : 0.32));
+  const wheelScale = isCompactLayout ? Math.min(0.65, Math.max(0.32, targetWheelPixels / baseWheelSize)) : 0.85;
   const wheelContainerStyle: CSSProperties = {
     width: baseWheelSize * wheelScale,
     height: baseWheelSize * wheelScale,
@@ -380,9 +380,11 @@ export function LuckyWheelExperience({ cartId, sessionToken, onApplyCoupon }: Lu
     border: "1px solid rgba(255,255,255,0.55)",
     background: "linear-gradient(145deg, rgba(255,255,255,0.92), rgba(245,244,255,0.96), rgba(249,243,255,0.98))",
     boxShadow: "0 55px 120px -60px rgba(143,123,255,0.65)",
-    width: isCompactLayout ? "min(78vw, 520px)" : "min(72vw, 760px)",
-    padding: isCompactLayout ? "1rem" : "2rem",
-    gap: isCompactLayout ? "1.5rem" : "1.75rem",
+    width: isCompactLayout ? "min(84vw, 480px)" : "min(72vw, 760px)",
+    padding: isCompactLayout ? "0.85rem 1rem 1.3rem" : "2rem",
+    gap: isCompactLayout ? "1rem" : "1.75rem",
+    maxHeight: isCompactLayout ? "86vh" : undefined,
+    overflowY: isCompactLayout ? "auto" : "visible",
   };
   const highlightColor = design.highlightColor ?? "#f8c6ff";
   const wheelGlowColor = design.wheelGlowColor ?? "#bfe6ff";
@@ -448,7 +450,7 @@ export function LuckyWheelExperience({ cartId, sessionToken, onApplyCoupon }: Lu
         ))}
       </div>
       <div
-        className={`relative z-10 flex w-full max-w-4xl flex-col overflow-visible rounded-[48px] text-[#1e2040] shadow-[0_45px_160px_-70px_rgba(106,95,255,0.8)] ${isCompactLayout ? "gap-8" : "gap-10"} ${isCompactLayout ? "p-6 pt-12" : "p-8 md:flex-row md:p-12"}`}
+        className={`relative z-10 flex w-full max-w-4xl flex-col overflow-visible rounded-[48px] text-[#1e2040] shadow-[0_45px_160px_-70px_rgba(106,95,255,0.8)] ${isCompactLayout ? "gap-6" : "gap-10"} ${isCompactLayout ? "p-4 pt-8" : "p-8 md:flex-row md:p-12"}`}
         style={cardStyle}
       >
         <div className="pointer-events-none absolute inset-0 rounded-[48px] bg-[radial-gradient(120%_120%_at_50%_0%,rgba(255,255,255,0.7),transparent_70%),radial-gradient(120%_150%_at_50%_100%,rgba(166,194,255,0.35),transparent)]" />
@@ -462,22 +464,22 @@ export function LuckyWheelExperience({ cartId, sessionToken, onApplyCoupon }: Lu
         </button>
 
         <div className="relative z-10 flex flex-1 flex-col gap-5">
-          <span className="inline-flex w-fit items-center gap-2 rounded-full bg-white/70 px-4 py-1 text-[11px] font-semibold uppercase tracking-[0.45em] text-[#7f6bff] shadow-sm">
+          <span className="inline-flex w-fit items-center gap-2 rounded-full bg-white/70 px-3 py-[6px] text-[10px] font-semibold uppercase tracking-[0.45em] text-[#7f6bff] shadow-sm">
             {ctaLabel}
           </span>
-          <h2 className="text-4xl font-semibold text-[#1c1b3a] md:text-[44px]">{headline}</h2>
-          <p className="text-lg text-[#514c7c]">{subheadlineCopy}</p>
+          <h2 className="text-3xl font-semibold text-[#1c1b3a] md:text-[44px]">{headline}</h2>
+          <p className="text-base text-[#514c7c] md:text-lg">{subheadlineCopy}</p>
           <p className="text-sm leading-relaxed text-[#5c577f]">{descriptionCopy}</p>
 
-          <div className="mt-5 flex flex-wrap gap-2 text-[11px] text-[#4a437a]">
+          <div className="mt-3 flex flex-wrap gap-2 text-[11px] text-[#4a437a]">
             {status.data.alreadyPlayed ? <Badge tone="violet">Já participou</Badge> : <Badge tone="teal">Primeira chance</Badge>}
             {disabledMessage && <Badge tone="amber">Limite ativo</Badge>}
             {result?.freeShipping && <Badge tone="teal">Frete grátis</Badge>}
             {result?.freeOrder && <Badge tone="pink">Pedido 100% nosso</Badge>}
           </div>
 
-          <div className="mt-auto space-y-4 text-center">
-            <p className={`rounded-3xl px-4 py-3 text-sm leading-relaxed shadow-[0_25px_45px_-30px_rgba(101,92,255,0.55)] ${infoToneMap[infoTone]}`}>
+          <div className="mt-auto space-y-3 text-center">
+            <p className={`rounded-3xl px-4 py-2.5 text-sm leading-relaxed shadow-[0_25px_45px_-30px_rgba(101,92,255,0.55)] ${infoToneMap[infoTone]}`}>
               {infoCopy}
             </p>
 
@@ -485,7 +487,7 @@ export function LuckyWheelExperience({ cartId, sessionToken, onApplyCoupon }: Lu
               type="button"
               onClick={handleSpin}
               disabled={spinDisabled}
-              className={`mx-auto inline-flex items-center justify-center rounded-full px-6 py-3 text-sm font-semibold uppercase tracking-[0.4em] transition ${
+              className={`mx-auto inline-flex items-center justify-center rounded-full px-5 py-3 text-xs font-semibold uppercase tracking-[0.32em] transition md:px-6 md:text-sm md:tracking-[0.4em] ${
                 spinDisabled ? "cursor-not-allowed bg-slate-200 text-slate-400" : "lucky-wheel-cta hover:brightness-[1.05]"
               }`}
               style={buttonStyles}
