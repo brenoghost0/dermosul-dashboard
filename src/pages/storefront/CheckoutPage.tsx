@@ -96,6 +96,7 @@ export default function CheckoutPage() {
     2: null,
     3: null,
   });
+  const pendingScrollStep = useRef<1 | 2 | 3 | null>(currentStep);
 
   const [customer, setCustomer] = useState({
     firstName: "",
@@ -149,8 +150,9 @@ export default function CheckoutPage() {
   const registerStepRef = useCallback(
     (step: 1 | 2 | 3) => (node: HTMLElement | null) => {
       stepRefs.current[step] = node;
-      if (node) {
+      if (node && pendingScrollStep.current === step) {
         scrollStepIntoView(step);
+        pendingScrollStep.current = null;
       }
     },
     [scrollStepIntoView]
@@ -452,17 +454,24 @@ useEffect(() => {
       }
 
       if (step === currentStep) {
+        pendingScrollStep.current = step;
         scrollStepIntoView(step);
         return;
       }
 
+      pendingScrollStep.current = step;
       setCurrentStep(step);
     },
     [currentStep, scrollStepIntoView]
   );
 
   useEffect(() => {
-    scrollStepIntoView(currentStep);
+    pendingScrollStep.current = currentStep;
+    const node = stepRefs.current[currentStep];
+    if (node) {
+      scrollStepIntoView(currentStep);
+      pendingScrollStep.current = null;
+    }
   }, [currentStep, scrollStepIntoView]);
 
   function handleIdentificationNext() {
