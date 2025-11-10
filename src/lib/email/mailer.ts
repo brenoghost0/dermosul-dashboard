@@ -242,3 +242,36 @@ export function renderShippedEmail(opts: { name: string; orderId: string; tracki
     cta: opts.link ? { label: 'Ver rastreamento atualizado', href: opts.link } : undefined,
   });
 }
+
+export function renderCanceledEmail(opts: { name: string; orderId: string; link?: string }) {
+  return renderEmailTemplate({
+    title: 'Pedido cancelado com sucesso',
+    subtitle: `O pedido #${opts.orderId} foi encerrado e o estorno está em processamento.`,
+    greeting: `Olá, <strong>${opts.name}</strong>. Concluímos o cancelamento solicitado para o pedido #${opts.orderId}.`,
+    highlights: [
+      { label: 'Pedido', value: `#${opts.orderId}` },
+      { label: 'Status atual', value: 'Cancelado' },
+      { label: 'Prazo do estorno', value: 'Até 5 dias úteis' },
+    ],
+    statusSteps: [
+      {
+        label: 'Cancelamento confirmado',
+        description: 'Registro atualizado na Dermosul.',
+        state: 'done',
+      },
+      {
+        label: 'Estorno em andamento',
+        description: 'O valor retorna pelo mesmo método de pagamento.',
+        state: 'active',
+      },
+      {
+        label: 'Contato Dermosul',
+        description: 'Nossa concierge segue disponível para te apoiar.',
+        state: 'upcoming',
+      },
+    ],
+    extraContent:
+      '<p>O estorno segue pelo mesmo método utilizado no checkout. Você receberá a confirmação automática assim que a operadora concluir o processo.</p><p>Se precisar de suporte adicional, basta responder este e-mail ou falar com nossa concierge.</p>',
+    cta: opts.link ? { label: 'Acompanhar atendimento', href: opts.link } : undefined,
+  });
+}

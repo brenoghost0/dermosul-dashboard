@@ -1,7 +1,9 @@
 // src/lib/api.ts
 import axios from 'axios';
 
-const RUNTIME_ORIGIN = typeof window !== 'undefined' ? window.location?.origin || '' : '';
+const isBrowser = typeof window !== 'undefined';
+const RUNTIME_ORIGIN = isBrowser ? window.location?.origin || '' : '';
+const RUNTIME_HOST = isBrowser ? window.location?.host || '' : '';
 
 const normalizeBaseUrl = (value: unknown): string => {
   if (typeof value !== 'string') return '';
@@ -13,7 +15,13 @@ const normalizeBaseUrl = (value: unknown): string => {
 const rawEnvBase = (import.meta as any)?.env?.VITE_API_BASE_URL;
 const normalizedEnvBase = normalizeBaseUrl(rawEnvBase);
 const normalizedRuntimeBase = normalizeBaseUrl(RUNTIME_ORIGIN);
-export const API_BASE_URL = normalizedEnvBase || normalizedRuntimeBase || 'http://localhost:3007';
+const isViteDevHost = /^localhost:51(73|74)$/i.test(RUNTIME_HOST);
+const DEFAULT_LOCAL_API = 'http://127.0.0.1:3008';
+
+export const API_BASE_URL =
+  normalizedEnvBase ||
+  (isViteDevHost ? DEFAULT_LOCAL_API : normalizedRuntimeBase) ||
+  DEFAULT_LOCAL_API;
 const resolveApiUrl = (rawPath: string): string => {
   if (/^https?:\/\//i.test(rawPath)) return rawPath;
   const trimmed = (rawPath || "").trim();
@@ -221,6 +229,14 @@ export interface OrderDetail extends OrderRow {
   paymentMethod?: 'pix' | 'cartao' | 'boleto' | 'desconhecido';
 }
 
+export interface CancelOrderResponse {
+  order: OrderDetail;
+  refund?: {
+    status?: string;
+    message?: string;
+  } | null;
+}
+
 // Helper para normalizar números
 export const n = (x: unknown, d = 0) => {
   const v = Number(x);
@@ -299,6 +315,12 @@ export const api = {
     return http<OrderDetail>(`/api/orders/${encodeURIComponent(id)}`, {
       method: 'PATCH',
       body: JSON.stringify(data),
+    });
+  },
+  cancelOrder: (id: string, payload?: { reason?: string; refundAmount?: number }) => {
+    return http<CancelOrderResponse>(`/api/orders/${encodeURIComponent(id)}/cancel`, {
+      method: 'POST',
+      body: JSON.stringify(payload || {}),
     });
   },
   deleteOrder: (id: string) => {

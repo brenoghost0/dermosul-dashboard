@@ -1641,6 +1641,27 @@ router.patch("/orders/:id", requireAuth, async (req, res) => {
         res.status(400).json({ errors: error.message });
     }
 });
+router.post("/orders/:id/cancel", requireAuth, async (req, res) => {
+    try {
+        const { reason, refundAmount } = req.body || {};
+        let refundAmountCents;
+        if (refundAmount !== undefined && refundAmount !== null && refundAmount !== "") {
+            const numericValue = Number(refundAmount);
+            if (!Number.isFinite(numericValue)) {
+                return res.status(400).json({ error: "Valor de estorno inválido." });
+            }
+            refundAmountCents = Math.round(numericValue * 100);
+        }
+        const result = await (0, index_js_1.cancelOrderWithRefund)(req.params.id, {
+            reason,
+            refundAmountCents,
+        });
+        res.json(result);
+    }
+    catch (error) {
+        res.status(400).json({ error: error.message || "Não foi possível cancelar o pedido." });
+    }
+});
 router.delete("/orders/:id", requireAuth, async (req, res) => {
     try {
         const deleted = await (0, index_js_1.deleteOrder)(req.params.id);

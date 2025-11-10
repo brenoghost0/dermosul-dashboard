@@ -85,6 +85,7 @@ export default function OrderDetail() {
   const [notes, setNotes] = useState<string>("");
   const [notesSaving, setNotesSaving] = useState(false);
   const [notesMessage, setNotesMessage] = useState<string | null>(null);
+  const [canceling, setCanceling] = useState(false);
 
   // Carrega dados do pedido
   useEffect(() => {
@@ -253,6 +254,30 @@ export default function OrderDetail() {
     }
   };
 
+  const handleCancelOrder = async () => {
+    if (!id || !orderData || canceling || orderData.status === "cancelado") return;
+    if (!window.confirm("Cancelar e estornar este pedido?")) return;
+    const reasonInput = window.prompt("Motivo do cancelamento (opcional):");
+    setCanceling(true);
+    setError(null);
+    try {
+      const response = await api.cancelOrder(id, {
+        reason: reasonInput && reasonInput.trim().length ? reasonInput.trim() : undefined,
+      });
+      setOrderData(response.order);
+      setFormState((prev) => ({
+        ...prev,
+        status: response.order.status,
+      }));
+      setSaveMessage("Pedido cancelado e estornado.");
+      setTimeout(() => setSaveMessage(null), 4000);
+    } catch (e: any) {
+      setError(e?.message || "Falha ao cancelar pedido.");
+    } finally {
+      setCanceling(false);
+    }
+  };
+
   if (loading) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-[#05080f] text-slate-200">
@@ -307,6 +332,14 @@ export default function OrderDetail() {
               </p>
             </div>
             <div className="flex flex-wrap gap-3">
+              <button
+                type="button"
+                onClick={handleCancelOrder}
+                className={DANGER_BUTTON}
+                disabled={canceling || orderData.status === "cancelado"}
+              >
+                {canceling ? "Cancelando..." : "Cancelar e estornar"}
+              </button>
               <Link to="/dashboard/pedidos" className={SECONDARY_BUTTON}>
                 Voltar
               </Link>

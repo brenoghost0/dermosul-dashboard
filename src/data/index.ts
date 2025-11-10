@@ -31,6 +31,7 @@ export const {
   updateLandingPageStatus,
   updateOrderStatusByExternalReference,
   getOrderByExternalReference,
+  cancelOrderWithRefund,
 } = sqlAdapter;
 
 export * from "./store-adapter.js";

@@ -1313,13 +1313,19 @@ async function resolveCoupon(
   }
 
   const now = new Date();
-  const coupon = await tx.coupon.findFirst({
-    where: {
-      code: sanitized,
-      active: true,
-      AND: [{ OR: [{ startsAt: null }, { startsAt: { lte: now } }] }, { OR: [{ endsAt: null }, { endsAt: { gte: now } }] }],
-    },
-  });
+  let coupon: Coupon | null = null;
+  try {
+    coupon = await tx.coupon.findFirst({
+      where: {
+        code: sanitized,
+        active: true,
+        AND: [{ OR: [{ startsAt: null }, { startsAt: { lte: now } }] }, { OR: [{ endsAt: null }, { endsAt: { gte: now } }] }],
+      },
+    });
+  } catch (findError) {
+    console.error("Falha ao buscar cupom válido:", findError);
+    throw new Error("Cupom inválido.");
+  }
 
   if (!coupon) {
     throw new Error("Cupom inválido ou expirado.");

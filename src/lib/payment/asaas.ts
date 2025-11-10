@@ -1,5 +1,5 @@
 import axios from "axios";
-import { PaymentProvider, PaymentRequest, PaymentResponse } from "./types.js";
+import { PaymentProvider, PaymentRequest, PaymentResponse, RefundOptions, RefundResponse } from "./types.js";
 
 const TEST_CARD_NUMBER = (process.env.TEST_CARD_NUMBER || "4111111111111111").replace(/\D/g, "");
 const TEST_CARD_CVV = (process.env.TEST_CARD_CVV || "").replace(/\D/g, "");
@@ -203,6 +203,50 @@ class AsaasProvider implements PaymentProvider {
     } catch (error: any) {
       console.error('Asaas - Error fetching payment by id:', error.response?.data || error.message);
       return { success: false, paid: false };
+    }
+  }
+
+  async refundPayment(paymentId: string, options: RefundOptions = {}): Promise<RefundResponse> {
+    try {
+      ensureGatewayConfigured();
+      const payload: Record<string, unknown> = {};
+      if (typeof options.valueCents === "number" && options.valueCents > 0) {
+        payload.value = Number((options.valueCents / 100).toFixed(2));
+      }
+      if (options.description) {
+        payload.description = options.description;
+      }
+      const response = await apiClient.post(`/payments/${paymentId}/refund`, payload);
+      return {
+        success: true,
+        status: response.data?.status || "REFUNDED",
+      };
+    } catch (error: any) {
+      const errData = error.response?.data;
+      const errDescription = errData?.errors?.[0]?.description || error.message || "Failed to refund payment.";
+      const normalized = String(errDescription).toLowerCase();
+      const paymentNotReceived =
+        normalized.includes("não foi recebido") ||
+        normalized.includes("not received") ||
+        errData?.errors?.some((e: any) => e?.code === "payment_not_received");
+
+      if (paymentNotReceived) {
+        try {
+          await apiClient.delete(`/payments/${paymentId}`);
+          return { success: true, status: "CANCELLED" };
+        } catch (cancelError: any) {
+          console.error("Asaas - Error cancelling pending payment:", cancelError.response?.data || cancelError.message);
+          const cancelMessage =
+            cancelError.response?.data?.errors?.[0]?.description || cancelError.message || errDescription;
+          return { success: false, message: cancelMessage };
+        }
+      }
+
+      console.error("Asaas - Error refunding payment:", errData || error.message);
+      return {
+        success: false,
+        message: errDescription,
+      };
     }
   }
 }

@@ -26,7 +26,19 @@ export interface PaymentResponse {
   copyPaste?: string;
 }
 
+export interface RefundOptions {
+  valueCents?: number;
+  description?: string;
+}
+
+export interface RefundResponse {
+  success: boolean;
+  status?: string;
+  message?: string;
+}
+
 export interface PaymentProvider {
   processPayment(paymentRequest: PaymentRequest): Promise<PaymentResponse>;
   createPixPayment(paymentRequest: PaymentRequest): Promise<PaymentResponse>;
+  refundPayment(paymentId: string, options?: RefundOptions): Promise<RefundResponse>;
 }

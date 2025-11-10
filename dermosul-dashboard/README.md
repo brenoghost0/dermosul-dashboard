@@ -131,3 +131,30 @@ chmod +x /root/dermosul/scripts/auto-restore-if-missing.sh
 ```
 
 > Sempre validar `auto-restore.log`, `verify.log` e os dumps antes de qualquer deploy. Em caso de queda de SSH, abrir chamado com o provedor citando o protocolo e anexando o output de `ssh -vvv`.
+
+## Cancelamento e estorno
+
+- O botão **Cancelar e estornar** no dashboard chama `POST /api/orders/:id/cancel`, que fala com o gateway Asaas para estornar/cancelar a cobrança, devolve estoque e atualiza o pedido/pagamento.
+- Após o cancelamento o cliente recebe o e-mail "Pedido cancelado" (template `renderCanceledEmail`), sem mencionar falta de estoque.
+- Se o gateway retornar erro, o backend impede o cancelamento e devolve a mensagem para o dashboard.
+
+## Ambiente local atual
+
+- `.env` local precisa ter:
+  ```
+  DATA_SOURCE=sql
+  VITE_API_BASE_URL=http://127.0.0.1:3008
+  ```
+- `npm run dev` sobe três processos (`dev:server`, `dev:worker`, `dev:client`). O backend roda em `127.0.0.1:3008`, então o login do dashboard usa esse host/porta automaticamente.
+- Para usar os dados reais (575 produtos) copie o dump da VPS e restaure:
+  ```bash
+  scp root@191.252.110.64:/root/backups/dermosul-2025-11-08.sql.gz ./dermosul-real.sql.gz
+  docker compose up -d db
+  gunzip -c ./dermosul-real.sql.gz | docker compose exec -T db psql -U postgres -d dermosul
+  ```
+  (se a porta 5432 estiver ocupada por um Postgres nativo, pare o serviço com `launchctl bootout …` ou `brew services stop postgresql@14` antes de subir o container).
+
+### Problema pendente em dev
+
+- Ainda não conseguimos subir o container `db` porque a porta 5432 está presa pelo Postgres do macOS (`postgres 1528` e `com.docker.backend`). Precisamos desligar o serviço nativo e reiniciar o Docker Desktop para liberar a porta, depois repetir o `docker compose up -d db` e restaurar o dump.
+- O frontend em `localhost:5174` precisa conversar com o backend em `127.0.0.1:3008`. Garanta que `.env` contenha `VITE_API_BASE_URL=http://127.0.0.1:3008` (ou ajuste `src/lib/api.ts` para usar `DEFAULT_LOCAL_API=http://127.0.0.1:3008`) e que os containers `db` e `redis` estejam ativos (`docker compose up -d db redis`) antes de rodar `npm run dev`; caso contrário o cliente ficará com `Failed to fetch`.

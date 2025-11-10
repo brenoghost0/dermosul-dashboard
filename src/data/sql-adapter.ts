@@ -2,7 +2,8 @@
 import { Prisma, PaymentMethod } from '@prisma/client';
 import { prisma } from '../db/prisma.js';
 import { toISO, lastNDays, generateUniqueId, generateSlug, generateShortId, generateUniqueNumericOrderId } from '../utils/index.js'; // Importar utilitários
-import { sendMail, renderPaymentApprovedEmail, renderPendingEmail, renderShippedEmail } from '../lib/email/mailer.js';
+import { sendMail, renderPaymentApprovedEmail, renderPendingEmail, renderShippedEmail, renderCanceledEmail } from '../lib/email/mailer.js';
+import { getPaymentProvider } from '../lib/payment/index.js';
 
 // --- Funções Utilitárias para Mapeamento e Conversão ---
 
@@ -55,6 +56,11 @@ const validateCpf = (cpf: string): boolean => {
     return false;
   }
   return true;
+};
+
+type CancelOrderOptions = {
+  reason?: string;
+  refundAmountCents?: number;
 };
 
 const sanitizeString = (value: unknown, fallback = ''): string => {
@@ -617,6 +623,8 @@ export async function updateOrder(id: string, updatedFields: any): Promise<any |
           renderPendingEmail({ name, orderId, total, installments, item: itemName }));
       } else if (nextStatus === 'enviado') {
         await sendMail(to, `Dermosul • Seu pedido #${orderId} foi enviado 🚚`, renderShippedEmail({ name, orderId }));
+      } else if (nextStatus === 'cancelado') {
+        await sendMail(to, `Dermosul • Pedido #${orderId} cancelado`, renderCanceledEmail({ name, orderId }));
       }
     }
   } catch (e) {
@@ -624,6 +632,122 @@ export async function updateOrder(id: string, updatedFields: any): Promise<any |
   }
 
   return mapped;
+}
+
+export async function cancelOrderWithRefund(orderId: string, options: CancelOrderOptions = {}) {
+  const order = await prisma.order.findUnique({
+    where: { id: orderId },
+    include: {
+      customer: { include: { addresses: true } },
+      items: true,
+      payments: true,
+    },
+  });
+
+  if (!order) {
+    throw new Error("Pedido não encontrado.");
+  }
+
+  if (order.status === 'cancelado') {
+    throw new Error("Este pedido já está cancelado.");
+  }
+
+  const refundAmountCents = Math.max(
+    0,
+    Math.min(
+      typeof options.refundAmountCents === "number" ? Math.round(options.refundAmountCents) : order.totalAmount,
+      order.totalAmount,
+    ),
+  );
+
+  const metadataObject: Record<string, any> =
+    order.metadata && typeof order.metadata === 'object' && order.metadata !== null
+      ? { ...(order.metadata as Record<string, any>) }
+      : {};
+  const paymentGateway = metadataObject.paymentGateway || null;
+  const gatewayPaymentId: string | null = paymentGateway?.gatewayPaymentId || null;
+
+  let refundInfo: { status?: string; message?: string } | null = null;
+  if (gatewayPaymentId) {
+    const provider = getPaymentProvider();
+    const refundResult = await provider.refundPayment(gatewayPaymentId, {
+      valueCents: refundAmountCents > 0 ? refundAmountCents : undefined,
+      description: options.reason,
+    });
+    if (!refundResult.success) {
+      throw new Error(refundResult.message || "Falha ao solicitar estorno no gateway.");
+    }
+    refundInfo = refundResult;
+    metadataObject.paymentGateway = {
+      ...(paymentGateway || {}),
+      refundStatus: refundResult.status ?? 'REFUNDED',
+      refundedAt: new Date().toISOString(),
+      refundAmountCents,
+    };
+  }
+
+  metadataObject.cancellation = {
+    ...(metadataObject.cancellation || {}),
+    reason: options.reason || null,
+    refundedAt: new Date().toISOString(),
+    refundAmountCents,
+    gatewayStatus: refundInfo?.status ?? metadataObject.paymentGateway?.gatewayStatus ?? null,
+  };
+
+  await prisma.$transaction(async (tx) => {
+    for (const item of order.items) {
+      await tx.product.update({
+        where: { id: item.productId },
+        data: { stockQuantity: { increment: item.qty } },
+      });
+      if (item.variantId) {
+        await tx.productVariant.update({
+          where: { id: item.variantId },
+          data: { stock: { increment: item.qty } },
+        });
+      }
+    }
+
+    await tx.payment.updateMany({
+      where: { orderId },
+      data: {
+        status: 'cancelado',
+        paidAmount: Math.max((order.payments[0]?.paidAmount ?? 0) - refundAmountCents, 0),
+      },
+    });
+
+    await tx.order.update({
+      where: { id: orderId },
+      data: {
+        status: 'cancelado',
+        metadata: metadataObject as Prisma.InputJsonValue,
+      },
+    });
+  });
+
+  const updated = await prisma.order.findUnique({
+    where: { id: orderId },
+    include: {
+      customer: { include: { addresses: true } },
+      items: { include: { product: true } },
+      payments: true,
+    },
+  });
+
+  try {
+    const to = updated?.customer?.email || '';
+    const name = [updated?.customer?.firstName, updated?.customer?.lastName].filter(Boolean).join(' ') || 'Cliente';
+    if (to) {
+      await sendMail(to, `Dermosul • Pedido #${orderId} cancelado`, renderCanceledEmail({ name, orderId }));
+    }
+  } catch (e) {
+    console.warn('[email] falha ao avisar cancelamento:', (e as any)?.message || e);
+  }
+
+  return {
+    order: mapOrderFromPrisma(updated),
+    refund: refundInfo,
+  };
 }
 
 export async function deleteOrder(id: string): Promise<boolean> {
