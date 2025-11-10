@@ -1,7 +1,7 @@
 // backend/data/sql-adapter.ts
 import { Prisma, PaymentMethod } from '@prisma/client';
 import { prisma } from '../db/prisma.js';
-import { toISO, lastNDays, generateUniqueId, generateSlug, generateShortId } from '../utils/index.js'; // Importar utilitários
+import { toISO, lastNDays, generateUniqueId, generateSlug, generateShortId, generateUniqueNumericOrderId } from '../utils/index.js'; // Importar utilitários
 import { sendMail, renderPaymentApprovedEmail, renderPendingEmail, renderShippedEmail } from '../lib/email/mailer.js';
 
 // --- Funções Utilitárias para Mapeamento e Conversão ---
@@ -457,9 +457,11 @@ export async function createOrder(orderData: any): Promise<any> {
       ? toCents(providedTotal)
       : itemsData.reduce((sum, item) => sum + item.qty * item.unitPrice, 0);
 
+    const orderId = await generateUniqueNumericOrderId(tx);
+
     return tx.order.create({
       data: {
-        id: generateShortId(),
+        id: orderId,
         customer: { connect: { id: customer.id } },
         status: status as any,
         category: orderData.category || 'Outros',
@@ -1158,9 +1160,10 @@ export async function createPublicOrder(orderData: any): Promise<any> {
       const requestedStatus = sanitizeString(orderData.status || 'aguardando_pagamento').toLowerCase();
       const orderStatus = VALID_ORDER_STATUSES.has(requestedStatus) ? requestedStatus : 'aguardando_pagamento';
 
+      const orderId = await generateUniqueNumericOrderId(tx);
       const order = await tx.order.create({
         data: {
-          id: generateShortId(),
+          id: orderId,
           externalReference: externalReference, // Salva a referência externa
           customer: { connect: { id: customer.id } },
           status: orderStatus as any,

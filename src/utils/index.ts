@@ -1,3 +1,6 @@
+import type { Prisma, PrismaClient } from '@prisma/client';
+import { prisma } from '../db/prisma';
+
 export const generateShortId = (length = 8) => {
   // Gera um ID numérico de 'length' dígitos (default 8)
   // Sem zeros à esquerda sendo removidos: string fixa, ex.: '00342189'
@@ -21,10 +24,27 @@ export const lastNDays = (n: number) => {
   return dates.reverse();
 };
 
-import { prisma } from '../db/prisma';
-
 export const generateUniqueId = () => {
   return Math.random().toString(36).substr(2, 9);
+};
+
+type PrismaOrderClient = Prisma.TransactionClient | PrismaClient;
+
+export const generateUniqueNumericOrderId = async (
+  client: PrismaOrderClient = prisma,
+  length = 8,
+): Promise<string> => {
+  // Garante IDs apenas numéricos e evita colisões consultando o banco
+  while (true) {
+    const candidate = generateShortId(length);
+    const exists = await client.order.findUnique({
+      where: { id: candidate },
+      select: { id: true },
+    });
+    if (!exists) {
+      return candidate;
+    }
+  }
 };
 
 export const generateSlug = async (text: string): Promise<string> => {

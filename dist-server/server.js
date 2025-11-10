@@ -362,9 +362,10 @@ async function runSeedIfNeeded() {
                     metaDescription: null,
                 },
             });
+            const orderId = await (0, utils_1.generateUniqueNumericOrderId)();
             await prisma_1.prisma.order.create({
                 data: {
-                    id: (0, utils_1.generateShortId)(),
+                    id: orderId,
                     customerId: customer.id,
                     status: orderStatus,
                     category: pt_BR_1.faker.helpers.arrayElement(['Skincare', 'Maquiagem', 'Cabelo']),

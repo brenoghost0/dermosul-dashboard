@@ -432,9 +432,10 @@ async function createOrder(orderData) {
         const totalAmount = Number.isFinite(providedTotal) && providedTotal > 0
             ? toCents(providedTotal)
             : itemsData.reduce((sum, item) => sum + item.qty * item.unitPrice, 0);
+        const orderId = await (0, index_js_1.generateUniqueNumericOrderId)(tx);
         return tx.order.create({
             data: {
-                id: (0, index_js_1.generateShortId)(),
+                id: orderId,
                 customer: { connect: { id: customer.id } },
                 status: status,
                 category: orderData.category || 'Outros',
@@ -1090,9 +1091,10 @@ async function createPublicOrder(orderData) {
             });
             const requestedStatus = sanitizeString(orderData.status || 'aguardando_pagamento').toLowerCase();
             const orderStatus = VALID_ORDER_STATUSES.has(requestedStatus) ? requestedStatus : 'aguardando_pagamento';
+            const orderId = await (0, index_js_1.generateUniqueNumericOrderId)(tx);
             const order = await tx.order.create({
                 data: {
-                    id: (0, index_js_1.generateShortId)(),
+                    id: orderId,
                     externalReference: externalReference, // Salva a referência externa
                     customer: { connect: { id: customer.id } },
                     status: orderStatus,

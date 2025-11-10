@@ -86,7 +86,7 @@ import {
 } from './data/index';
 import { prisma } from './db/prisma';
 import { faker } from '@faker-js/faker/locale/pt_BR';
-import { generateShortId } from './utils';
+import { generateUniqueNumericOrderId } from './utils';
 
 const app = express();
 app.use(cors());
@@ -425,9 +425,11 @@ async function runSeedIfNeeded() {
         },
       });
 
+      const orderId = await generateUniqueNumericOrderId();
+
       await prisma.order.create({
         data: {
-          id: generateShortId(),
+          id: orderId,
           customerId: customer.id,
           status: orderStatus,
           category: faker.helpers.arrayElement(['Skincare', 'Maquiagem', 'Cabelo']),

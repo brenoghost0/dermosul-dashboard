@@ -2,7 +2,7 @@ import { prisma } from "../db/prisma.js";
 import { Prisma } from "@prisma/client";
 import type { BannerKind, Coupon, ProductVariant } from "@prisma/client";
 import dayjs from "dayjs";
-import { generateUniqueId, generateShortId } from "../utils/index.js";
+import { generateUniqueId, generateShortId, generateUniqueNumericOrderId } from "../utils/index.js";
 import { getPaymentProvider } from "../lib/payment/index.js";
 import type { PaymentRequest } from "../lib/payment/types.js";
 import type {
@@ -1717,7 +1717,7 @@ export async function checkoutCart(payload: CheckoutPayload) {
 
     const totalCents = Math.max(subtotalCents - discountCents + shippingCents, 0);
 
-    const orderId = generateUniqueId();
+    const orderId = await generateUniqueNumericOrderId(tx);
     const orderNumber = generateShortId(9);
     const externalReference = `store-${orderNumber}`;
     const paymentRecordId = generateUniqueId();

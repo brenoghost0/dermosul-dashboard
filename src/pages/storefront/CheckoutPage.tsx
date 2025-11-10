@@ -1315,7 +1315,7 @@ function CheckoutHeaderBar({
           </div>
         </div>
         <div className="flex flex-1 flex-wrap items-center justify-between gap-4 md:pl-10">
-          <ol className="flex flex-1 items-center gap-3">
+          <ol className="flex flex-1 flex-wrap items-center gap-3 md:flex-nowrap">
             {steps.map((step, index) => (
               <ProgressStep key={step.id} step={step} isLast={index === steps.length - 1} />
             ))}

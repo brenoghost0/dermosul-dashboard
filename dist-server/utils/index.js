@@ -1,6 +1,7 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.generateSlug = exports.generateUniqueId = exports.lastNDays = exports.toISO = exports.generateShortId = void 0;
+exports.generateSlug = exports.generateUniqueNumericOrderId = exports.generateUniqueId = exports.lastNDays = exports.toISO = exports.generateShortId = void 0;
+const prisma_1 = require("../db/prisma");
 const generateShortId = (length = 8) => {
     // Gera um ID numérico de 'length' dígitos (default 8)
     // Sem zeros à esquerda sendo removidos: string fixa, ex.: '00342189'
@@ -24,11 +25,24 @@ const lastNDays = (n) => {
     return dates.reverse();
 };
 exports.lastNDays = lastNDays;
-const prisma_1 = require("../db/prisma");
 const generateUniqueId = () => {
     return Math.random().toString(36).substr(2, 9);
 };
 exports.generateUniqueId = generateUniqueId;
+const generateUniqueNumericOrderId = async (client = prisma_1.prisma, length = 8) => {
+    // Garante IDs apenas numéricos e evita colisões consultando o banco
+    while (true) {
+        const candidate = (0, exports.generateShortId)(length);
+        const exists = await client.order.findUnique({
+            where: { id: candidate },
+            select: { id: true },
+        });
+        if (!exists) {
+            return candidate;
+        }
+    }
+};
+exports.generateUniqueNumericOrderId = generateUniqueNumericOrderId;
 const generateSlug = async (text) => {
     const baseSlug = text
         .toLowerCase()
