@@ -20,7 +20,16 @@ export default function CartPage() {
   const appliedCoupon = cart?.coupon ?? null;
   const couponDiscountValue = cart?.couponDiscountCents ?? 0;
   const couponDiscountDisplay = couponDiscountValue > 0 ? formatCurrency(couponDiscountValue) : null;
-  const shippingLabel = cart?.freeShippingApplied ? "Grátis" : shipping !== null ? formatCurrency(shipping) : "Calculado no checkout";
+  const shippingPostalCode = cart?.shippingAddress?.postalCode?.replace(/\D/g, "") ?? "";
+  const hasPostalCode = shippingPostalCode.length >= 8;
+  const shippingLabel = cart?.freeShippingApplied
+    ? hasPostalCode
+      ? "Grátis"
+      : "Informe o CEP"
+    : hasPostalCode && shipping !== null
+    ? formatCurrency(shipping)
+    : "Informe o CEP";
+  const totalDisplay = hasPostalCode ? formatCurrency(total) : formatCurrency(Math.max(subtotal - discount, 0));
   const [couponCode, setCouponCode] = useState("");
   const [couponStatus, setCouponStatus] = useState<"idle" | "loading" | "success" | "error">("idle");
   const [couponFeedback, setCouponFeedback] = useState<string | null>(null);
@@ -239,7 +248,7 @@ export default function CartPage() {
 
                 <div className="flex flex-wrap items-baseline justify-between gap-1 border-t border-violet-100 pt-3 text-sm font-semibold text-violet-900">
                   <span>Total</span>
-                  <span className="text-base">{formatCurrency(total)}</span>
+                  <span className="text-base">{totalDisplay}</span>
                 </div>
                 <Link
                   to="/checkout"
